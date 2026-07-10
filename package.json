@@ -1,0 +1,22 @@
+{
+  "name": "tableverse",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test:unit": "npm run test:unit --workspace=packages/shared --workspace=packages/game-core --workspace=packages/client --if-present",
+    "test:integration": "npm run test:integration --workspace=packages/server --if-present",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4",
+    "eslint": "^9.13.0",
+    "@eslint/js": "^9.13.0",
+    "typescript-eslint": "^8.12.2",
+    "prettier": "^3.3.3"
+  }
+}
