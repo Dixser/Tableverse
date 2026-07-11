@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   canPerform,
   type Room,
@@ -61,6 +62,7 @@ export function RoomShell({
   onSeatClaimed,
   onLeftRoom,
 }: RoomShellProps) {
+  const { t } = useTranslation();
   const [room, setRoom] = useState<Room | null>(null);
   const [seats, setSeats] = useState<SeatAssignment[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -217,7 +219,7 @@ export function RoomShell({
       {error}
     </div>
   );
-  if (!room) return <div className={styles.status}>Loading room…</div>;
+  if (!room) return <div className={styles.status}>{t('room.loadingRoom')}</div>;
 
   const canClaim = role != null && canPerform(role, 'claimSeat');
   const canManageSeats = role != null && canPerform(role, 'manageSeats');
@@ -232,7 +234,7 @@ export function RoomShell({
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.heading}>Room {room.inviteCode}</h1>
+      <h1 className={styles.heading}>{t('room.title', { inviteCode: room.inviteCode })}</h1>
 
       {actionError && (
         <p className={styles.error} role="alert">
@@ -240,12 +242,13 @@ export function RoomShell({
         </p>
       )}
 
-      <section className={styles.section} aria-label="Players">
-        <h2 className={styles.sectionTitle}>Players</h2>
+      <section className={styles.section} aria-label={t('room.players')}>
+        <h2 className={styles.sectionTitle}>{t('room.players')}</h2>
         <ul className={styles.list}>
           {room.members.map((m) => (
             <li className={styles.listItem} key={m.userID}>
-              {m.userID === user.id ? 'You' : m.userID} — {m.role}
+              {m.userID === user.id ? t('room.you') : m.userID} —{' '}
+              {t(`room.role.${m.role}`)}
               <span className={styles.spacer} />
               {m.userID === user.id && canLeaveRoom && (
                 <button
@@ -253,7 +256,7 @@ export function RoomShell({
                   type="button"
                   onClick={() => void leaveRoom()}
                 >
-                  Leave room
+                  {t('room.leaveRoom')}
                 </button>
               )}
               {canKick && m.userID !== user.id && (
@@ -262,7 +265,7 @@ export function RoomShell({
                   type="button"
                   onClick={() => void kickPlayer(m.userID)}
                 >
-                  Kick
+                  {t('room.kick')}
                 </button>
               )}
             </li>
@@ -270,12 +273,15 @@ export function RoomShell({
         </ul>
       </section>
 
-      <section className={styles.section} aria-label="Seats">
-        <h2 className={styles.sectionTitle}>Seats</h2>
+      <section className={styles.section} aria-label={t('room.seats')}>
+        <h2 className={styles.sectionTitle}>{t('room.seats')}</h2>
         <ul className={styles.list}>
           {seats.map((seat) => (
             <li className={styles.listItem} key={seat.playerID}>
-              Seat {seat.playerID}: {seat.userID === user.id ? 'You' : seat.userID}
+              {t('room.seatOccupied', {
+                playerID: seat.playerID,
+                occupant: seat.userID === user.id ? t('room.you') : seat.userID,
+              })}
               <PresenceBadge status={presence[seat.playerID] ?? 'connected'} />
               <span className={styles.spacer} />
               {seat.userID === user.id && canLeaveSeat && (
@@ -284,7 +290,7 @@ export function RoomShell({
                   type="button"
                   onClick={() => void leaveSeat(seat.playerID)}
                 >
-                  Leave seat
+                  {t('room.leaveSeat')}
                 </button>
               )}
               {canManageSeats && room.status === 'in_game' && (
@@ -293,7 +299,7 @@ export function RoomShell({
                   type="button"
                   onClick={() => releaseSeat(seat.playerID)}
                 >
-                  Release
+                  {t('room.release')}
                 </button>
               )}
             </li>
@@ -306,7 +312,7 @@ export function RoomShell({
               checked={room.allowMultiSeat}
               onChange={(e) => void setAllowMultiSeat(e.target.checked)}
             />
-            Allow multiple seats per player
+            {t('room.allowMultiSeat')}
           </label>
         )}
         {canClaim && room.status === 'lobby' && selectedModule && (
@@ -320,15 +326,15 @@ export function RoomShell({
       </section>
 
       {room.status === 'lobby' && canChangeGame && (
-        <section className={styles.section} aria-label="Game selection">
-          <h2 className={styles.sectionTitle}>Game</h2>
+        <section className={styles.section} aria-label={t('room.game')}>
+          <h2 className={styles.sectionTitle}>{t('room.game')}</h2>
           <select
             className={styles.select}
             value={room.selectedGameID ?? ''}
             onChange={(e) => void changeGame(e.target.value)}
           >
             <option value="" disabled>
-              Select a game…
+              {t('room.selectGamePlaceholder')}
             </option>
             {gamesCatalog.map((m) => (
               <option key={m.id} value={m.id}>
@@ -336,18 +342,20 @@ export function RoomShell({
               </option>
             ))}
           </select>
-          {gamesCatalog.length === 0 && <p className={styles.hint}>No games available yet.</p>}
+          {gamesCatalog.length === 0 && (
+            <p className={styles.hint}>{t('room.noGamesAvailable')}</p>
+          )}
         </section>
       )}
 
       {room.status === 'lobby' && canStart && room.selectedGameID && (
         <button className={styles.buttonStart} type="button" onClick={() => void startMatch()}>
-          Start match
+          {t('room.startMatch')}
         </button>
       )}
       {room.status === 'in_game' && canEnd && (
         <button className={styles.buttonDanger} type="button" onClick={() => void endMatch()}>
-          End match
+          {t('room.endMatch')}
         </button>
       )}
 
@@ -374,6 +382,7 @@ function SeatPicker({
   currentUserID: string;
   onClaim: (playerID: string) => void;
 }) {
+  const { t } = useTranslation();
   const seatByPlayerID = new Map(seats.map((s) => [s.playerID, s]));
   return (
     <div className={styles.seatPicker}>
@@ -387,8 +396,9 @@ function SeatPicker({
             disabled={!!occupant}
             onClick={() => onClaim(playerID)}
           >
-            Seat {playerID}
-            {occupant && ` — ${occupant.userID === currentUserID ? 'You' : occupant.userID}`}
+            {t('room.seatLabel', { playerID })}
+            {occupant &&
+              ` — ${occupant.userID === currentUserID ? t('room.you') : occupant.userID}`}
           </button>
         );
       })}

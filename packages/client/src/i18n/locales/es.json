@@ -1,0 +1,66 @@
+{
+  "identity": {
+    "title": "Tableverse",
+    "nicknameLabel": "Apodo",
+    "continue": "Continuar"
+  },
+  "roomEntry": {
+    "welcome": "Bienvenido, {{name}}.",
+    "createRoom": "Crear una sala",
+    "inviteCodeLabel": "Código de invitación",
+    "join": "Unirse",
+    "autoJoinError": "No se pudo unir a la sala {{inviteCode}}: {{message}}"
+  },
+  "app": {
+    "loading": "Cargando…",
+    "joiningRoom": "Uniéndose a la sala…"
+  },
+  "room": {
+    "title": "Sala {{inviteCode}}",
+    "loadingRoom": "Cargando sala…",
+    "players": "Jugadores",
+    "you": "Tú",
+    "leaveRoom": "Salir de la sala",
+    "kick": "Expulsar",
+    "seats": "Asientos",
+    "leaveSeat": "Dejar el asiento",
+    "release": "Liberar",
+    "allowMultiSeat": "Permitir varios asientos por jugador",
+    "game": "Juego",
+    "selectGamePlaceholder": "Selecciona un juego…",
+    "noGamesAvailable": "Todavía no hay juegos disponibles.",
+    "startMatch": "Iniciar partida",
+    "endMatch": "Terminar partida",
+    "seatLabel": "Asiento {{playerID}}",
+    "seatOccupied": "Asiento {{playerID}}: {{occupant}}",
+    "role": {
+      "host": "Anfitrión",
+      "member": "Miembro"
+    }
+  },
+  "languageToggle": {
+    "ariaLabel": "Idioma"
+  },
+  "seatSwitcher": {
+    "ariaLabel": "Tus asientos",
+    "seatTab": "Asiento {{playerID}}"
+  },
+  "presence": {
+    "connected": "Conectado",
+    "gracePeriod": "Desconectado — reconectando…",
+    "released": "Desconectado — liberable"
+  },
+  "gameMount": {
+    "noGameSelected": "Todavía no se ha seleccionado ningún juego.",
+    "unknownGame": "Juego desconocido: {{gameID}}",
+    "waitingForMatch": "Esperando a que comience la partida…"
+  },
+  "gameover": {
+    "draw": "Es un empate.",
+    "youWin": "¡Ganaste!",
+    "youAndOthersWin": "¡Tú y {{names}} ganan!",
+    "othersWin_one": "¡{{names}} gana!",
+    "othersWin_other": "¡{{names}} ganan!",
+    "fallback": "Fin de la partida."
+  }
+}

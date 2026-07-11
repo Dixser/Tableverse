@@ -159,6 +159,27 @@ against, which doesn't exist yet (Love Letter, below, is still unspecced).
 Depends only on feature 001's existing `GameMount`/`BoardProps` machinery —
 no new platform interface beyond the one type it adds.
 
+## 010 — i18n Support
+
+Not part of the original dependency-ordered sequence — inserted by explicit
+user request now that the platform is starting to accumulate enough
+platform-chrome surface area (rooms, seats, presence, the gameover banner
+from feature 009) to be worth translating before it grows further. Adds
+`react-i18next` to `packages/client`, extracts every platform-chrome string
+(plus Tic-Tac-Toe's `GameModule`, which turns out to need zero changes — its
+`BoardComponent` renders only `X`/`O` marks) into translation keys for
+English and Spanish, and adds a manual language switcher that structurally
+mirrors feature 004's theme-toggle pattern (a plain hook, a `localStorage`
+key, a pre-paint script in `index.html`) rather than introducing a new
+Context/Provider pattern. The one genuinely hard part is `GameoverBanner`'s
+dynamic, pluralized winner messages (win vs. wins depending on winner
+count, interpolated name lists) — handled via i18next's `count`-based
+pluralization rather than string concatenation, since concatenation breaks
+for languages with different word order. Depends only on feature 004's
+existing theme-toggle precedent (structural template, not a code
+dependency) and feature 009's `GameoverBanner` (the component being
+translated) — no new platform interface.
+
 ## Later candidates (placeholders — not specced yet)
 
 These are provisional next games, listed only to sanity-check that the
@@ -168,7 +189,7 @@ its turn comes, including an explicit up-front decision (per the versioning
 heuristic) on whether it's a new catalog entry or an `edition` of an
 existing one.
 
-- **010 — Love Letter** (candidate): small hidden-information card game.
+- **011 — Love Letter** (candidate): small hidden-information card game.
   Chosen as the next step up in complexity specifically to exercise
   `playerView` filtering and the spectator hidden-information risk called
   out in tech-stack.md, which Tic-Tac-Toe (no hidden information) cannot
@@ -176,7 +197,9 @@ existing one.
   kit** (hand tray, opponent card-count badges) deferred by feature 009 —
   once Love Letter exists as a second real `BoardComponent`, shared pieces
   should be *extracted* from the two real implementations, not designed
-  speculatively ahead of them.
-- **011 — TBD**: a game with a configurable `settingsSchema` (e.g. a house
+  speculatively ahead of them. Would also be the first real test of
+  feature 010's i18n contract against actual in-board game text, since
+  Tic-Tac-Toe never exercised it.
+- **012 — TBD**: a game with a configurable `settingsSchema` (e.g. a house
   rule or turn timer), to exercise the generic settings-form rendering
   path that neither Tic-Tac-Toe nor Love Letter necessarily requires.

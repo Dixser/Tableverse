@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import styles from './SeatSwitcher.module.css';
 
 export interface SeatSwitcherProps {
@@ -13,9 +14,10 @@ export interface SeatSwitcherProps {
  * background Client() feeds GameMount.
  */
 export function SeatSwitcher({ seatIDs, activeSeatID, onSelect }: SeatSwitcherProps) {
+  const { t } = useTranslation();
   if (seatIDs.length <= 1) return null;
   return (
-    <div className={styles.tabs} role="tablist" aria-label="Your seats">
+    <div className={styles.tabs} role="tablist" aria-label={t('seatSwitcher.ariaLabel')}>
       {seatIDs.map((playerID) => (
         <button
           key={playerID}
@@ -25,7 +27,7 @@ export function SeatSwitcher({ seatIDs, activeSeatID, onSelect }: SeatSwitcherPr
           aria-selected={playerID === activeSeatID}
           onClick={() => onSelect(playerID)}
         >
-          Seat {playerID}
+          {t('seatSwitcher.seatTab', { playerID })}
         </button>
       ))}
     </div>

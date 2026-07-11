@@ -14,6 +14,16 @@
         } catch (e) {}
       })();
     </script>
+    <script>
+      (function () {
+        try {
+          var lang = localStorage.getItem('tableverse:language');
+          if (lang === 'en' || lang === 'es') {
+            document.documentElement.lang = lang;
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
