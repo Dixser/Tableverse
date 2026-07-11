@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import styles from './GameoverBanner.module.css';
 
 export interface GameoverBannerProps {
@@ -12,11 +14,13 @@ export interface GameoverBannerProps {
   playerNames: Record<string, string>;
 }
 
-function nameFor(id: string, playerNames: Record<string, string>): string {
-  return playerNames[id] ?? `Seat ${id}`;
+function nameFor(id: string, playerNames: Record<string, string>, t: TFunction): string {
+  return playerNames[id] ?? t('room.seatLabel', { playerID: id });
 }
 
-/** "Alice" / "Alice and Bob" / "Alice, Bob and Carol" */
+/** "Alice" / "Alice and Bob" / "Alice, Bob and Carol" -- the list-joining
+ * grammar itself stays English-only (no current AC requires localizing
+ * "and"); see spec/features/010-i18n-support/plan.md's open risks. */
 function formatNameList(names: string[]): string {
   if (names.length === 1) return names[0]!;
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
@@ -26,29 +30,33 @@ function formatNameList(names: string[]): string {
  * Resolves ctx.gameover + the viewer's perspective into display text.
  * Exported separately from the component so every branch (including
  * multi-winner cases no real game exercises yet) is unit-testable without
- * mounting React.
+ * mounting React. Takes `t` as a parameter (rather than importing a global
+ * translator) so it stays a pure, independently testable function -- see
+ * spec/features/010-i18n-support/plan.md.
  */
 export function resolveGameoverMessage(
   gameover: unknown,
   playerID: string | null,
   playerNames: Record<string, string>,
+  t: TFunction,
 ): string | null {
   if (!gameover || typeof gameover !== 'object') return null;
   const g = gameover as { winner?: string | string[]; draw?: boolean };
-  if (g.draw === true) return "It's a draw.";
+  if (g.draw === true) return t('gameover.draw');
   if (g.winner !== undefined) {
     const winnerIDs = Array.isArray(g.winner) ? g.winner : [g.winner];
     const iAmWinner = playerID !== null && winnerIDs.includes(playerID);
     const others = winnerIDs
       .filter((id) => id !== playerID)
-      .map((id) => nameFor(id, playerNames));
+      .map((id) => nameFor(id, playerNames, t));
     if (iAmWinner) {
-      return others.length === 0 ? 'You win!' : `You and ${formatNameList(others)} win!`;
+      return others.length === 0
+        ? t('gameover.youWin')
+        : t('gameover.youAndOthersWin', { names: formatNameList(others) });
     }
-    const verb = winnerIDs.length > 1 ? 'win' : 'wins';
-    return `${formatNameList(others)} ${verb}!`;
+    return t('gameover.othersWin', { names: formatNameList(others), count: winnerIDs.length });
   }
-  return 'Game over.';
+  return t('gameover.fallback');
 }
 
 /**
@@ -58,7 +66,8 @@ export function resolveGameoverMessage(
  * still in progress (ctx.gameover is undefined).
  */
 export function GameoverBanner({ gameover, playerID, playerNames }: GameoverBannerProps) {
-  const message = resolveGameoverMessage(gameover, playerID, playerNames);
+  const { t } = useTranslation();
+  const message = resolveGameoverMessage(gameover, playerID, playerNames, t);
   if (message === null) return null;
   return (
     <div className={styles.banner} role="status">

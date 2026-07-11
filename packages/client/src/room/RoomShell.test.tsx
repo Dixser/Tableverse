@@ -49,8 +49,8 @@ describe('RoomShell', () => {
     );
 
     await waitFor(() => screen.getByText('Room ABC123'));
-    expect(screen.getByText(/You — host/)).toBeInTheDocument();
-    expect(screen.getByText(/guest-1 — member/)).toBeInTheDocument();
+    expect(screen.getByText(/You — Host/)).toBeInTheDocument();
+    expect(screen.getByText(/guest-1 — Member/)).toBeInTheDocument();
   });
 
   it('shows a claim-seat form for a member (claimSeat is permitted) but hides host-only release for a member seat they do not manage', async () => {

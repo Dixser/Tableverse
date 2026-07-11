@@ -1,0 +1,66 @@
+{
+  "identity": {
+    "title": "Tableverse",
+    "nicknameLabel": "Nickname",
+    "continue": "Continue"
+  },
+  "roomEntry": {
+    "welcome": "Welcome, {{name}}.",
+    "createRoom": "Create a room",
+    "inviteCodeLabel": "Invite code",
+    "join": "Join",
+    "autoJoinError": "Couldn't join room {{inviteCode}}: {{message}}"
+  },
+  "app": {
+    "loading": "Loading…",
+    "joiningRoom": "Joining room…"
+  },
+  "room": {
+    "title": "Room {{inviteCode}}",
+    "loadingRoom": "Loading room…",
+    "players": "Players",
+    "you": "You",
+    "leaveRoom": "Leave room",
+    "kick": "Kick",
+    "seats": "Seats",
+    "leaveSeat": "Leave seat",
+    "release": "Release",
+    "allowMultiSeat": "Allow multiple seats per player",
+    "game": "Game",
+    "selectGamePlaceholder": "Select a game…",
+    "noGamesAvailable": "No games available yet.",
+    "startMatch": "Start match",
+    "endMatch": "End match",
+    "seatLabel": "Seat {{playerID}}",
+    "seatOccupied": "Seat {{playerID}}: {{occupant}}",
+    "role": {
+      "host": "Host",
+      "member": "Member"
+    }
+  },
+  "languageToggle": {
+    "ariaLabel": "Language"
+  },
+  "seatSwitcher": {
+    "ariaLabel": "Your seats",
+    "seatTab": "Seat {{playerID}}"
+  },
+  "presence": {
+    "connected": "Connected",
+    "gracePeriod": "Disconnected — reconnecting…",
+    "released": "Disconnected — releasable"
+  },
+  "gameMount": {
+    "noGameSelected": "No game selected yet.",
+    "unknownGame": "Unknown game: {{gameID}}",
+    "waitingForMatch": "Waiting for the match to start…"
+  },
+  "gameover": {
+    "draw": "It's a draw.",
+    "youWin": "You win!",
+    "youAndOthersWin": "You and {{names}} win!",
+    "othersWin_one": "{{names}} wins!",
+    "othersWin_other": "{{names}} win!",
+    "fallback": "Game over."
+  }
+}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Game } from 'boardgame.io';
 import type { Room, User } from '@tableverse/shared';
 import { getGameModule, withGameName } from '@tableverse/game-core';
@@ -10,6 +11,7 @@ import { GameMount } from './gameMount/GameMount.js';
 import { useSeatClients } from './seats/useSeatClients.js';
 import { getInviteCodeFromLocation, setHomeUrl, setRoomUrl } from './routing.js';
 import { ThemeToggle } from './theme/ThemeToggle.js';
+import { LanguageToggle } from './i18n/LanguageToggle.js';
 import styles from './App.module.css';
 
 const FALLBACK_GAME: Game = {};
@@ -23,6 +25,7 @@ function IdentityGate({
   loading: boolean;
   error: string | null;
 }) {
+  const { t } = useTranslation();
   const [displayName, setDisplayName] = useState('');
   return (
     <div className={styles.page}>
@@ -33,9 +36,9 @@ function IdentityGate({
           if (displayName.trim()) onIdentify(displayName.trim());
         }}
       >
-        <h1 className={styles.title}>Tableverse</h1>
+        <h1 className={styles.title}>{t('identity.title')}</h1>
         <label className={styles.field}>
-          <span className={styles.fieldLabel}>Nickname</span>
+          <span className={styles.fieldLabel}>{t('identity.nicknameLabel')}</span>
           <input
             className={styles.input}
             value={displayName}
@@ -43,7 +46,7 @@ function IdentityGate({
           />
         </label>
         <button className={styles.button} type="submit" disabled={loading}>
-          Continue
+          {t('identity.continue')}
         </button>
         {error && (
           <p className={styles.error} role="alert">
@@ -70,6 +73,7 @@ function RoomEntry({
   initialError?: string;
   onEnter: (room: Room) => void;
 }) {
+  const { t } = useTranslation();
   const [inviteCode, setInviteCode] = useState(initialInviteCode ?? '');
   const [error, setError] = useState<string | null>(initialError ?? null);
 
@@ -94,9 +98,9 @@ function RoomEntry({
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <p className={styles.welcome}>Welcome, {user.displayName}.</p>
+        <p className={styles.welcome}>{t('roomEntry.welcome', { name: user.displayName })}</p>
         <button className={styles.button} type="button" onClick={() => void createRoom()}>
-          Create a room
+          {t('roomEntry.createRoom')}
         </button>
         <hr className={styles.divider} />
         <form
@@ -106,7 +110,7 @@ function RoomEntry({
           }}
         >
           <label className={styles.field}>
-            <span className={styles.fieldLabel}>Invite code</span>
+            <span className={styles.fieldLabel}>{t('roomEntry.inviteCodeLabel')}</span>
             <input
               className={styles.input}
               value={inviteCode}
@@ -114,7 +118,7 @@ function RoomEntry({
             />
           </label>
           <button className={styles.buttonSecondary} type="submit">
-            Join
+            {t('roomEntry.join')}
           </button>
         </form>
         {error && (
@@ -188,6 +192,7 @@ function ActiveRoom({
 }
 
 export function App() {
+  const { t } = useTranslation();
   const session = useSession();
   const [roomID, setRoomID] = useState<string | null>(null);
   // Captured once on mount from a /room/:inviteCode link. Consumed (and
@@ -228,7 +233,7 @@ export function App() {
   }, [pendingInviteCode, session.user, session.sessionToken, roomID, enterRoom]);
 
   function renderScreen() {
-    if (session.loading) return <p className={styles.status}>Loading…</p>;
+    if (session.loading) return <p className={styles.status}>{t('app.loading')}</p>;
     if (!session.user || !session.sessionToken) {
       return (
         <IdentityGate
@@ -238,7 +243,7 @@ export function App() {
         />
       );
     }
-    if (pendingInviteCode) return <p className={styles.status}>Joining room…</p>;
+    if (pendingInviteCode) return <p className={styles.status}>{t('app.joiningRoom')}</p>;
     if (!roomID) {
       return (
         <RoomEntry
@@ -247,7 +252,10 @@ export function App() {
           initialInviteCode={autoJoinError?.inviteCode}
           initialError={
             autoJoinError
-              ? `Couldn't join room ${autoJoinError.inviteCode}: ${autoJoinError.message}`
+              ? t('roomEntry.autoJoinError', {
+                  inviteCode: autoJoinError.inviteCode,
+                  message: autoJoinError.message,
+                })
               : undefined
           }
           onEnter={enterRoom}
@@ -264,13 +272,15 @@ export function App() {
     );
   }
 
-  // ThemeToggle rendered once, always visible regardless of which screen is
-  // showing -- per plan.md's placement decision, a first-time visitor
-  // should be able to fix an uncomfortable theme before picking a nickname.
+  // ThemeToggle/LanguageToggle rendered once, always visible regardless of
+  // which screen is showing -- per plan.md's placement decision, a
+  // first-time visitor should be able to fix an uncomfortable theme or
+  // language before picking a nickname.
   return (
     <>
       {renderScreen()}
       <ThemeToggle />
+      <LanguageToggle />
     </>
   );
 }

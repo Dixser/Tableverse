@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { getGameModule, type BoardProps } from '@tableverse/game-core';
 import { boardComponents } from '../boardRegistry.js';
 import { GameoverBanner } from './GameoverBanner.js';
@@ -19,16 +20,17 @@ export interface GameMountProps {
  * see game-core/src/types.ts's doc comment for why the two are separate).
  */
 export function GameMount({ selectedGameID, boardProps, playerNames }: GameMountProps) {
+  const { t } = useTranslation();
   if (!selectedGameID) {
-    return <div>No game selected yet.</div>;
+    return <div>{t('gameMount.noGameSelected')}</div>;
   }
   const module = getGameModule(selectedGameID);
   const BoardComponent = boardComponents[selectedGameID];
   if (!module || !BoardComponent) {
-    return <div>Unknown game: {selectedGameID}</div>;
+    return <div>{t('gameMount.unknownGame', { gameID: selectedGameID })}</div>;
   }
   if (!boardProps) {
-    return <div>Waiting for the match to start…</div>;
+    return <div>{t('gameMount.waitingForMatch')}</div>;
   }
   return (
     <div data-testid="game-mount">
