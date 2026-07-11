@@ -91,6 +91,191 @@ describe('room routes: permission enforcement', () => {
     expect(seatsAfterHostRelease).toHaveLength(0);
   });
 
+  it('lets the host enable allowMultiSeat via /settings, then claim a second seat for solo play; a member is rejected with 403', async () => {
+    const { harness, server } = await setup();
+    const host = await createSessionedUser(harness, 'Host');
+    const member = await createSessionedUser(harness, 'Member');
+
+    const createRes = await fetch(`${server.baseUrl}/api/rooms`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    const { room } = (await createRes.json()) as { room: { roomID: string; inviteCode: string } };
+
+    await fetch(`${server.baseUrl}/api/rooms/join`, {
+      method: 'POST',
+      headers: {
+        [SESSION_TOKEN_HEADER]: member.sessionToken,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ inviteCode: room.inviteCode }),
+    });
+
+    // A member (not host) cannot toggle room settings.
+    const memberSettingsRes = await fetch(
+      `${server.baseUrl}/api/rooms/${room.roomID}/settings`,
+      {
+        method: 'POST',
+        headers: {
+          [SESSION_TOKEN_HEADER]: member.sessionToken,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ allowMultiSeat: true }),
+      },
+    );
+    expect(memberSettingsRes.status).toBe(403);
+
+    // The host claims seat 0, then enables allowMultiSeat, then claims
+    // seat 1 too -- solo play (spec.md story 4).
+    const claimSeat0 = await fetch(
+      `${server.baseUrl}/api/rooms/${room.roomID}/seats/0/claim`,
+      { method: 'POST', headers: { [SESSION_TOKEN_HEADER]: host.sessionToken } },
+    );
+    expect(claimSeat0.status).toBe(200);
+
+    const settingsRes = await fetch(
+      `${server.baseUrl}/api/rooms/${room.roomID}/settings`,
+      {
+        method: 'POST',
+        headers: {
+          [SESSION_TOKEN_HEADER]: host.sessionToken,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ allowMultiSeat: true }),
+      },
+    );
+    expect(settingsRes.status).toBe(200);
+    const { room: updatedRoom } = (await settingsRes.json()) as {
+      room: { allowMultiSeat: boolean };
+    };
+    expect(updatedRoom.allowMultiSeat).toBe(true);
+
+    const claimSeat1 = await fetch(
+      `${server.baseUrl}/api/rooms/${room.roomID}/seats/1/claim`,
+      { method: 'POST', headers: { [SESSION_TOKEN_HEADER]: host.sessionToken } },
+    );
+    expect(claimSeat1.status).toBe(200);
+
+    const seats = await harness.seats.getSeatsForRoom(room.roomID);
+    expect(seats).toHaveLength(2);
+    expect(seats.every((s) => s.userID === host.user.id)).toBe(true);
+  });
+
+  it('rejects a host calling /leave with 403 (the host cannot leave the room)', async () => {
+    const { harness, server } = await setup();
+    const host = await createSessionedUser(harness, 'Host2');
+    const createRes = await fetch(`${server.baseUrl}/api/rooms`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    const { room } = (await createRes.json()) as { room: { roomID: string } };
+
+    const leaveRes = await fetch(`${server.baseUrl}/api/rooms/${room.roomID}/leave`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    expect(leaveRes.status).toBe(403);
+  });
+
+  it('lets a member leave the room (cascading their seats) and rejects a non-host member calling /kick', async () => {
+    const { harness, server } = await setup();
+    const host = await createSessionedUser(harness, 'Host3');
+    const member = await createSessionedUser(harness, 'Member3');
+    const other = await createSessionedUser(harness, 'Other3');
+
+    const createRes = await fetch(`${server.baseUrl}/api/rooms`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    const { room } = (await createRes.json()) as { room: { roomID: string; inviteCode: string } };
+
+    for (const u of [member, other]) {
+      await fetch(`${server.baseUrl}/api/rooms/join`, {
+        method: 'POST',
+        headers: {
+          [SESSION_TOKEN_HEADER]: u.sessionToken,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ inviteCode: room.inviteCode }),
+      });
+    }
+    await fetch(`${server.baseUrl}/api/rooms/${room.roomID}/seats/0/claim`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: member.sessionToken },
+    });
+
+    // A non-host member cannot kick.
+    const kickRes = await fetch(`${server.baseUrl}/api/rooms/${room.roomID}/kick`, {
+      method: 'POST',
+      headers: {
+        [SESSION_TOKEN_HEADER]: other.sessionToken,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ targetUserID: member.user.id }),
+    });
+    expect(kickRes.status).toBe(403);
+
+    // The member leaves voluntarily; their seat is released.
+    const leaveRes = await fetch(`${server.baseUrl}/api/rooms/${room.roomID}/leave`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: member.sessionToken },
+    });
+    expect(leaveRes.status).toBe(200);
+
+    const seatsAfter = await harness.seats.getSeatsForRoom(room.roomID);
+    expect(seatsAfter).toHaveLength(0);
+  });
+
+  it('AC6: a kicked player can rejoin the room with the same invite code afterward (no ban list)', async () => {
+    const { harness, server } = await setup();
+    const host = await createSessionedUser(harness, 'Host4');
+    const target = await createSessionedUser(harness, 'Target4');
+
+    const createRes = await fetch(`${server.baseUrl}/api/rooms`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    const { room } = (await createRes.json()) as { room: { roomID: string; inviteCode: string } };
+
+    await fetch(`${server.baseUrl}/api/rooms/join`, {
+      method: 'POST',
+      headers: {
+        [SESSION_TOKEN_HEADER]: target.sessionToken,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ inviteCode: room.inviteCode }),
+    });
+
+    const kickRes = await fetch(`${server.baseUrl}/api/rooms/${room.roomID}/kick`, {
+      method: 'POST',
+      headers: {
+        [SESSION_TOKEN_HEADER]: host.sessionToken,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ targetUserID: target.user.id }),
+    });
+    expect(kickRes.status).toBe(200);
+    const { room: afterKick } = (await kickRes.json()) as {
+      room: { members: { userID: string }[] };
+    };
+    expect(afterKick.members.some((m) => m.userID === target.user.id)).toBe(false);
+
+    // No ban list -- rejoining with the same invite code succeeds.
+    const rejoinRes = await fetch(`${server.baseUrl}/api/rooms/join`, {
+      method: 'POST',
+      headers: {
+        [SESSION_TOKEN_HEADER]: target.sessionToken,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ inviteCode: room.inviteCode }),
+    });
+    expect(rejoinRes.status).toBe(200);
+    const { room: afterRejoin } = (await rejoinRes.json()) as {
+      room: { members: { userID: string }[] };
+    };
+    expect(afterRejoin.members.some((m) => m.userID === target.user.id)).toBe(true);
+  });
+
   it('rejects requests with no/invalid session token with 401', async () => {
     const { server } = await setup();
     const res = await fetch(`${server.baseUrl}/api/rooms`, { method: 'POST' });

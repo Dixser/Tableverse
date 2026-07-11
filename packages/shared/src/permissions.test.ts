@@ -16,6 +16,7 @@ const ALL_ACTIONS: RoomAction[] = [
   'editRoomSettings',
   'claimSeat',
   'leaveSeat',
+  'leaveRoom',
 ];
 
 describe('canPerform', () => {
@@ -28,10 +29,19 @@ describe('canPerform', () => {
     }
   }
 
-  it('host can do everything a member can, plus host-only actions', () => {
+  it('host can do everything a member can except leaveRoom, plus host-only actions', () => {
+    // leaveRoom is the one deliberate exception to "host is a superset of
+    // member" -- the host cannot leave the room (feature 007's resolved
+    // decision, no succession logic exists), asserted separately below.
     for (const action of ROOM_PERMISSIONS.member) {
+      if (action === 'leaveRoom') continue;
       expect(canPerform('host', action)).toBe(true);
     }
+  });
+
+  it('the host cannot leaveRoom, even though a member can', () => {
+    expect(canPerform('member', 'leaveRoom')).toBe(true);
+    expect(canPerform('host', 'leaveRoom')).toBe(false);
   });
 
   it('member cannot perform any host-only action', () => {

@@ -1,3 +1,5 @@
+import styles from './SeatSwitcher.module.css';
+
 export interface SeatSwitcherProps {
   seatIDs: string[];
   activeSeatID: string | null;
@@ -13,12 +15,13 @@ export interface SeatSwitcherProps {
 export function SeatSwitcher({ seatIDs, activeSeatID, onSelect }: SeatSwitcherProps) {
   if (seatIDs.length <= 1) return null;
   return (
-    <div role="tablist" aria-label="Your seats">
+    <div className={styles.tabs} role="tablist" aria-label="Your seats">
       {seatIDs.map((playerID) => (
         <button
           key={playerID}
           type="button"
           role="tab"
+          className={playerID === activeSeatID ? styles.tabActive : styles.tab}
           aria-selected={playerID === activeSeatID}
           onClick={() => onSelect(playerID)}
         >

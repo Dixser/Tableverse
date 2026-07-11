@@ -91,4 +91,16 @@ export class SeatService {
   async clearAllSeats(roomID: string): Promise<void> {
     await this.models.RoomSeat.destroy({ where: { roomId: roomID } });
   }
+
+  /**
+   * Releases every seat one user holds in one room, in a single bulk
+   * delete -- used by RoomService.leaveRoom and .kickPlayer (feature 007),
+   * both of which need "every seat this user holds here," not the
+   * per-seat granularity leaveSeat(playerID) exists for.
+   */
+  async releaseSeatsForUser(roomID: string, userID: string): Promise<void> {
+    await this.models.RoomSeat.destroy({
+      where: { roomId: roomID, userId: userID },
+    });
+  }
 }

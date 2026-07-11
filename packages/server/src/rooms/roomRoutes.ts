@@ -139,6 +139,56 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
     ctx.status = 204;
   });
 
+  router.post('/:roomID/leave', async (ctx) => {
+    const room = await authorize(ctx, deps, param(ctx, 'roomID'), 'leaveRoom');
+    if (!room) return;
+    const updated = await deps.roomService.leaveRoom(room.roomID, ctx.state.user!.id);
+    ctx.body = { room: updated };
+  });
+
+  router.post('/:roomID/kick', async (ctx) => {
+    const room = await authorize(ctx, deps, param(ctx, 'roomID'), 'kickPlayer');
+    if (!room) return;
+    const { targetUserID } = getBody<{ targetUserID?: string }>(ctx);
+    if (!targetUserID) {
+      ctx.status = 400;
+      ctx.body = { error: 'targetUserID is required' };
+      return;
+    }
+    try {
+      const updated = await deps.roomService.kickPlayer(
+        room.roomID,
+        ctx.state.user!.id,
+        targetUserID,
+      );
+      ctx.body = { room: updated };
+    } catch (err) {
+      ctx.status = 409;
+      ctx.body = { error: (err as RoomServiceError).message };
+    }
+  });
+
+  router.post('/:roomID/settings', async (ctx) => {
+    const room = await authorize(
+      ctx,
+      deps,
+      param(ctx, 'roomID'),
+      'editRoomSettings',
+    );
+    if (!room) return;
+    const { allowMultiSeat } = getBody<{ allowMultiSeat?: boolean }>(ctx);
+    if (typeof allowMultiSeat !== 'boolean') {
+      ctx.status = 400;
+      ctx.body = { error: 'allowMultiSeat must be a boolean' };
+      return;
+    }
+    const updated = await deps.roomService.setAllowMultiSeat(
+      room.roomID,
+      allowMultiSeat,
+    );
+    ctx.body = { room: updated };
+  });
+
   router.post('/:roomID/game', async (ctx) => {
     const room = await authorize(ctx, deps, param(ctx, 'roomID'), 'changeGame');
     if (!room) return;

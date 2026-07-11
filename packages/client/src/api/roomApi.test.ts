@@ -53,6 +53,38 @@ describe('roomApi', () => {
     await expect(roomApi.leaveSeat('tok-1', 'r1', '0')).resolves.toBeUndefined();
   });
 
+  it('leaveRoom posts to /leave and parses the returned room', async () => {
+    const room = { roomID: 'r1', members: [] };
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ room }),
+    });
+
+    const result = await roomApi.leaveRoom('tok-1', 'r1');
+
+    expect(result).toEqual({ room });
+    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(url).toContain('/api/rooms/r1/leave');
+    expect(init.method).toBe('POST');
+  });
+
+  it('kickPlayer posts targetUserID to /kick and parses the returned room', async () => {
+    const room = { roomID: 'r1', members: [] };
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ room }),
+    });
+
+    const result = await roomApi.kickPlayer('tok-1', 'r1', 'user-2');
+
+    expect(result).toEqual({ room });
+    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(url).toContain('/api/rooms/r1/kick');
+    expect(JSON.parse(init.body as string)).toEqual({ targetUserID: 'user-2' });
+  });
+
   it('RoomApiError instances carry the HTTP status', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: false,

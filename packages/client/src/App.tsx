@@ -9,6 +9,8 @@ import { SeatSwitcher } from './room/SeatSwitcher.js';
 import { GameMount } from './gameMount/GameMount.js';
 import { useSeatClients } from './seats/useSeatClients.js';
 import { getInviteCodeFromLocation, setHomeUrl, setRoomUrl } from './routing.js';
+import { ThemeToggle } from './theme/ThemeToggle.js';
+import styles from './App.module.css';
 
 const FALLBACK_GAME: Game = {};
 
@@ -23,22 +25,33 @@ function IdentityGate({
 }) {
   const [displayName, setDisplayName] = useState('');
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (displayName.trim()) onIdentify(displayName.trim());
-      }}
-    >
-      <h1>Tableverse</h1>
-      <label>
-        Nickname
-        <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-      </label>
-      <button type="submit" disabled={loading}>
-        Continue
-      </button>
-      {error && <p role="alert">{error}</p>}
-    </form>
+    <div className={styles.page}>
+      <form
+        className={styles.card}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (displayName.trim()) onIdentify(displayName.trim());
+        }}
+      >
+        <h1 className={styles.title}>Tableverse</h1>
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>Nickname</span>
+          <input
+            className={styles.input}
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+          />
+        </label>
+        <button className={styles.button} type="submit" disabled={loading}>
+          Continue
+        </button>
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
+      </form>
+    </div>
   );
 }
 
@@ -46,16 +59,19 @@ function RoomEntry({
   user,
   sessionToken,
   initialInviteCode,
+  initialError,
   onEnter,
 }: {
   user: User;
   sessionToken: string;
   /** Prefilled from a /room/:inviteCode link, e.g. after an auto-join attempt failed. */
   initialInviteCode?: string;
+  /** Set alongside initialInviteCode when an auto-join attempt (from a /room/:inviteCode link) failed. */
+  initialError?: string;
   onEnter: (room: Room) => void;
 }) {
   const [inviteCode, setInviteCode] = useState(initialInviteCode ?? '');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError ?? null);
 
   const createRoom = async () => {
     try {
@@ -76,24 +92,37 @@ function RoomEntry({
   };
 
   return (
-    <div>
-      <p>Welcome, {user.displayName}.</p>
-      <button type="button" onClick={() => void createRoom()}>
-        Create a room
-      </button>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void joinRoom();
-        }}
-      >
-        <label>
-          Invite code
-          <input value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
-        </label>
-        <button type="submit">Join</button>
-      </form>
-      {error && <p role="alert">{error}</p>}
+    <div className={styles.page}>
+      <div className={styles.card}>
+        <p className={styles.welcome}>Welcome, {user.displayName}.</p>
+        <button className={styles.button} type="button" onClick={() => void createRoom()}>
+          Create a room
+        </button>
+        <hr className={styles.divider} />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void joinRoom();
+          }}
+        >
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Invite code</span>
+            <input
+              className={styles.input}
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+            />
+          </label>
+          <button className={styles.buttonSecondary} type="submit">
+            Join
+          </button>
+        </form>
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -102,10 +131,12 @@ function ActiveRoom({
   roomID,
   user,
   sessionToken,
+  onLeftRoom,
 }: {
   roomID: string;
   user: User;
   sessionToken: string;
+  onLeftRoom: () => void;
 }) {
   // Populated from RoomShell's own room fetches -- RoomShell owns fetching
   // the Room (chrome/board split), but GameMount/useSeatClients live
@@ -139,13 +170,19 @@ function ActiveRoom({
       sessionToken={sessionToken}
       roomID={roomID}
       onRoomUpdate={handleRoomUpdate}
+      onSeatClaimed={(credential) => seatClients.addSeat(roomID, credential)}
+      onLeftRoom={onLeftRoom}
     >
       <SeatSwitcher
         seatIDs={seatClients.seatIDs}
         activeSeatID={seatClients.activeSeatID}
         onSelect={seatClients.setActiveSeatID}
       />
-      <GameMount selectedGameID={selectedGameID} boardProps={seatClients.boardProps} />
+      <GameMount
+        selectedGameID={selectedGameID}
+        boardProps={seatClients.boardProps}
+        playerNames={seatClients.playerNames}
+      />
     </RoomShell>
   );
 }
@@ -170,6 +207,11 @@ export function App() {
     setRoomUrl(room.inviteCode);
   }, []);
 
+  const leaveActiveRoom = useCallback(() => {
+    setRoomID(null);
+    setHomeUrl();
+  }, []);
+
   useEffect(() => {
     if (!pendingInviteCode || !session.user || !session.sessionToken || roomID) {
       return;
@@ -185,35 +227,50 @@ export function App() {
       });
   }, [pendingInviteCode, session.user, session.sessionToken, roomID, enterRoom]);
 
-  if (session.loading) return <p>Loading…</p>;
-  if (!session.user || !session.sessionToken) {
-    return (
-      <IdentityGate
-        onIdentify={(name) => void session.identify(name)}
-        loading={session.loading}
-        error={session.error}
-      />
-    );
-  }
-  if (pendingInviteCode) return <p>Joining room…</p>;
-  if (!roomID) {
-    return (
-      <>
-        {autoJoinError && (
-          <p role="alert">
-            Couldn't join room {autoJoinError.inviteCode}: {autoJoinError.message}
-          </p>
-        )}
+  function renderScreen() {
+    if (session.loading) return <p className={styles.status}>Loading…</p>;
+    if (!session.user || !session.sessionToken) {
+      return (
+        <IdentityGate
+          onIdentify={(name) => void session.identify(name)}
+          loading={session.loading}
+          error={session.error}
+        />
+      );
+    }
+    if (pendingInviteCode) return <p className={styles.status}>Joining room…</p>;
+    if (!roomID) {
+      return (
         <RoomEntry
           user={session.user}
           sessionToken={session.sessionToken}
           initialInviteCode={autoJoinError?.inviteCode}
+          initialError={
+            autoJoinError
+              ? `Couldn't join room ${autoJoinError.inviteCode}: ${autoJoinError.message}`
+              : undefined
+          }
           onEnter={enterRoom}
         />
-      </>
+      );
+    }
+    return (
+      <ActiveRoom
+        roomID={roomID}
+        user={session.user}
+        sessionToken={session.sessionToken}
+        onLeftRoom={leaveActiveRoom}
+      />
     );
   }
+
+  // ThemeToggle rendered once, always visible regardless of which screen is
+  // showing -- per plan.md's placement decision, a first-time visitor
+  // should be able to fix an uncomfortable theme before picking a nickname.
   return (
-    <ActiveRoom roomID={roomID} user={session.user} sessionToken={session.sessionToken} />
+    <>
+      {renderScreen()}
+      <ThemeToggle />
+    </>
   );
 }

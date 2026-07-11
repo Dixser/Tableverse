@@ -331,6 +331,15 @@ interface GameModule {
   game = writing a new `GameModule` + one line in this catalog.** No other
   file in `packages/server` or `packages/client` should require a change —
   feature 002 (Tic-Tac-Toe) exists specifically to prove this end-to-end.
+- **`Ctx.gameover` must conform to `GameoverResult`** (`{ winner?: string |
+  string[]; draw?: boolean }`, defined in `game-core/src/types.ts`) — the
+  shape every `Game.endIf` returns on match completion. This is what lets
+  the platform render a single generic gameover/victory message
+  (`GameoverBanner`, rendered by `GameMount`, feature 009) for every game
+  without any game writing its own gameover UI. Not enforced by
+  boardgame.io's own types (`endIf` returns `any` upstream); a
+  non-conforming shape degrades to a generic fallback message rather than
+  crashing (see feature 009's plan.md).
 
 ## Rules versioning strategy
 

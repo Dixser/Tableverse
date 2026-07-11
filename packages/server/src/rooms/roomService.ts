@@ -71,6 +71,65 @@ export class RoomService {
   }
 
   /**
+   * Toggles `allowMultiSeat`, per spec.md user story 4: a host must be able
+   * to enable it before claiming every seat for solo play. No status
+   * restriction -- unlike changeGame, flipping this doesn't invalidate any
+   * existing seat assignment, it only changes whether a *future* claimSeat
+   * call is allowed to give one user a second seat.
+   */
+  async setAllowMultiSeat(roomID: string, allowMultiSeat: boolean): Promise<Room> {
+    const room = await this.mustGetRoom(roomID);
+    await this.rooms.update(roomID, { allowMultiSeat });
+    return { ...room, allowMultiSeat };
+  }
+
+  /**
+   * A member gives up their room membership entirely (not just a seat),
+   * per feature 007's spec.md story 1. Cascades: every seat they hold in
+   * this room is released as part of the same operation. The host can
+   * never reach this -- canPerform('host', 'leaveRoom') is false,
+   * enforced entirely by ROOM_PERMISSIONS as data, not a check here.
+   */
+  async leaveRoom(roomID: string, userID: string): Promise<Room> {
+    const room = await this.mustGetRoom(roomID);
+    await this.seats.releaseSeatsForUser(roomID, userID);
+    const members = room.members.filter((m) => m.userID !== userID);
+    await this.rooms.update(roomID, { members });
+    return { ...room, members };
+  }
+
+  /**
+   * Host removes another member entirely, per feature 007's spec.md
+   * story 2. Same cascade as leaveRoom, just triggered by the host acting
+   * on someone else instead of a member acting on themself. Two domain
+   * rules the permission map can't express, checked here: a user cannot
+   * kick themself, and the target must actually be a member of this room.
+   * Not checked: the target having role 'host' -- structurally impossible
+   * today, since there is exactly one host per room (assigned at creation,
+   * never transferred) and the self-kick guard already excludes the one
+   * case where actingUserID could equal the host's own userID.
+   */
+  async kickPlayer(
+    roomID: string,
+    actingUserID: string,
+    targetUserID: string,
+  ): Promise<Room> {
+    const room = await this.mustGetRoom(roomID);
+    if (actingUserID === targetUserID) {
+      throw new RoomServiceError(`User ${actingUserID} cannot kick themself`);
+    }
+    if (!room.members.some((m) => m.userID === targetUserID)) {
+      throw new RoomServiceError(
+        `User ${targetUserID} is not a member of room ${roomID}`,
+      );
+    }
+    await this.seats.releaseSeatsForUser(roomID, targetUserID);
+    const members = room.members.filter((m) => m.userID !== targetUserID);
+    await this.rooms.update(roomID, { members });
+    return { ...room, members };
+  }
+
+  /**
    * Claims a seat, per spec.md story 3 / AC6's two-phase model:
    *  - while the room is `lobby` (no match exists), this is a pure
    *    room-level reservation -- no boardgame.io credentials yet, since

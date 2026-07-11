@@ -123,6 +123,57 @@ describe('RoomService', () => {
     );
   });
 
+  it('leaveRoom removes the member and cascades every seat they held (including more than one, under allowMultiSeat)', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const room = await harness.roomService.createRoom('user-host');
+    await harness.rooms.update(room.roomID, { allowMultiSeat: true });
+    const joined = await harness.roomService.joinRoom(room.inviteCode, 'user-guest');
+    expect(joined.members).toContainEqual({ userID: 'user-guest', role: 'member' });
+    await harness.seats.claimSeat(room.roomID, '0', 'user-guest');
+    await harness.seats.claimSeat(room.roomID, '1', 'user-guest');
+
+    const updated = await harness.roomService.leaveRoom(room.roomID, 'user-guest');
+
+    expect(updated.members).not.toContainEqual({ userID: 'user-guest', role: 'member' });
+    const seatsAfter = await harness.seats.getSeatsForRoom(room.roomID);
+    expect(seatsAfter).toHaveLength(0);
+  });
+
+  it('kickPlayer removes the target member and cascades their seats, identical in effect to leaveRoom', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const room = await harness.roomService.createRoom('user-host');
+    await harness.roomService.joinRoom(room.inviteCode, 'user-guest');
+    await harness.seats.claimSeat(room.roomID, '0', 'user-guest');
+
+    const updated = await harness.roomService.kickPlayer(
+      room.roomID,
+      'user-host',
+      'user-guest',
+    );
+
+    expect(updated.members).toEqual([{ userID: 'user-host', role: 'host' }]);
+    const seatsAfter = await harness.seats.getSeatsForRoom(room.roomID);
+    expect(seatsAfter).toHaveLength(0);
+  });
+
+  it('kickPlayer rejects a user attempting to kick themself', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const room = await harness.roomService.createRoom('user-host');
+
+    await expect(
+      harness.roomService.kickPlayer(room.roomID, 'user-host', 'user-host'),
+    ).rejects.toThrow(/cannot kick themself/);
+  });
+
+  it('kickPlayer rejects a target who is not a member of the room', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const room = await harness.roomService.createRoom('user-host');
+
+    await expect(
+      harness.roomService.kickPlayer(room.roomID, 'user-host', 'not-a-member'),
+    ).rejects.toThrow(/not a member/);
+  });
+
   it('AC17: endMatch returns to lobby, clears currentMatchID, and preserves seats when the game was not changed', async () => {
     harness = await createTestHarness([dummyGameModule]);
     const room = await harness.roomService.createRoom('user-host');

@@ -80,6 +80,32 @@ export const roomApi = {
     });
   },
 
+  leaveRoom(sessionToken: string, roomID: string): Promise<{ room: Room }> {
+    return request(`/api/rooms/${roomID}/leave`, sessionToken, { method: 'POST' });
+  },
+
+  kickPlayer(
+    sessionToken: string,
+    roomID: string,
+    targetUserID: string,
+  ): Promise<{ room: Room }> {
+    return request(`/api/rooms/${roomID}/kick`, sessionToken, {
+      method: 'POST',
+      body: JSON.stringify({ targetUserID }),
+    });
+  },
+
+  setAllowMultiSeat(
+    sessionToken: string,
+    roomID: string,
+    allowMultiSeat: boolean,
+  ): Promise<{ room: Room }> {
+    return request(`/api/rooms/${roomID}/settings`, sessionToken, {
+      method: 'POST',
+      body: JSON.stringify({ allowMultiSeat }),
+    });
+  },
+
   changeGame(
     sessionToken: string,
     roomID: string,

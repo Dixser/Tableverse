@@ -1,4 +1,5 @@
 import type { SeatPresenceStatus } from '@tableverse/shared';
+import styles from './PresenceBadge.module.css';
 
 const LABEL: Record<SeatPresenceStatus, string> = {
   connected: 'Connected',
@@ -8,7 +9,7 @@ const LABEL: Record<SeatPresenceStatus, string> = {
 
 export function PresenceBadge({ status }: { status: SeatPresenceStatus }) {
   return (
-    <span data-status={status} role="status">
+    <span className={styles[status]} data-status={status} role="status">
       {LABEL[status]}
     </span>
   );

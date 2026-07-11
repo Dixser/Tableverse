@@ -69,7 +69,6 @@ export const dummyGameModule: GameModule<DummyG> = {
   minPlayers: 2,
   maxPlayers: 4,
   gameDef: dummyGameDef,
-  BoardComponent: () => null,
 };
 
 /**

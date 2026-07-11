@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
-import { canPerform, type Room, type SeatAssignment, type User } from '@tableverse/shared';
-import { gamesCatalog } from '@tableverse/game-core';
+import {
+  canPerform,
+  type Room,
+  type SeatAssignment,
+  type SeatCredential,
+  type User,
+} from '@tableverse/shared';
+import { gamesCatalog, getGameModule } from '@tableverse/game-core';
 import { roomApi } from '../api/roomApi.js';
 import { usePresence } from '../presence/usePresence.js';
 import { seatCredentialStore } from '../seats/seatCredentialStore.js';
 import { PresenceBadge } from './PresenceBadge.js';
+import styles from './RoomShell.module.css';
 
 export interface RoomShellProps {
   user: User;
@@ -21,6 +28,23 @@ export interface RoomShellProps {
    * seam, per the chrome/board split.
    */
   onRoomUpdate?: (room: Room) => void;
+  /**
+   * Called with a freshly-claimed seat's credential (mid-match claims
+   * only -- a lobby claim has no credential yet, per feature 001's
+   * two-phase model). Lets the caller hot-mount a Client() for it
+   * immediately, closing a gap feature 001's plan.md flagged and left
+   * unfixed: useSeatClients previously had no way to learn about a seat
+   * claimed after its mount effect already ran (see feature 005's plan.md).
+   */
+  onSeatClaimed?: (credential: SeatCredential) => void;
+  /**
+   * Called once this user's own leaveRoom action succeeds. RoomShell
+   * itself has no navigation concept (chrome/board split -- it only owns
+   * fetching *this* room) -- the caller (ActiveRoom in App.tsx) resets its
+   * roomID state and the URL back to home, the same way entering a room
+   * sets them on the way in.
+   */
+  onLeftRoom?: () => void;
 }
 
 /**
@@ -34,10 +58,16 @@ export function RoomShell({
   roomID,
   children,
   onRoomUpdate,
+  onSeatClaimed,
+  onLeftRoom,
 }: RoomShellProps) {
   const [room, setRoom] = useState<Room | null>(null);
   const [seats, setSeats] = useState<SeatAssignment[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Separate from `error` (load failures, which replace the whole chrome)
+  // -- a failed room action (claim/release/settings) should surface
+  // without wiping out the room the user is already looking at.
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -68,91 +98,232 @@ export function RoomShell({
 
   const claimSeat = useCallback(
     async (playerID: string) => {
-      const { credential } = await roomApi.claimSeat(sessionToken, roomID, playerID);
-      // Only set for a mid-game claim (room already in_game) -- a lobby
-      // claim has no matchID yet to scope credentials to, per spec.md's
-      // two-phase model; useSeatClients picks up lobby-claimed seats'
-      // credentials in the batch startMatch issues instead.
-      if (credential) seatCredentialStore.add(credential);
-      await refresh();
+      setActionError(null);
+      try {
+        const { credential } = await roomApi.claimSeat(sessionToken, roomID, playerID);
+        // Only set for a mid-game claim (room already in_game) -- a lobby
+        // claim has no matchID yet to scope credentials to, per spec.md's
+        // two-phase model; useSeatClients picks up lobby-claimed seats'
+        // credentials in the batch startMatch issues instead.
+        if (credential) {
+          seatCredentialStore.add(credential);
+          onSeatClaimed?.(credential);
+        }
+        await refresh();
+      } catch (err) {
+        setActionError((err as Error).message);
+      }
+    },
+    [sessionToken, roomID, refresh, onSeatClaimed],
+  );
+
+  const leaveSeat = useCallback(
+    async (playerID: string) => {
+      setActionError(null);
+      try {
+        await roomApi.leaveSeat(sessionToken, roomID, playerID);
+        await refresh();
+      } catch (err) {
+        setActionError((err as Error).message);
+      }
     },
     [sessionToken, roomID, refresh],
   );
 
   const releaseSeat = useCallback(
     async (playerID: string) => {
-      await roomApi.releaseSeat(sessionToken, roomID, playerID);
-      await refresh();
+      setActionError(null);
+      try {
+        await roomApi.releaseSeat(sessionToken, roomID, playerID);
+        await refresh();
+      } catch (err) {
+        setActionError((err as Error).message);
+      }
     },
     [sessionToken, roomID, refresh],
   );
 
   const changeGame = useCallback(
     async (gameID: string) => {
-      await roomApi.changeGame(sessionToken, roomID, gameID);
-      await refresh();
+      setActionError(null);
+      try {
+        await roomApi.changeGame(sessionToken, roomID, gameID);
+        await refresh();
+      } catch (err) {
+        setActionError((err as Error).message);
+      }
     },
     [sessionToken, roomID, refresh],
   );
 
   const startMatch = useCallback(async () => {
-    await roomApi.startMatch(sessionToken, roomID);
-    await refresh();
+    setActionError(null);
+    try {
+      await roomApi.startMatch(sessionToken, roomID);
+      await refresh();
+    } catch (err) {
+      setActionError((err as Error).message);
+    }
   }, [sessionToken, roomID, refresh]);
 
   const endMatch = useCallback(async () => {
-    await roomApi.endMatch(sessionToken, roomID);
-    await refresh();
+    setActionError(null);
+    try {
+      await roomApi.endMatch(sessionToken, roomID);
+      await refresh();
+    } catch (err) {
+      setActionError((err as Error).message);
+    }
   }, [sessionToken, roomID, refresh]);
 
-  if (error) return <div role="alert">{error}</div>;
-  if (!room) return <div>Loading room…</div>;
+  const leaveRoom = useCallback(async () => {
+    setActionError(null);
+    try {
+      await roomApi.leaveRoom(sessionToken, roomID);
+      onLeftRoom?.();
+    } catch (err) {
+      setActionError((err as Error).message);
+    }
+  }, [sessionToken, roomID, onLeftRoom]);
+
+  const kickPlayer = useCallback(
+    async (targetUserID: string) => {
+      setActionError(null);
+      try {
+        await roomApi.kickPlayer(sessionToken, roomID, targetUserID);
+        await refresh();
+      } catch (err) {
+        setActionError((err as Error).message);
+      }
+    },
+    [sessionToken, roomID, refresh],
+  );
+
+  const setAllowMultiSeat = useCallback(
+    async (allowMultiSeat: boolean) => {
+      setActionError(null);
+      try {
+        await roomApi.setAllowMultiSeat(sessionToken, roomID, allowMultiSeat);
+        await refresh();
+      } catch (err) {
+        setActionError((err as Error).message);
+      }
+    },
+    [sessionToken, roomID, refresh],
+  );
+
+  if (error) return (
+    <div className={styles.errorStatus} role="alert">
+      {error}
+    </div>
+  );
+  if (!room) return <div className={styles.status}>Loading room…</div>;
 
   const canClaim = role != null && canPerform(role, 'claimSeat');
   const canManageSeats = role != null && canPerform(role, 'manageSeats');
   const canChangeGame = role != null && canPerform(role, 'changeGame');
   const canStart = role != null && canPerform(role, 'startMatch');
   const canEnd = role != null && canPerform(role, 'endMatch');
+  const canEditSettings = role != null && canPerform(role, 'editRoomSettings');
+  const canLeaveSeat = role != null && canPerform(role, 'leaveSeat');
+  const canLeaveRoom = role != null && canPerform(role, 'leaveRoom');
+  const canKick = role != null && canPerform(role, 'kickPlayer');
+  const selectedModule = room.selectedGameID ? getGameModule(room.selectedGameID) : undefined;
 
   return (
-    <div>
-      <h1>Room {room.inviteCode}</h1>
+    <div className={styles.container}>
+      <h1 className={styles.heading}>Room {room.inviteCode}</h1>
 
-      <section aria-label="Players">
-        <h2>Players</h2>
-        <ul>
+      {actionError && (
+        <p className={styles.error} role="alert">
+          {actionError}
+        </p>
+      )}
+
+      <section className={styles.section} aria-label="Players">
+        <h2 className={styles.sectionTitle}>Players</h2>
+        <ul className={styles.list}>
           {room.members.map((m) => (
-            <li key={m.userID}>
+            <li className={styles.listItem} key={m.userID}>
               {m.userID === user.id ? 'You' : m.userID} — {m.role}
+              <span className={styles.spacer} />
+              {m.userID === user.id && canLeaveRoom && (
+                <button
+                  className={styles.buttonDanger}
+                  type="button"
+                  onClick={() => void leaveRoom()}
+                >
+                  Leave room
+                </button>
+              )}
+              {canKick && m.userID !== user.id && (
+                <button
+                  className={styles.buttonDanger}
+                  type="button"
+                  onClick={() => void kickPlayer(m.userID)}
+                >
+                  Kick
+                </button>
+              )}
             </li>
           ))}
         </ul>
       </section>
 
-      <section aria-label="Seats">
-        <h2>Seats</h2>
-        <ul>
+      <section className={styles.section} aria-label="Seats">
+        <h2 className={styles.sectionTitle}>Seats</h2>
+        <ul className={styles.list}>
           {seats.map((seat) => (
-            <li key={seat.playerID}>
-              Seat {seat.playerID}: {seat.userID === user.id ? 'You' : seat.userID}{' '}
+            <li className={styles.listItem} key={seat.playerID}>
+              Seat {seat.playerID}: {seat.userID === user.id ? 'You' : seat.userID}
               <PresenceBadge status={presence[seat.playerID] ?? 'connected'} />
+              <span className={styles.spacer} />
+              {seat.userID === user.id && canLeaveSeat && (
+                <button
+                  className={styles.buttonDanger}
+                  type="button"
+                  onClick={() => void leaveSeat(seat.playerID)}
+                >
+                  Leave seat
+                </button>
+              )}
               {canManageSeats && room.status === 'in_game' && (
-                <button type="button" onClick={() => releaseSeat(seat.playerID)}>
+                <button
+                  className={styles.buttonDanger}
+                  type="button"
+                  onClick={() => releaseSeat(seat.playerID)}
+                >
                   Release
                 </button>
               )}
             </li>
           ))}
         </ul>
-        {canClaim && room.status === 'lobby' && (
-          <ClaimSeatForm onClaim={claimSeat} />
+        {canEditSettings && room.status === 'lobby' && (
+          <label className={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              checked={room.allowMultiSeat}
+              onChange={(e) => void setAllowMultiSeat(e.target.checked)}
+            />
+            Allow multiple seats per player
+          </label>
+        )}
+        {canClaim && room.status === 'lobby' && selectedModule && (
+          <SeatPicker
+            maxPlayers={selectedModule.maxPlayers}
+            seats={seats}
+            currentUserID={user.id}
+            onClaim={claimSeat}
+          />
         )}
       </section>
 
       {room.status === 'lobby' && canChangeGame && (
-        <section aria-label="Game selection">
-          <h2>Game</h2>
+        <section className={styles.section} aria-label="Game selection">
+          <h2 className={styles.sectionTitle}>Game</h2>
           <select
+            className={styles.select}
             value={room.selectedGameID ?? ''}
             onChange={(e) => void changeGame(e.target.value)}
           >
@@ -165,45 +336,62 @@ export function RoomShell({
               </option>
             ))}
           </select>
-          {gamesCatalog.length === 0 && <p>No games available yet.</p>}
+          {gamesCatalog.length === 0 && <p className={styles.hint}>No games available yet.</p>}
         </section>
       )}
 
       {room.status === 'lobby' && canStart && room.selectedGameID && (
-        <button type="button" onClick={() => void startMatch()}>
+        <button className={styles.buttonStart} type="button" onClick={() => void startMatch()}>
           Start match
         </button>
       )}
       {room.status === 'in_game' && canEnd && (
-        <button type="button" onClick={() => void endMatch()}>
+        <button className={styles.buttonDanger} type="button" onClick={() => void endMatch()}>
           End match
         </button>
       )}
 
-      <div>{children}</div>
+      <div className={styles.boardArea}>{children}</div>
     </div>
   );
 }
 
-function ClaimSeatForm({ onClaim }: { onClaim: (playerID: string) => void }) {
-  const [playerID, setPlayerID] = useState('');
+/**
+ * Replaces the old free-text "seat number" input (feature 008): one
+ * button per seat the selected game actually has, so a member sees
+ * exactly how many seats exist and which are open at a glance. Clicking
+ * an open seat's button claims it directly via the unchanged claimSeat
+ * action.
+ */
+function SeatPicker({
+  maxPlayers,
+  seats,
+  currentUserID,
+  onClaim,
+}: {
+  maxPlayers: number;
+  seats: SeatAssignment[];
+  currentUserID: string;
+  onClaim: (playerID: string) => void;
+}) {
+  const seatByPlayerID = new Map(seats.map((s) => [s.playerID, s]));
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (playerID) onClaim(playerID);
-        setPlayerID('');
-      }}
-    >
-      <label>
-        Seat number
-        <input
-          value={playerID}
-          onChange={(e) => setPlayerID(e.target.value)}
-          placeholder="0"
-        />
-      </label>
-      <button type="submit">Claim seat</button>
-    </form>
+    <div className={styles.seatPicker}>
+      {Array.from({ length: maxPlayers }, (_, i) => String(i)).map((playerID) => {
+        const occupant = seatByPlayerID.get(playerID);
+        return (
+          <button
+            key={playerID}
+            className={occupant ? styles.seatButtonTaken : styles.seatButtonOpen}
+            type="button"
+            disabled={!!occupant}
+            onClick={() => onClaim(playerID)}
+          >
+            Seat {playerID}
+            {occupant && ` — ${occupant.userID === currentUserID ? 'You' : occupant.userID}`}
+          </button>
+        );
+      })}
+    </div>
   );
 }

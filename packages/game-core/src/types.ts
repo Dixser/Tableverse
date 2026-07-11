@@ -1,11 +1,10 @@
 import type { Ctx, Game } from 'boardgame.io';
-import type React from 'react';
 
 /**
- * Type-only reference to React's FC shape — game-core has no React runtime
- * dependency, but the GameModule contract (below) must describe the shape
- * of the board component every game plugs in, which is inherently a React
- * type. See spec/features/001-platform-core/tasks.md task 2.1.
+ * Standard boardgame.io board props, re-shaped for a game's
+ * BoardComponent. Plain data only -- game-core has no React runtime
+ * dependency; this type doesn't reference React at all, only the
+ * component that CONSUMES it (each game's own BoardComponent.tsx) does.
  */
 export interface BoardProps<G = unknown> {
   G: G;
@@ -24,13 +23,25 @@ export interface JSONSchema {
   [key: string]: unknown;
 }
 
+/**
+ * Server-safe game metadata + rules. Deliberately carries NO reference to
+ * a game's BoardComponent (or anything that could transitively import
+ * CSS/React) -- packages/server imports this catalog at real runtime
+ * (Node, not a bundler), and Node cannot resolve a `.module.css` import
+ * the way Vite can. A game's BoardComponent is registered separately, in
+ * packages/client's own board registry (see packages/game-core/src/boards.ts
+ * for the client-only entry point game board components are exported
+ * from). Discovered the hard way: feature 003 briefly put BoardComponent
+ * back on this interface, which crashed the server on boot the moment a
+ * real game's board imported a real CSS file — see
+ * spec/features/003-ui-styling/tasks.md for the incident.
+ */
 export interface GameModule<G = unknown> {
   id: string;
   displayName: string;
   minPlayers: number;
   maxPlayers: number;
   gameDef: Game<G>;
-  BoardComponent: React.FC<BoardProps<G>>;
   settingsSchema?: JSONSchema;
 }
 
@@ -47,4 +58,26 @@ export interface GameModule<G = unknown> {
  */
 export function withGameName<G>(module: GameModule<G>): Game<G> {
   return { ...module.gameDef, name: module.id };
+}
+
+/**
+ * Required shape of `Ctx.gameover` for every GameModule's `endIf`. Not
+ * enforced by boardgame.io's own types (endIf returns `any` upstream) --
+ * this is the platform's own contract on top of it, consumed generically by
+ * GameoverBanner (packages/client/src/gameMount). Tic-Tac-Toe's endIf
+ * already returns exactly this shape (see its gameDef.ts); this type
+ * formalizes it, it does not introduce it.
+ *
+ * `winner` is explicitly "one or more playerIDs" -- a single string for the
+ * common case, or an array for any future game whose endIf can produce more
+ * than one winner (e.g. a team win). Consumers must normalize to an array
+ * before use; no game today needs the array form, but message-resolution
+ * logic must not assume exactly one winner just because Tic-Tac-Toe always
+ * has one.
+ */
+export interface GameoverResult {
+  /** playerID(s) who won. Omit for a draw or any non-win end state. */
+  winner?: string | string[];
+  /** True when the match ended with no winner. */
+  draw?: boolean;
 }
