@@ -6,11 +6,14 @@ import type { RoomRepository } from './roomRepository.js';
 import type { SeatService } from './seatService.js';
 import type { UserRepository } from '../identity/userRepository.js';
 import type { SqliteStorageAdapter } from '../bgio/storage/sqliteStorageAdapter.js';
+import type { PresenceManager } from '../presence/presenceManager.js';
 import { createMatch as bgioCreateMatch } from '../bgio/vendor.js';
 
 export class RoomServiceError extends Error {}
 
 export class RoomService {
+  private presenceManager: PresenceManager | undefined;
+
   constructor(
     private readonly rooms: RoomRepository,
     private readonly seats: SeatService,
@@ -18,6 +21,16 @@ export class RoomService {
     private readonly storage: SqliteStorageAdapter,
     private readonly getGameModule: (id: string) => GameModule | undefined,
   ) {}
+
+  /**
+   * Presence is wired up on a Socket.IO server built from the HTTP server
+   * boardgame.io's own bgio.run(PORT) creates, which doesn't exist yet when
+   * RoomService itself is constructed in index.ts -- so it's attached here,
+   * after the fact, rather than taken as a constructor argument.
+   */
+  setPresenceManager(presenceManager: PresenceManager): void {
+    this.presenceManager = presenceManager;
+  }
 
   async createRoom(hostUserID: string): Promise<Room> {
     const inviteCode = await this.rooms.generateUniqueInviteCode();
@@ -290,7 +303,20 @@ export class RoomService {
       throw new RoomServiceError(`Room ${roomID} is not in_game`);
     }
     if (room.currentMatchID) {
-      await this.storage.wipe(room.currentMatchID);
+      const matchID = room.currentMatchID;
+      // Each seat's client tears down its presence socket as part of
+      // leaving the match, which otherwise looks identical to that seat
+      // dropping its connection -- clearing presence state here resets any
+      // stale badge immediately, and markMatchEnded suppresses the
+      // disconnect that's about to arrive for this matchID so it doesn't
+      // restart a grace-period ("reconnecting") timer for players who are
+      // still right here in the lobby.
+      const seats = await this.seats.getSeatsForRoom(roomID);
+      for (const seat of seats) {
+        this.presenceManager?.clearSeat(roomID, matchID, seat.playerID);
+      }
+      this.presenceManager?.markMatchEnded(matchID);
+      await this.storage.wipe(matchID);
     }
     await this.rooms.update(roomID, {
       currentMatchID: null,

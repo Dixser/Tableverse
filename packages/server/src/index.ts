@@ -85,7 +85,8 @@ async function main(): Promise<void> {
   // Presence gets its own Socket.IO namespace on a distinct engine.io path
   // (/presence-socket), sharing the same underlying HTTP server as
   // boardgame.io's own transport but never sharing its channel.
-  createPresenceSystem(appServer, undefined, CLIENT_ORIGINS);
+  const { presenceManager } = createPresenceSystem(appServer, undefined, CLIENT_ORIGINS);
+  roomService.setPresenceManager(presenceManager);
 
   // eslint-disable-next-line no-console
   console.log(`Tableverse server listening on :${PORT}`);

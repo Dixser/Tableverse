@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { createTestHarness, type TestHarness } from '../helpers/testHarness.js';
 import { dummyGameModule } from '@tableverse/game-core/testing/fixtures/dummyGame.js';
+import { PresenceManager } from '../../src/presence/presenceManager.js';
+import type { SeatStatusChangedEvent } from '@tableverse/shared';
 
 describe('RoomService', () => {
   let harness: TestHarness | undefined;
@@ -190,5 +192,39 @@ describe('RoomService', () => {
     const seatsAfter = await harness.seats.getSeatsForRoom(room.roomID);
     expect(seatsAfter).toHaveLength(1);
     expect(seatsAfter[0]?.userID).toBe('user-host');
+  });
+
+  it("endMatch clears each seat's presence state and suppresses the seat socket's subsequent disconnect, instead of leaving players falsely shown as reconnecting in the lobby", async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const room = await harness.roomService.createRoom('user-host');
+    await harness.roomService.changeGame(room.roomID, dummyGameModule.id);
+    await harness.seats.claimSeat(room.roomID, '0', 'user-host');
+    const { room: started } = await harness.roomService.startMatch(room.roomID);
+    const matchID = started.currentMatchID!;
+
+    const events: SeatStatusChangedEvent[] = [];
+    const presenceManager = new PresenceManager((e) => events.push(e));
+    harness.roomService.setPresenceManager(presenceManager);
+
+    // A real disconnect earlier in the match left the seat in grace_period.
+    presenceManager.handleDisconnect(room.roomID, matchID, '0');
+    expect(presenceManager.getStatus(matchID, '0')).toBe('grace_period');
+
+    await harness.roomService.endMatch(started.roomID);
+
+    // The stale grace_period badge is corrected immediately...
+    expect(presenceManager.getStatus(matchID, '0')).toBe('connected');
+    expect(events.at(-1)).toEqual({
+      type: 'seatStatusChanged',
+      roomID: room.roomID,
+      playerID: '0',
+      status: 'connected',
+    });
+
+    // ...and the seat's presence socket disconnecting afterward, as
+    // useSeatClients tears down the ended match client-side, must not be
+    // mistaken for a real drop and restart the grace-period timer.
+    presenceManager.handleDisconnect(room.roomID, matchID, '0');
+    expect(presenceManager.getStatus(matchID, '0')).toBe('connected');
   });
 });
