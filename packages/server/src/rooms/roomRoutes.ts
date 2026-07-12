@@ -176,16 +176,29 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
       'editRoomSettings',
     );
     if (!room) return;
-    const { allowMultiSeat } = getBody<{ allowMultiSeat?: boolean }>(ctx);
-    if (typeof allowMultiSeat !== 'boolean') {
-      ctx.status = 400;
-      ctx.body = { error: 'allowMultiSeat must be a boolean' };
-      return;
+    const { allowMultiSeat, gameSettings } = getBody<{
+      allowMultiSeat?: boolean;
+      gameSettings?: Record<string, unknown>;
+    }>(ctx);
+    let updated = room;
+    if (typeof allowMultiSeat === 'boolean') {
+      updated = await deps.roomService.setAllowMultiSeat(
+        room.roomID,
+        allowMultiSeat,
+      );
     }
-    const updated = await deps.roomService.setAllowMultiSeat(
-      room.roomID,
-      allowMultiSeat,
-    );
+    if (gameSettings !== undefined) {
+      try {
+        updated = await deps.roomService.setGameSettings(
+          room.roomID,
+          gameSettings,
+        );
+      } catch (err) {
+        ctx.status = 400;
+        ctx.body = { error: (err as RoomServiceError).message };
+        return;
+      }
+    }
     ctx.body = { room: updated };
   });
 

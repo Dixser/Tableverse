@@ -174,6 +174,48 @@ describe('RoomService', () => {
     ).rejects.toThrow(/not a member/);
   });
 
+  it('setGameSettings persists a valid settings object and returns the updated Room', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const room = await harness.roomService.createRoom('user-host');
+    await harness.roomService.changeGame(room.roomID, dummyGameModule.id);
+
+    const updated = await harness.roomService.setGameSettings(room.roomID, {
+      variant: 'b',
+    });
+    expect(updated.gameSettings).toEqual({ variant: 'b' });
+
+    const persisted = await harness.rooms.getById(room.roomID);
+    expect(persisted?.gameSettings).toEqual({ variant: 'b' });
+  });
+
+  it('setGameSettings rejects a room that is in_game, mirroring changeGame\'s lobby-only guard', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const room = await harness.roomService.createRoom('user-host');
+    await harness.roomService.changeGame(room.roomID, dummyGameModule.id);
+    await harness.rooms.update(room.roomID, { allowMultiSeat: true });
+    await harness.seats.claimSeat(room.roomID, '0', 'user-host');
+    await harness.seats.claimSeat(room.roomID, '1', 'user-host');
+    const { room: started } = await harness.roomService.startMatch(room.roomID);
+
+    await expect(
+      harness.roomService.setGameSettings(started.roomID, { variant: 'b' }),
+    ).rejects.toThrow(/in_game/);
+  });
+
+  it('setGameSettings rejects a value that fails the selected game\'s schema, leaving stored gameSettings unchanged', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const room = await harness.roomService.createRoom('user-host');
+    await harness.roomService.changeGame(room.roomID, dummyGameModule.id);
+    await harness.roomService.setGameSettings(room.roomID, { variant: 'a' });
+
+    await expect(
+      harness.roomService.setGameSettings(room.roomID, { variant: 'z' }),
+    ).rejects.toThrow();
+
+    const persisted = await harness.rooms.getById(room.roomID);
+    expect(persisted?.gameSettings).toEqual({ variant: 'a' });
+  });
+
   it('AC17: endMatch returns to lobby, clears currentMatchID, and preserves seats when the game was not changed', async () => {
     harness = await createTestHarness([dummyGameModule]);
     const room = await harness.roomService.createRoom('user-host');

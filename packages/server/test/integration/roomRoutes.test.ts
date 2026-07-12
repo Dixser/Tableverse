@@ -3,6 +3,7 @@ import { createTestHarness, type TestHarness } from '../helpers/testHarness.js';
 import { startTestServer, type TestServer } from '../helpers/testServer.js';
 import { createRoomRouter } from '../../src/rooms/roomRoutes.js';
 import { SESSION_TOKEN_HEADER } from '../../src/identity/sessionMiddleware.js';
+import { dummyGameModule } from '@tableverse/game-core/testing/fixtures/dummyGame.js';
 
 async function createSessionedUser(harness: TestHarness, displayName: string) {
   return harness.users.createUser(displayName);
@@ -159,6 +160,114 @@ describe('room routes: permission enforcement', () => {
     const seats = await harness.seats.getSeatsForRoom(room.roomID);
     expect(seats).toHaveLength(2);
     expect(seats.every((s) => s.userID === host.user.id)).toBe(true);
+  });
+
+  it('POST /:roomID/settings validates gameSettings against the selected game\'s schema: valid input persists (200), invalid input is rejected (400, unchanged), a non-host is rejected (403)', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const router = createRoomRouter({
+      users: harness.users,
+      rooms: harness.rooms,
+      seats: harness.seats,
+      roomService: harness.roomService,
+    });
+    server = await startTestServer(router);
+    const host = await createSessionedUser(harness, 'HostSettings');
+    const member = await createSessionedUser(harness, 'MemberSettings');
+
+    const createRes = await fetch(`${server.baseUrl}/api/rooms`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    const { room } = (await createRes.json()) as { room: { roomID: string; inviteCode: string } };
+
+    await fetch(`${server.baseUrl}/api/rooms/join`, {
+      method: 'POST',
+      headers: {
+        [SESSION_TOKEN_HEADER]: member.sessionToken,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ inviteCode: room.inviteCode }),
+    });
+
+    await harness.roomService.changeGame(room.roomID, dummyGameModule.id);
+
+    // Non-host is rejected before any state change.
+    const memberRes = await fetch(
+      `${server.baseUrl}/api/rooms/${room.roomID}/settings`,
+      {
+        method: 'POST',
+        headers: {
+          [SESSION_TOKEN_HEADER]: member.sessionToken,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ gameSettings: { variant: 'b' } }),
+      },
+    );
+    expect(memberRes.status).toBe(403);
+
+    // Invalid input (outside the declared enum) is rejected, storage unchanged.
+    const invalidRes = await fetch(
+      `${server.baseUrl}/api/rooms/${room.roomID}/settings`,
+      {
+        method: 'POST',
+        headers: {
+          [SESSION_TOKEN_HEADER]: host.sessionToken,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ gameSettings: { variant: 'not-a-real-variant' } }),
+      },
+    );
+    expect(invalidRes.status).toBe(400);
+    const afterInvalid = await harness.rooms.getById(room.roomID);
+    expect(afterInvalid?.gameSettings).toEqual({});
+
+    // Valid input persists and is reflected in the response.
+    const validRes = await fetch(
+      `${server.baseUrl}/api/rooms/${room.roomID}/settings`,
+      {
+        method: 'POST',
+        headers: {
+          [SESSION_TOKEN_HEADER]: host.sessionToken,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ gameSettings: { variant: 'b' } }),
+      },
+    );
+    expect(validRes.status).toBe(200);
+    const { room: updatedRoom } = (await validRes.json()) as {
+      room: { gameSettings: Record<string, unknown> };
+    };
+    expect(updatedRoom.gameSettings).toEqual({ variant: 'b' });
+    const afterValid = await harness.rooms.getById(room.roomID);
+    expect(afterValid?.gameSettings).toEqual({ variant: 'b' });
+  });
+
+  it('POST /:roomID/settings still accepts the legacy allowMultiSeat-only body shape unchanged (no gameSettings key present)', async () => {
+    const { harness, server } = await setup();
+    const host = await createSessionedUser(harness, 'HostLegacy');
+
+    const createRes = await fetch(`${server.baseUrl}/api/rooms`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    const { room } = (await createRes.json()) as { room: { roomID: string } };
+
+    const settingsRes = await fetch(
+      `${server.baseUrl}/api/rooms/${room.roomID}/settings`,
+      {
+        method: 'POST',
+        headers: {
+          [SESSION_TOKEN_HEADER]: host.sessionToken,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ allowMultiSeat: true }),
+      },
+    );
+    expect(settingsRes.status).toBe(200);
+    const { room: updatedRoom } = (await settingsRes.json()) as {
+      room: { allowMultiSeat: boolean };
+    };
+    expect(updatedRoom.allowMultiSeat).toBe(true);
   });
 
   it('rejects a host calling /leave with 403 (the host cannot leave the room)', async () => {

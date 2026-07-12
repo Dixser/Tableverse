@@ -69,6 +69,13 @@ export const dummyGameModule: GameModule<DummyG> = {
   minPlayers: 2,
   maxPlayers: 4,
   gameDef: dummyGameDef,
+  settingsSchema: {
+    type: 'object',
+    properties: {
+      variant: { type: 'string', enum: ['a', 'b'], default: 'a' },
+    },
+    required: ['variant'],
+  },
 };
 
 /**

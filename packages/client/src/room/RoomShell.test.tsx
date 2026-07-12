@@ -8,6 +8,34 @@ vi.mock('../presence/usePresence.js', () => ({
   usePresence: () => ({}),
 }));
 
+const SETTINGS_FIXTURE_GAME_ID = 'settings-fixture-v1';
+
+vi.mock('@tableverse/game-core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tableverse/game-core')>();
+  return {
+    ...actual,
+    getGameModule: (id: string) => {
+      if (id === SETTINGS_FIXTURE_GAME_ID) {
+        return {
+          id: SETTINGS_FIXTURE_GAME_ID,
+          displayName: 'Settings Fixture',
+          minPlayers: 2,
+          maxPlayers: 2,
+          gameDef: {},
+          settingsSchema: {
+            type: 'object',
+            properties: {
+              edition: { type: 'string', enum: ['normal', 'classic'], default: 'normal' },
+            },
+            required: ['edition'],
+          },
+        };
+      }
+      return actual.getGameModule(id);
+    },
+  };
+});
+
 function makeRoom(overrides: Partial<Room> = {}): Room {
   return {
     roomID: 'room-1',
@@ -546,5 +574,55 @@ describe('RoomShell', () => {
 
     await waitFor(() => screen.getByRole('alert'));
     expect(screen.getByRole('alert')).toHaveTextContent('room not found');
+  });
+
+  it('renders no settings form when the selected game has no settingsSchema (tictactoe-v1)', async () => {
+    vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+      room: makeRoom({ selectedGameID: 'tictactoe-v1' }),
+      seats: [],
+      myCredentials: [],
+    });
+
+    render(
+      <RoomShell
+        user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+        sessionToken="tok"
+        roomID="room-1"
+      />,
+    );
+
+    await waitFor(() => screen.getByText('Room ABC123'));
+    expect(screen.queryByText('Game settings')).not.toBeInTheDocument();
+  });
+
+  it('renders a settings form for a game with a settingsSchema, and submitting it calls roomApi.setGameSettings with the schema-declared fields', async () => {
+    vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+      room: makeRoom({ selectedGameID: SETTINGS_FIXTURE_GAME_ID, gameSettings: { edition: 'normal' } }),
+      seats: [],
+      myCredentials: [],
+    });
+    const setGameSettings = vi
+      .spyOn(roomApi, 'setGameSettings')
+      .mockResolvedValue({ room: makeRoom({ selectedGameID: SETTINGS_FIXTURE_GAME_ID, gameSettings: { edition: 'classic' } }) });
+
+    render(
+      <RoomShell
+        user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+        sessionToken="tok"
+        roomID="room-1"
+      />,
+    );
+
+    await waitFor(() => screen.getByText('Room ABC123'));
+    expect(screen.getByText('Game settings')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'edition' }), {
+      target: { value: 'classic' },
+    });
+    fireEvent.click(screen.getByText('Save settings'));
+
+    await waitFor(() =>
+      expect(setGameSettings).toHaveBeenCalledWith('tok', 'room-1', { edition: 'classic' }),
+    );
   });
 });
