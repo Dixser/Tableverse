@@ -14,8 +14,8 @@ carrying two kinds of entries:
    defines the contract a `GameModule` uses to produce them (see plan.md's
    `GameLogEntry`/`G.log` design) and renders whatever a game populates.
    No shipped game populates it yet — Tic-Tac-Toe needs zero changes,
-   exactly as feature 009/010 needed none; feature 013 (Love Letter) is the
-   first game to actually emit any.
+   exactly as feature 009/010 needed none; feature 014 (Love Letter's
+   rules engine) is the first game to actually emit any.
 
 The one behavioral rule this feature is built around, per explicit user
 request: **a message sent by a spectator (a room member holding no seat at
@@ -57,8 +57,8 @@ Called out up front since they shape every acceptance criterion below.
   carries what's already public. A card revealed to exactly one player
   is that game's own `BoardComponent`'s responsibility to display,
   filtered the same `playerView` way every other hidden field already is
-  — see plan.md's "Public/private split" and feature 013's specs for the
-  concrete Love Letter case this generalizes from.
+  — see plan.md's "Public/private split" and features 014/015's specs for
+  the concrete Love Letter case this generalizes from.
 
 ## User stories
 
@@ -168,8 +168,8 @@ browser sessions.
   `BoardComponent`, per "Resolved design decisions." This feature adds no
   new channel for secret data.
 - Actually producing any `G.log` entries — this feature defines and
-  consumes the contract; feature 013 (Love Letter) is the first game to
-  populate it.
+  consumes the contract; feature 014 (Love Letter's rules engine) is the
+  first game to populate it.
 - A "who's currently online in chat" presence indicator — the existing
   `/presence` seat-status badges (feature 001) are unaffected and unrelated;
   this feature does not add a parallel presence concept for chat.

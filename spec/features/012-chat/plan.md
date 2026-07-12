@@ -83,7 +83,7 @@ already must be (tech-stack.md's "Hidden information rule", the
 conformance suite's `secretKeys` check). It is structurally impossible for
 such a field to leak into chat, because chat only ever reads the `log`
 field — a different field, always public by the reserved-field-name
-contract above. Feature 013's own specs define the concrete shape Love
+contract above. Feature 014's own spec defines the concrete shape Love
 Letter uses for this (its own `G.privateReveals`-shaped field, or
 equivalent); this feature does not need to know that shape, only that
 `log` is never it.
@@ -257,7 +257,7 @@ New translation keys under a `chat.*` namespace (feature 010's existing
 `en`/`es` resource files) for the panel's own chrome (input placeholder,
 send button, "spectator" mode hint if any). Game-status message keys
 themselves (e.g. `loveLetter.log.eliminated`) are added by whichever game
-defines them — feature 013, not this feature — since this feature never
+defines them — feature 014, not this feature — since this feature never
 emits any itself (spec.md's explicit non-goal).
 
 ## Testing / verification strategy
@@ -282,7 +282,7 @@ emits any itself (spec.md's explicit non-goal).
   works identically with zero `G.log` activity, since Tic-Tac-Toe never
   populates it) confirms the free-text filtering rule end-to-end; the
   `G.log` rendering path itself can only be manually verified once
-  feature 013 ships a game that populates it.
+  feature 014 ships a game that populates it.
 
 ## Open risks
 
