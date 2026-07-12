@@ -81,3 +81,27 @@ export interface GameoverResult {
   /** True when the match ended with no winner. */
   draw?: boolean;
 }
+
+/**
+ * One system-generated, translatable game-status entry. A game's own moves
+ * may append these to a reserved `log` field on G (G['log']: GameLogEntry[])
+ * to describe public events (a card played, a player eliminated) in the
+ * shared chat feed -- see spec/features/012-chat/plan.md for why this lives
+ * in G itself rather than being pushed through a side channel: G is the
+ * only replay-safe medium boardgame.io moves have.
+ *
+ * Reserved field name: any GameModule that wants status messages in chat
+ * must name the field exactly `log` on its G. Append-only -- entries are
+ * never removed or mutated once pushed, so the client can diff by array
+ * length to find what's new since the last render. Never contains
+ * anything a playerView would need to hide -- by construction this field
+ * must only ever hold PUBLIC information, since (unlike a per-player
+ * secret field) it is never filtered out of any player's or spectator's
+ * view.
+ */
+export interface GameLogEntry {
+  /** i18next translation key, e.g. "loveLetter.log.eliminated". */
+  key: string;
+  /** Interpolation params for the translation (i18next's `t(key, params)`). */
+  params?: Record<string, string | number>;
+}

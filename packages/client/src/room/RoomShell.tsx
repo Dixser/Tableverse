@@ -11,6 +11,7 @@ import { gamesCatalog, getGameModule } from '@tableverse/game-core';
 import { roomApi } from '../api/roomApi.js';
 import { usePresence } from '../presence/usePresence.js';
 import { seatCredentialStore } from '../seats/seatCredentialStore.js';
+import { ChatPanel } from '../chat/ChatPanel.js';
 import { PresenceBadge } from './PresenceBadge.js';
 import styles from './RoomShell.module.css';
 
@@ -46,6 +47,10 @@ export interface RoomShellProps {
    * sets them on the way in.
    */
   onLeftRoom?: () => void;
+  /** Raw G.log if present on the active match's G -- unknown, not
+   * GameLogEntry[], since a non-conforming game's G shouldn't crash the
+   * panel (same defensive posture as GameoverBanner's `gameover: unknown`). */
+  gameLog?: unknown;
 }
 
 /**
@@ -61,6 +66,7 @@ export function RoomShell({
   onRoomUpdate,
   onSeatClaimed,
   onLeftRoom,
+  gameLog,
 }: RoomShellProps) {
   const { t } = useTranslation();
   const [room, setRoom] = useState<Room | null>(null);
@@ -360,6 +366,8 @@ export function RoomShell({
       )}
 
       <div className={styles.boardArea}>{children}</div>
+
+      <ChatPanel roomID={roomID} sessionToken={sessionToken} gameLog={gameLog} />
     </div>
   );
 }
