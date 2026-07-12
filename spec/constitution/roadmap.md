@@ -196,7 +196,7 @@ incident; see this feature's own spec.md for why). Deliberately scoped to
 the **contract-required plumbing only** — it does not attempt a shared
 board UI kit or any rules template narrower than "a trivial valid game,"
 both of which stay deferred until a second and third real game exist to
-generalize from (see 013, below). Depends only on feature 001's existing
+generalize from (see 015, below). Depends only on feature 001's existing
 `GameModule` contract and conformance suite — no new platform interface,
 no changes to any existing game.
 
@@ -212,34 +212,69 @@ defeated", "Player C chooses to pass") — with spectator messages filtered
 out of seated players' view, so a spectator's commentary can never leak
 strategy-relevant chatter to someone still playing. Depends on feature
 001's room/member model and feature 005's spectator model; produces the
-system-status-message channel that feature 013 (Love Letter) is the first
-game to actually populate with real per-move messages.
+system-status-message channel that feature 014 (Love Letter's rules
+engine) is the first game to actually populate with real per-move
+messages.
 
-## 013 — Love Letter
+## 013 — Generic Game Settings Form
 
-Small hidden-information card game — the next step up in complexity
-specifically to exercise `playerView` filtering and the spectator
-hidden-information risk called out in tech-stack.md, which Tic-Tac-Toe (no
-hidden information) cannot validate. **Also the natural trigger point for
-a genre-shared board UI kit** (hand tray, opponent card-count badges)
-deferred by feature 009 — once Love Letter exists as a second real
-`BoardComponent`, shared pieces should be *extracted* from the two real
-implementations, not designed speculatively ahead of them. Would also be
-the first real test of feature 010's i18n contract against actual in-board
-game text, and the first game whose per-move results are announced through
-feature 012's chat system-message channel (e.g. a card-use message split
-into a public "Player A used the Baron on Player B" broadcast plus a
-private reveal to Player A only — see this feature's own specs for the
-public/private split). Two rules editions (Normal, Classic) — see this
-feature's own specs for the versioning-heuristic decision on whether that's
-one catalog entry with an `edition` setting or two. Depends on feature 001
-(seats/rooms), feature 011 (scaffolded from its skeleton), and feature 012
-(chat channel for status messages).
+Not part of the original dependency-ordered sequence — surfaced while
+planning Love Letter (below), not requested for its own sake. Closes a
+real, previously-invisible gap: `GameModule.settingsSchema` has existed
+since feature 001 and tech-stack.md documents its contract in full, but
+no code — server or client — ever implemented it (`POST /:roomID/settings`
+only ever handled `allowMultiSeat`; no client component ever rendered a
+settings form). Adds a small hand-written validator against the platform's
+already-narrow `JSONSchema` subset (shared from `game-core` so server and
+client can't validate a submission differently), the missing
+`RoomService.setGameSettings` + route wiring, and a generic
+`SettingsForm` component that renders one control per schema property
+(flat `string`/`enum`/`boolean`/`number` only — no nesting). This is what
+this roadmap's old placeholder ("014 — TBD: a game with a configurable
+settingsSchema... to exercise the generic settings-form rendering path")
+described, pulled forward because Love Letter turns out to need it, not
+deferred further. Depends only on feature 001's existing `Room`/route
+machinery — no new platform interface beyond `settingsSchema`, which
+already existed.
+
+## 014 — Love Letter: Rules Engine
+
+The `game-core` half of Love Letter — a small hidden-information card
+game, chosen as the next step up in complexity specifically to exercise
+`playerView` filtering and the spectator hidden-information risk called
+out in tech-stack.md, which Tic-Tac-Toe (no hidden information) cannot
+validate. Two rules editions, Normal (21-card deck, 2-6 players) and
+Classic (16-card deck, 2-4 players, a strict subset of Normal's card pool)
+— per tech-stack.md's versioning heuristic, modeled as **one** catalog
+entry (`loveletter-v1`) with an `edition` setting, since Classic's deck is
+a subset of Normal's and neither changes turn structure, phases, or the
+round/token win condition. Depends on feature 011 (scaffolded from its
+skeleton), feature 012 (emits real `G.log` status-message entries into
+the chat channel for the first time), and feature 013 (the `edition`
+setting is this feature's first real settings-form consumer).
+
+## 015 — Love Letter: Board UI, Round Tracking & Private Reveals
+
+The `packages/client` half of Love Letter, depending on 014's rules engine
+existing first (its `BoardProps<LoveLetterG>` shape isn't final until
+then). Hand display, target-selection UI for cards that need one, the
+per-player round-wins-so-far display (players must be able to see this at
+any time, per explicit user request), and the public/private reveal split
+(e.g. a Baron comparison's result reaches every player as a public
+`G.log`-driven chat message — "Player A used the Baron on Player B" — but
+the actual compared card value reaches only Player A, rendered by this
+`BoardComponent` from a `playerView`-filtered private field, never chat).
+**Also the natural trigger point for a genre-shared board UI kit** (hand
+tray, opponent card-count badges) deferred by feature 009 — once this
+ships as a second real `BoardComponent`, shared pieces should be
+*extracted* from the two real implementations, not designed speculatively
+ahead of them. Also the first real test of feature 010's i18n contract
+against actual in-board game text. Depends on feature 014.
 
 ## Later candidates (placeholders — not specced yet)
 
-- **014 — TBD**: a game with a configurable `settingsSchema` for a
-  non-edition setting (e.g. a house rule or turn timer) — Love Letter's
-  `edition` field (013) exercises the settings-form path for a fixed enum
-  choice, but not e.g. a numeric/timer-shaped setting, so this placeholder
-  remains open for whichever future game needs that shape first.
+- **016 — TBD**: a game with a configurable `settingsSchema` field shaped
+  like a house rule or turn timer (a `number`, not an `enum`) — feature
+  013's generic form supports this shape already, but nothing has
+  exercised it end-to-end yet; Love Letter's `edition` (014) only proves
+  the `enum` case.

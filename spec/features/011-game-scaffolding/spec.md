@@ -148,11 +148,11 @@ corrupt or conflict with work in progress anywhere else in the repo.
 - Any rules-engine template narrower than "a trivial valid GameModule"
   (e.g. a "card game template" or "phase-based template") — there is only
   one real game to generalize from today; a second template variant is
-  premature until Love Letter (feature 013+) ships and a real pattern
+  premature until Love Letter (features 014/015) ships and a real pattern
   exists to extract.
 - A settings-schema template/example — no shipped game uses
-  `settingsSchema` yet (see roadmap.md's still-open 012 placeholder,
-  renumbered by this same planning pass — see roadmap.md).
+  `settingsSchema` yet (see feature 013, the generic settings-form
+  feature this same planning pass added to the roadmap).
 - Removing or renumbering an existing game module (this tool only adds).
 - Any interactive/prompted CLI UX (inquirer-style prompts). Plain
   positional CLI arguments only, consistent with this repo's existing

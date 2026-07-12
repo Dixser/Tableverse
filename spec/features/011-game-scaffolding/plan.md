@@ -320,7 +320,7 @@ but never written by this feature's own code.
    flagged for a couple of extra unit-test cases in `new-game.test.mjs`
    beyond the single-word `loveletters` example used throughout this plan,
    since a hyphenated id is the more likely real input (e.g. Love Letter
-   itself, feature 013).
+   itself, feature 014).
 2. **No devDependency currently runs standalone Node scripts under test**
    — `new-game.test.mjs`'s exact test runner is left as an implementation-
    time decision (see Testing strategy) rather than locked here, to avoid
