@@ -180,26 +180,66 @@ existing theme-toggle precedent (structural template, not a code
 dependency) and feature 009's `GameoverBanner` (the component being
 translated) — no new platform interface.
 
+## 011 — Game Module Scaffolding
+
+Not part of the original dependency-ordered sequence — inserted by explicit
+user request, ahead of Love Letter (below), specifically to make adding
+Love Letter (and every game after it) start from a generated, compiling
+skeleton instead of hand-copied boilerplate. Adds a template
+(`packages/game-core/templates/new-game/`) and a small generator script
+(`npm run new-game -- <id> "<Display Name>"`) that scaffolds the five files
+every `GameModule` needs and prints a checklist of the three registration
+points a new module must be wired into by hand (`gamesCatalog.ts`,
+`boards.ts`, `boardRegistry.ts` — three, not the one file feature 002's
+entry above describes, per a real split introduced by a feature 003
+incident; see this feature's own spec.md for why). Deliberately scoped to
+the **contract-required plumbing only** — it does not attempt a shared
+board UI kit or any rules template narrower than "a trivial valid game,"
+both of which stay deferred until a second and third real game exist to
+generalize from (see 013, below). Depends only on feature 001's existing
+`GameModule` contract and conformance suite — no new platform interface,
+no changes to any existing game.
+
+## 012 — Room & Match Chat
+
+Not part of the original dependency-ordered sequence — inserted by explicit
+user request. Reverses mission.md's original MVP exclusion ("Spectator
+chat or any chat system") now that the platform has enough of a
+room/seat/spectator model (features 001, 005) to make chat worth building
+against. One merged chat channel per room, carrying both free-text player
+messages and system-generated game-status messages (e.g. "Player A is
+defeated", "Player C chooses to pass") — with spectator messages filtered
+out of seated players' view, so a spectator's commentary can never leak
+strategy-relevant chatter to someone still playing. Depends on feature
+001's room/member model and feature 005's spectator model; produces the
+system-status-message channel that feature 013 (Love Letter) is the first
+game to actually populate with real per-move messages.
+
+## 013 — Love Letter
+
+Small hidden-information card game — the next step up in complexity
+specifically to exercise `playerView` filtering and the spectator
+hidden-information risk called out in tech-stack.md, which Tic-Tac-Toe (no
+hidden information) cannot validate. **Also the natural trigger point for
+a genre-shared board UI kit** (hand tray, opponent card-count badges)
+deferred by feature 009 — once Love Letter exists as a second real
+`BoardComponent`, shared pieces should be *extracted* from the two real
+implementations, not designed speculatively ahead of them. Would also be
+the first real test of feature 010's i18n contract against actual in-board
+game text, and the first game whose per-move results are announced through
+feature 012's chat system-message channel (e.g. a card-use message split
+into a public "Player A used the Baron on Player B" broadcast plus a
+private reveal to Player A only — see this feature's own specs for the
+public/private split). Two rules editions (Normal, Classic) — see this
+feature's own specs for the versioning-heuristic decision on whether that's
+one catalog entry with an `edition` setting or two. Depends on feature 001
+(seats/rooms), feature 011 (scaffolded from its skeleton), and feature 012
+(chat channel for status messages).
+
 ## Later candidates (placeholders — not specced yet)
 
-These are provisional next games, listed only to sanity-check that the
-platform core and the versioning heuristic in tech-stack.md generalize
-beyond Tic-Tac-Toe. Each will get its own spec → plan → tasks cycle when
-its turn comes, including an explicit up-front decision (per the versioning
-heuristic) on whether it's a new catalog entry or an `edition` of an
-existing one.
-
-- **011 — Love Letter** (candidate): small hidden-information card game.
-  Chosen as the next step up in complexity specifically to exercise
-  `playerView` filtering and the spectator hidden-information risk called
-  out in tech-stack.md, which Tic-Tac-Toe (no hidden information) cannot
-  validate. **Also the natural trigger point for a genre-shared board UI
-  kit** (hand tray, opponent card-count badges) deferred by feature 009 —
-  once Love Letter exists as a second real `BoardComponent`, shared pieces
-  should be *extracted* from the two real implementations, not designed
-  speculatively ahead of them. Would also be the first real test of
-  feature 010's i18n contract against actual in-board game text, since
-  Tic-Tac-Toe never exercised it.
-- **012 — TBD**: a game with a configurable `settingsSchema` (e.g. a house
-  rule or turn timer), to exercise the generic settings-form rendering
-  path that neither Tic-Tac-Toe nor Love Letter necessarily requires.
+- **014 — TBD**: a game with a configurable `settingsSchema` for a
+  non-edition setting (e.g. a house rule or turn timer) — Love Letter's
+  `edition` field (013) exercises the settings-form path for a fixed enum
+  choice, but not e.g. a numeric/timer-shaped setting, so this placeholder
+  remains open for whichever future game needs that shape first.
