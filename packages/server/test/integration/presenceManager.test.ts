@@ -72,4 +72,39 @@ describe('PresenceManager', () => {
     expect(manager.getStatus('match-1', '0')).toBe('connected');
     expect(manager.getStatus('match-1', '1')).toBe('grace_period');
   });
+
+  it('clearSeat resets a stale grace_period/released status back to connected and broadcasts it', () => {
+    const events: SeatStatusChangedEvent[] = [];
+    const manager = new PresenceManager((e) => events.push(e), 60_000);
+
+    manager.handleDisconnect('room-1', 'match-1', '0');
+    manager.clearSeat('room-1', 'match-1', '0');
+
+    expect(manager.getStatus('match-1', '0')).toBe('connected');
+    expect(events.map((e) => e.status)).toEqual(['grace_period', 'connected']);
+
+    // The cancelled grace-period timer must not fire after clearSeat.
+    vi.advanceTimersByTime(60_000);
+    expect(manager.getStatus('match-1', '0')).toBe('connected');
+    expect(events).toHaveLength(2);
+  });
+
+  it('markMatchEnded suppresses a disconnect for that matchID so it does not restart the grace-period timer', () => {
+    const events: SeatStatusChangedEvent[] = [];
+    const manager = new PresenceManager((e) => events.push(e), 60_000);
+
+    // Mirrors RoomService.endMatch: clear any stale status, mark the match
+    // ended, and only THEN does the client's seat socket disconnect arrive
+    // (as a side effect of tearing down the ended match).
+    manager.clearSeat('room-1', 'match-1', '0');
+    manager.markMatchEnded('match-1');
+    manager.handleDisconnect('room-1', 'match-1', '0');
+
+    expect(manager.getStatus('match-1', '0')).toBe('connected');
+    expect(events.map((e) => e.status)).toEqual(['connected']);
+
+    // A genuinely different match is unaffected by another match's ended marker.
+    manager.handleDisconnect('room-1', 'match-2', '0');
+    expect(manager.getStatus('match-2', '0')).toBe('grace_period');
+  });
 });
