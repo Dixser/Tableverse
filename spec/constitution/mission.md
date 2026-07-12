@@ -45,7 +45,6 @@ game solo by controlling every seat.
   session only.
 - Cross-device reconnection (resuming a seat from a different device/browser
   than the one that claimed it).
-- Spectator chat or any chat system.
 - Ranking, ELO, stats tracking, or leaderboards.
 - Public matchmaking or a public room directory/browser — rooms are joined
   only via a private invite code.
@@ -53,6 +52,11 @@ game solo by controlling every seat.
   fine-grained per-action custom roles.
 - Mobile native apps — web only, responsive is a nice-to-have, not a
   requirement.
+- Chat moderation, rate-limiting, or message persistence beyond a single
+  server process's lifetime (chat itself is in scope as of feature 012 —
+  see roadmap.md — this exclusion covers only its moderation/durability
+  surface, consistent with the trust level already extended to every
+  other room action for this target audience).
 - Any game whose core mechanic depends on symmetric-fairness, real-time
   reflex racing (see tech-stack.md for why this is a genuine engine
   limitation, not just an MVP cut).
