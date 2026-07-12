@@ -62,5 +62,10 @@
     "othersWin_one": "{{names}} wins!",
     "othersWin_other": "{{names}} win!",
     "fallback": "Game over."
+  },
+  "chat": {
+    "title": "Chat",
+    "inputPlaceholder": "Type a message…",
+    "send": "Send"
   }
 }

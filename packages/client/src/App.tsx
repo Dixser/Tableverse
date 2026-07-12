@@ -176,6 +176,9 @@ function ActiveRoom({
       onRoomUpdate={handleRoomUpdate}
       onSeatClaimed={(credential) => seatClients.addSeat(roomID, credential)}
       onLeftRoom={onLeftRoom}
+      gameLog={
+        seatClients.boardProps?.G && (seatClients.boardProps.G as { log?: unknown }).log
+      }
     >
       <SeatSwitcher
         seatIDs={seatClients.seatIDs}

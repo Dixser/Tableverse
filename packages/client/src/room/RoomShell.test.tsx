@@ -8,6 +8,10 @@ vi.mock('../presence/usePresence.js', () => ({
   usePresence: () => ({}),
 }));
 
+vi.mock('../chat/useChat.js', () => ({
+  useChat: () => ({ messages: [], sendMessage: vi.fn() }),
+}));
+
 function makeRoom(overrides: Partial<Room> = {}): Room {
   return {
     roomID: 'room-1',

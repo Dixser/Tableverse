@@ -13,6 +13,7 @@ import { createRoomRouter } from './rooms/roomRoutes.js';
 import { SqliteStorageAdapter } from './bgio/storage/sqliteStorageAdapter.js';
 import { createBgioServer } from './bgio/serverConfig.js';
 import { createPresenceSystem } from './presence/presenceChannel.js';
+import { createChatSystem } from './chat/chatChannel.js';
 
 const PORT = Number(process.env.PORT ?? 8000);
 const DB_STORAGE = process.env.DB_STORAGE ?? './tableverse.sqlite3';
@@ -86,6 +87,10 @@ async function main(): Promise<void> {
   // (/presence-socket), sharing the same underlying HTTP server as
   // boardgame.io's own transport but never sharing its channel.
   createPresenceSystem(appServer, undefined, CLIENT_ORIGINS);
+
+  // Chat gets its own namespace too (/chat-socket), for the same reason --
+  // never sharing a channel with boardgame.io's own state sync or presence.
+  createChatSystem(appServer, { users, rooms, seats }, CLIENT_ORIGINS);
 
   // eslint-disable-next-line no-console
   console.log(`Tableverse server listening on :${PORT}`);
