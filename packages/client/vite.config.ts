@@ -27,6 +27,7 @@ export default defineConfig({
       '/api': { target: BACKEND, changeOrigin: true },
       '/socket.io': { target: BACKEND, changeOrigin: true, ws: true },
       '/presence-socket': { target: BACKEND, changeOrigin: true, ws: true },
+      '/chat-socket': { target: BACKEND, changeOrigin: true, ws: true },
     },
   },
 });
