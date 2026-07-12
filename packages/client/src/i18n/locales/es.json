@@ -38,6 +38,10 @@
       "member": "Miembro"
     }
   },
+  "settingsForm": {
+    "title": "Ajustes del juego",
+    "save": "Guardar ajustes"
+  },
   "languageToggle": {
     "ariaLabel": "Idioma"
   },

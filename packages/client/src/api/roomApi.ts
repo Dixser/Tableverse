@@ -106,6 +106,17 @@ export const roomApi = {
     });
   },
 
+  setGameSettings(
+    sessionToken: string,
+    roomID: string,
+    gameSettings: Record<string, unknown>,
+  ): Promise<{ room: Room }> {
+    return request(`/api/rooms/${roomID}/settings`, sessionToken, {
+      method: 'POST',
+      body: JSON.stringify({ gameSettings }),
+    });
+  },
+
   changeGame(
     sessionToken: string,
     roomID: string,

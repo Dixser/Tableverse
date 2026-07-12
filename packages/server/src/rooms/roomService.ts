@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid';
 import type { Room, SeatAssignment, SeatCredential } from '@tableverse/shared';
 import type { Server as BgioServer } from 'boardgame.io';
 import type { GameModule } from '@tableverse/game-core';
+import { validateGameSettings } from '@tableverse/game-core';
 import type { RoomRepository } from './roomRepository.js';
 import type { SeatService } from './seatService.js';
 import type { UserRepository } from '../identity/userRepository.js';
@@ -81,6 +82,46 @@ export class RoomService {
     const room = await this.mustGetRoom(roomID);
     await this.rooms.update(roomID, { allowMultiSeat });
     return { ...room, allowMultiSeat };
+  }
+
+  /**
+   * Persists validated game settings, per feature 013's spec.md story 1.
+   * Lobby-only, mirroring changeGame's guard: settings that shaped the
+   * current match can't be changed out from under it mid-match (story 3).
+   * A GameModule with no settingsSchema validates against `{ type:
+   * 'object' }` (no declared properties/required), so any submitted key is
+   * rejected as unknown -- a game with no schema accepts no settings.
+   */
+  async setGameSettings(
+    roomID: string,
+    gameSettings: Record<string, unknown>,
+  ): Promise<Room> {
+    const room = await this.mustGetRoom(roomID);
+    if (room.status !== 'lobby') {
+      throw new RoomServiceError(
+        `Cannot edit game settings while room ${roomID} is ${room.status}`,
+      );
+    }
+    if (!room.selectedGameID) {
+      throw new RoomServiceError(`Room ${roomID} has no selected game`);
+    }
+    const gameModule = this.getGameModule(room.selectedGameID);
+    if (!gameModule) {
+      throw new RoomServiceError(
+        `Unknown game ${room.selectedGameID} for room ${roomID}`,
+      );
+    }
+    const errors = validateGameSettings(
+      gameModule.settingsSchema ?? { type: 'object' },
+      gameSettings,
+    );
+    if (errors.length > 0) {
+      throw new RoomServiceError(
+        `Invalid game settings: ${errors.map((e) => e.message).join('; ')}`,
+      );
+    }
+    await this.rooms.update(roomID, { gameSettings });
+    return { ...room, gameSettings };
   }
 
   /**

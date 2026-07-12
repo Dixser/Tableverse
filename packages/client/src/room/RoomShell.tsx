@@ -13,6 +13,7 @@ import { usePresence } from '../presence/usePresence.js';
 import { seatCredentialStore } from '../seats/seatCredentialStore.js';
 import { ChatPanel } from '../chat/ChatPanel.js';
 import { PresenceBadge } from './PresenceBadge.js';
+import { SettingsForm } from './SettingsForm.js';
 import styles from './RoomShell.module.css';
 
 export interface RoomShellProps {
@@ -220,6 +221,19 @@ export function RoomShell({
     [sessionToken, roomID, refresh],
   );
 
+  const updateGameSettings = useCallback(
+    async (next: Record<string, unknown>) => {
+      setActionError(null);
+      try {
+        await roomApi.setGameSettings(sessionToken, roomID, next);
+        await refresh();
+      } catch (err) {
+        setActionError((err as Error).message);
+      }
+    },
+    [sessionToken, roomID, refresh],
+  );
+
   if (error) return (
     <div className={styles.errorStatus} role="alert">
       {error}
@@ -352,6 +366,14 @@ export function RoomShell({
             <p className={styles.hint}>{t('room.noGamesAvailable')}</p>
           )}
         </section>
+      )}
+
+      {canEditSettings && room.status === 'lobby' && selectedModule?.settingsSchema && (
+        <SettingsForm
+          schema={selectedModule.settingsSchema}
+          value={room.gameSettings}
+          onSubmit={(next) => void updateGameSettings(next)}
+        />
       )}
 
       {room.status === 'lobby' && canStart && room.selectedGameID && (
