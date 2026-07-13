@@ -18,10 +18,14 @@ coverage/
 *.sqlite
 *.db
 
-# Environment variables
-.env
-.env.local
-.env.*.local
+# Environment variables -- ignore every real env file, whatever the
+# environment name (.env, .env.production, .env.staging, ...), at any
+# depth (e.g. packages/client/.env.production). Keep the checked-in
+# .example templates: they hold placeholder values only, documenting
+# which keys a real .env file needs (see .env.example's own header).
+.env*
+!.env.example
+!.env.*.example
 
 # Logs
 *.log

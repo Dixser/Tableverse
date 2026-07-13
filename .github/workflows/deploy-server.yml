@@ -1,0 +1,36 @@
+name: Deploy server to Oracle VM
+
+# Only the backend needs this workflow: Cloudflare Pages already rebuilds
+# and deploys packages/client on push via its own Git integration. This
+# only fires on changes that actually affect the deployed server image --
+# game-core and shared are runtime deps of the server (consumed as TS
+# source, see packages/server/Dockerfile), so changes there are included.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/server/**'
+      - 'packages/game-core/**'
+      - 'packages/shared/**'
+      - 'docker-compose.yml'
+      - 'Caddyfile'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-server.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency: deploy-server-oracle
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.ORACLE_VM_HOST }}
+          username: ${{ secrets.ORACLE_VM_USER }}
+          key: ${{ secrets.ORACLE_VM_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/tableverse
+            git fetch origin main
+            git reset --hard origin/main
+            docker compose up -d --build --remove-orphans
