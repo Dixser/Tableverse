@@ -7,7 +7,7 @@ import {
   type SeatCredential,
   type User,
 } from '@tableverse/shared';
-import { gamesCatalog, getGameModule } from '@tableverse/game-core';
+import { gamesCatalog, getEffectiveMaxPlayers, getGameModule } from '@tableverse/game-core';
 import { roomApi } from '../api/roomApi.js';
 import { usePresence } from '../presence/usePresence.js';
 import { seatCredentialStore } from '../seats/seatCredentialStore.js';
@@ -293,13 +293,47 @@ export function RoomShell({
         </ul>
       </section>
 
+      {room.status === 'lobby' && canChangeGame && (
+        <section className={styles.section} aria-label={t('room.game')}>
+          <h2 className={styles.sectionTitle}>{t('room.game')}</h2>
+          <select
+            className={styles.select}
+            value={room.selectedGameID ?? ''}
+            onChange={(e) => void changeGame(e.target.value)}
+          >
+            <option value="" disabled>
+              {t('room.selectGamePlaceholder')}
+            </option>
+            {gamesCatalog.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.displayName}
+              </option>
+            ))}
+          </select>
+          {gamesCatalog.length === 0 && (
+            <p className={styles.hint}>{t('room.noGamesAvailable')}</p>
+          )}
+          {canEditSettings && selectedModule?.settingsSchema && (
+            <SettingsForm
+              schema={selectedModule.settingsSchema}
+              value={room.gameSettings}
+              onSubmit={(next) => void updateGameSettings(next)}
+            />
+          )}
+        </section>
+      )}
+
       <section className={styles.section} aria-label={t('room.seats')}>
         <h2 className={styles.sectionTitle}>{t('room.seats')}</h2>
         <ul className={styles.list}>
           {seats.map((seat) => (
             <li className={styles.listItem} key={seat.playerID}>
               {t('room.seatOccupied', {
-                playerID: seat.playerID,
+                // Seats are 0-indexed internally (boardgame.io's playerID
+                // convention), but displayed 1-indexed -- "Seat 1" for
+                // playerID '0' -- so non-technical players don't see a
+                // seat numbering that starts at 0.
+                seatNumber: Number(seat.playerID) + 1,
                 occupant: seat.userID === user.id ? t('room.you') : seat.userID,
               })}
               <PresenceBadge status={presence[seat.playerID] ?? 'connected'} />
@@ -337,44 +371,13 @@ export function RoomShell({
         )}
         {canClaim && room.status === 'lobby' && selectedModule && (
           <SeatPicker
-            maxPlayers={selectedModule.maxPlayers}
+            maxPlayers={getEffectiveMaxPlayers(selectedModule, room.gameSettings)}
             seats={seats}
             currentUserID={user.id}
             onClaim={claimSeat}
           />
         )}
       </section>
-
-      {room.status === 'lobby' && canChangeGame && (
-        <section className={styles.section} aria-label={t('room.game')}>
-          <h2 className={styles.sectionTitle}>{t('room.game')}</h2>
-          <select
-            className={styles.select}
-            value={room.selectedGameID ?? ''}
-            onChange={(e) => void changeGame(e.target.value)}
-          >
-            <option value="" disabled>
-              {t('room.selectGamePlaceholder')}
-            </option>
-            {gamesCatalog.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.displayName}
-              </option>
-            ))}
-          </select>
-          {gamesCatalog.length === 0 && (
-            <p className={styles.hint}>{t('room.noGamesAvailable')}</p>
-          )}
-        </section>
-      )}
-
-      {canEditSettings && room.status === 'lobby' && selectedModule?.settingsSchema && (
-        <SettingsForm
-          schema={selectedModule.settingsSchema}
-          value={room.gameSettings}
-          onSubmit={(next) => void updateGameSettings(next)}
-        />
-      )}
 
       {room.status === 'lobby' && canStart && room.selectedGameID && (
         <button className={styles.buttonStart} type="button" onClick={() => void startMatch()}>
@@ -426,7 +429,7 @@ function SeatPicker({
             disabled={!!occupant}
             onClick={() => onClaim(playerID)}
           >
-            {t('room.seatLabel', { playerID })}
+            {t('room.seatLabel', { seatNumber: Number(playerID) + 1 })}
             {occupant &&
               ` — ${occupant.userID === currentUserID ? t('room.you') : occupant.userID}`}
           </button>

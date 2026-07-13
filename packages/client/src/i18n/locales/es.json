@@ -31,8 +31,8 @@
     "noGamesAvailable": "Todavía no hay juegos disponibles.",
     "startMatch": "Iniciar partida",
     "endMatch": "Terminar partida",
-    "seatLabel": "Asiento {{playerID}}",
-    "seatOccupied": "Asiento {{playerID}}: {{occupant}}",
+    "seatLabel": "Asiento {{seatNumber}}",
+    "seatOccupied": "Asiento {{seatNumber}}: {{occupant}}",
     "role": {
       "host": "Anfitrión",
       "member": "Miembro"

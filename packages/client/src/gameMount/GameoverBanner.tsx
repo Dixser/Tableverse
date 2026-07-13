@@ -15,7 +15,9 @@ export interface GameoverBannerProps {
 }
 
 function nameFor(id: string, playerNames: Record<string, string>, t: TFunction): string {
-  return playerNames[id] ?? t('room.seatLabel', { playerID: id });
+  // Seats are 0-indexed internally (boardgame.io's playerID convention) but
+  // displayed 1-indexed, matching RoomShell's seat picker/list.
+  return playerNames[id] ?? t('room.seatLabel', { seatNumber: Number(id) + 1 });
 }
 
 /** "Alice" / "Alice and Bob" / "Alice, Bob and Carol" -- the list-joining

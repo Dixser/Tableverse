@@ -129,6 +129,6 @@ describe('GameMount', () => {
         playerNames={{}}
       />,
     );
-    expect(screen.getByRole('status')).toHaveTextContent('Seat 0 wins!');
+    expect(screen.getByRole('status')).toHaveTextContent('Seat 1 wins!');
   });
 });
