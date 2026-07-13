@@ -31,8 +31,8 @@
     "noGamesAvailable": "No games available yet.",
     "startMatch": "Start match",
     "endMatch": "End match",
-    "seatLabel": "Seat {{playerID}}",
-    "seatOccupied": "Seat {{playerID}}: {{occupant}}",
+    "seatLabel": "Seat {{seatNumber}}",
+    "seatOccupied": "Seat {{seatNumber}}: {{occupant}}",
     "role": {
       "host": "Host",
       "member": "Member"

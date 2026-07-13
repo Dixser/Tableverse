@@ -22,9 +22,17 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 // directions), independent of the describe/it wiring in
 // testGameModuleConformance below, which real games call.
 
+// client.store.getState() (not client.getState()) everywhere below -- the
+// latter runs G through the game's own playerView for the client's
+// playerID (here, an unset/spectator perspective), which for a game with
+// hidden information strips exactly the fields these checks need to
+// inspect (e.g. this suite's own determinism check would otherwise compare
+// two already-stripped views and trivially "pass" without ever exercising
+// the shuffle). The raw, unfiltered state lives on the client's redux store.
+
 export function checkSetupValidity<G>(module: GameModule<G>, numPlayers: number): void {
   const client = Client({ game: module.gameDef, numPlayers });
-  const state = client.getState();
+  const state = client.store.getState();
   if (state === null || state.G === undefined) {
     throw new Error(
       `${module.id}: setup produced no valid state for numPlayers=${numPlayers}`,
@@ -34,7 +42,7 @@ export function checkSetupValidity<G>(module: GameModule<G>, numPlayers: number)
 
 export function checkSerializability<G>(module: GameModule<G>, numPlayers: number): void {
   const client = Client({ game: module.gameDef, numPlayers });
-  const G = client.getState()?.G;
+  const G = client.store.getState()?.G;
   const roundTripped = JSON.parse(JSON.stringify(G)) as unknown;
   if (JSON.stringify(roundTripped) !== JSON.stringify(G)) {
     throw new Error(`${module.id}: G is not JSON-serializable`);
@@ -55,7 +63,10 @@ export function checkPlayerViewLeakFree<G>(
   }
   const numPlayers = module.minPlayers;
   const client = Client({ game: module.gameDef, numPlayers });
-  const state = client.getState();
+  // client.getState() already runs G through playerView once (for the
+  // client's own playerID) -- re-applying playerView below needs the raw,
+  // unfiltered state, which only client.store.getState() provides.
+  const state = client.store.getState();
   const playOrder = Array.from({ length: numPlayers }, (_, i) => String(i));
   const viewers: (string | null)[] = [...playOrder, null];
 
@@ -89,8 +100,8 @@ export function checkDeterminism<G>(module: GameModule<G>, numPlayers: number): 
   const gameWithFixedSeed = { ...module.gameDef, seed };
   const clientA = Client({ game: gameWithFixedSeed, numPlayers });
   const clientB = Client({ game: gameWithFixedSeed, numPlayers });
-  const a = JSON.stringify(clientA.getState()?.G);
-  const b = JSON.stringify(clientB.getState()?.G);
+  const a = JSON.stringify(clientA.store.getState()?.G);
+  const b = JSON.stringify(clientB.store.getState()?.G);
   if (a !== b) {
     throw new Error(
       `${module.id}: setup is not deterministic under a fixed seed`,

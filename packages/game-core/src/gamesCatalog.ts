@@ -1,5 +1,6 @@
 import type { GameModule } from './types.js';
 import { tictactoeModule } from './games/tictactoe/index.js';
+import { loveletterModule } from './games/loveletter/index.js';
 
 // GameModule<G>'s move functions take G as a parameter (a contravariant
 // position), so GameModule<Specific> can never be a structural subtype of
@@ -14,7 +15,7 @@ type AnyGameModule = GameModule<any>;
 // writing its own GameModule + one line here — nothing else in
 // packages/server or packages/client should need to change (feature 002
 // exists specifically to prove that for tictactoe-v1).
-export const gamesCatalog: AnyGameModule[] = [tictactoeModule];
+export const gamesCatalog: AnyGameModule[] = [tictactoeModule, loveletterModule];
 
 export function getGameModule(id: string): AnyGameModule | undefined {
   return gamesCatalog.find((m) => m.id === id);

@@ -35,7 +35,7 @@ describe('resolveGameoverMessage (en)', () => {
   });
 
   it('AC5: falls back to a seat label when the winner has no synced name', () => {
-    expect(resolveGameoverMessage({ winner: '0' }, '1', {}, tEn)).toBe('Seat 0 wins!');
+    expect(resolveGameoverMessage({ winner: '0' }, '1', {}, tEn)).toBe('Seat 1 wins!');
   });
 
   it('AC1/AC6: a co-winner sees "You and <other winners> win!"', () => {
@@ -97,7 +97,7 @@ describe('resolveGameoverMessage (es) -- feature 010: same table, Spanish locale
   });
 
   it('falls back to a seat label when the winner has no synced name', () => {
-    expect(resolveGameoverMessage({ winner: '0' }, '1', {}, tEs)).toBe('¡Asiento 0 gana!');
+    expect(resolveGameoverMessage({ winner: '0' }, '1', {}, tEs)).toBe('¡Asiento 1 gana!');
   });
 
   it('falls back to a generic message for an unrecognized shape', () => {
