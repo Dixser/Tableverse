@@ -29,10 +29,21 @@ export interface TheMindG {
   hands: Record<string, number[]>;
   /** Public. This level's shared pile, in the order played. */
   playedCards: number[];
-  /** Public. Cards revealed by a misplay this level. */
-  setAsideCards: number[];
-  /** Public. Cards revealed by a resolved shuriken this level. */
-  starDiscards: number[];
+  /**
+   * Public, per owning seat. Cards revealed by a misplay this level --
+   * attributed to whichever seat was holding each card, not just pooled
+   * anonymously, since knowing WHOSE card was revealed (not just its value)
+   * is exactly the information the rulebook's own worked example conveys
+   * ("Tim places his 26 aside, Linus does the same with his 30").
+   */
+  setAsideCards: Record<string, number[]>;
+  /**
+   * Public, per owning seat. Cards revealed by a resolved shuriken this
+   * level -- attributed the same way as setAsideCards. This is the whole
+   * point of the shuriken: it exists to let the team learn each other's
+   * current lowest card, not merely to thin hands anonymously.
+   */
+  starDiscards: Record<string, number[]>;
   /** Public. Null when no shuriken proposal is pending. */
   shurikenVote: TheMindShurikenVote | null;
   log: GameLogEntry[];
@@ -114,8 +125,8 @@ function buildInitialG(activeSeatIDs: string[], ctx: Ctx): TheMindG {
     stars: config.startingStars,
     hands: Object.fromEntries(seats.map((id) => [id, []])),
     playedCards: [],
-    setAsideCards: [],
-    starDiscards: [],
+    setAsideCards: Object.fromEntries(seats.map((id) => [id, []])),
+    starDiscards: Object.fromEntries(seats.map((id) => [id, []])),
     shurikenVote: null,
     log: [],
     matchResult: null,
@@ -145,8 +156,8 @@ function dealLevel(G: TheMindG, ctx: Ctx, random: ShuffleFn): void {
   }
   G.hands = hands;
   G.playedCards = [];
-  G.setAsideCards = [];
-  G.starDiscards = [];
+  G.setAsideCards = Object.fromEntries(seats.map((id) => [id, []]));
+  G.starDiscards = Object.fromEntries(seats.map((id) => [id, []]));
   G.shurikenVote = null;
 }
 
@@ -227,23 +238,26 @@ function playCard({
   G.playedCards.push(card);
   G.log.push({ key: 'theMind.log.cardPlayed', params: { actor: playerID, card } });
 
-  const revealed: number[] = [];
+  const revealedBySeat: Record<string, number[]> = {};
   for (const seat of G.activeSeatIDs) {
     if (seat === playerID) continue;
     const seatHand = G.hands[seat]!;
     for (let i = seatHand.length - 1; i >= 0; i--) {
       if (seatHand[i]! < card) {
-        revealed.push(seatHand[i]!);
+        (revealedBySeat[seat] ??= []).push(seatHand[i]!);
         seatHand.splice(i, 1);
       }
     }
   }
-  if (revealed.length > 0) {
+  const mistakeCount = Object.values(revealedBySeat).reduce((sum, cards) => sum + cards.length, 0);
+  if (mistakeCount > 0) {
     // One life lost per erroneous play, regardless of how many lower cards
     // were revealed across however many seats (spec.md AC4).
     loseLife(G);
-    G.setAsideCards.push(...revealed);
-    G.setAsideCards.sort((a, b) => a - b);
+    for (const [seat, cards] of Object.entries(revealedBySeat)) {
+      cards.sort((a, b) => a - b);
+      G.setAsideCards[seat]!.push(...cards);
+    }
     G.log.push({ key: 'theMind.log.mistake', params: { actor: playerID, card } });
   }
 
@@ -310,14 +324,11 @@ function voteShuriken(
   if (!allAgree) return;
 
   G.stars -= 1;
-  const discarded: number[] = [];
   for (const seat of G.activeSeatIDs) {
     const hand = G.hands[seat]!;
     if (hand.length === 0) continue;
-    discarded.push(hand.shift()!);
+    G.starDiscards[seat]!.push(hand.shift()!);
   }
-  G.starDiscards.push(...discarded);
-  G.starDiscards.sort((a, b) => a - b);
   G.shurikenVote = null;
   G.log.push({ key: 'theMind.log.shurikenUsed' });
 

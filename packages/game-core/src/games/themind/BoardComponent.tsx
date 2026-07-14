@@ -51,8 +51,10 @@ export const TheMindBoard: React.FC<BoardProps<TheMindView>> = ({
 
       <PlayedCardsZone
         playedCards={G.playedCards}
+        activeSeatIDs={G.activeSeatIDs}
         setAsideCards={G.setAsideCards}
         starDiscards={G.starDiscards}
+        playerNames={playerNames}
       />
 
       {playerID != null && (

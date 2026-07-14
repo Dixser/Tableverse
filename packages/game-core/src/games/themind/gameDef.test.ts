@@ -103,10 +103,10 @@ describe('themind gameDef', () => {
       actAs(client, '0').playCard!();
       const G = client.store.getState().G;
       expect(G.lives).toBe(2); // unchanged from the 2-player starting count.
-      expect(G.setAsideCards).toEqual([]);
+      expect(G.setAsideCards).toEqual({ '0': [], '1': [] });
     });
 
-    it('reveals every lower card across every other seat and costs exactly one life, however many cards were revealed', () => {
+    it('reveals every lower card across every other seat, attributed to its owner, and costs exactly one life however many cards were revealed', () => {
       const client = clientWithFixture(
         3,
         () => ({ hands: { '0': [40, 90], '1': [10, 15], '2': [5] }, lives: 3 }),
@@ -115,7 +115,7 @@ describe('themind gameDef', () => {
       const G = client.store.getState().G;
       expect(G.lives).toBe(2);
       expect(G.playedCards).toEqual([40]);
-      expect(G.setAsideCards).toEqual([5, 10, 15]);
+      expect(G.setAsideCards).toEqual({ '0': [], '1': [10, 15], '2': [5] });
       expect(G.hands['0']).toEqual([90]);
       expect(G.hands['1']).toEqual([]);
       expect(G.hands['2']).toEqual([]);
@@ -202,6 +202,22 @@ describe('themind gameDef', () => {
       expect(G.stars).toBe(1);
       expect(G.hands['0']).toHaveLength(3);
     });
+
+    it('level 1 is the natural case where a shuriken alone always completes the level -- every hand starts with exactly 1 card', () => {
+      // Real setup/deal (no hand-value fixture needed): level 1 always deals
+      // exactly 1 card per active seat, so resolving a shuriken before
+      // anyone has played empties every hand unconditionally, and the level
+      // must advance rather than getting stuck with 0-card hands.
+      const client = newClient(2);
+      expect(client.store.getState().G.hands['0']).toHaveLength(1); // sanity: level 1's real deal.
+      actAs(client, '0').proposeShuriken!();
+      actAs(client, '1').voteShuriken!(true);
+      const G = client.store.getState().G;
+      expect(G.level).toBe(2); // advanced, not stuck on an emptied level 1.
+      expect(G.hands['0']).toHaveLength(2); // freshly dealt for level 2, not left empty.
+      expect(G.hands['1']).toHaveLength(2);
+      expect(G.matchResult).toBeNull(); // 2-player match has 12 levels -- nowhere near a win yet.
+    });
   });
 
   describe('shuriken vote', () => {
@@ -230,14 +246,14 @@ describe('themind gameDef', () => {
       expect(G.stars).toBe(1);
     });
 
-    it('unanimous agreement discards every active seat\'s lowest card and spends one star', () => {
+    it('unanimous agreement discards every active seat\'s lowest card, attributed to its owner, and spends one star', () => {
       const client = clientWithFixture(3, () => ({ hands: { '0': [5, 80], '1': [6, 90], '2': [7, 95] }, stars: 1 }));
       actAs(client, '0').proposeShuriken!();
       actAs(client, '1').voteShuriken!(true);
       actAs(client, '2').voteShuriken!(true);
       const G = client.store.getState().G;
       expect(G.stars).toBe(0);
-      expect(G.starDiscards).toEqual([5, 6, 7]);
+      expect(G.starDiscards).toEqual({ '0': [5], '1': [6], '2': [7] });
       expect(G.hands['0']).toEqual([80]);
       expect(G.hands['1']).toEqual([90]);
       expect(G.hands['2']).toEqual([95]);
@@ -265,8 +281,8 @@ describe('themind gameDef', () => {
         stars: 1,
         hands: { '0': [5, 20], '1': [30] },
         playedCards: [],
-        setAsideCards: [],
-        starDiscards: [],
+        setAsideCards: { '0': [], '1': [] },
+        starDiscards: { '0': [], '1': [] },
         shurikenVote: null,
         log: [],
         matchResult: null,

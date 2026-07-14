@@ -29,8 +29,8 @@ function view(overrides: Partial<TheMindView> = {}): TheMindView {
     hands: { '0': [5, 40] },
     handCounts: { '0': 2, '1': 1 },
     playedCards: [],
-    setAsideCards: [],
-    starDiscards: [],
+    setAsideCards: { '0': [], '1': [] },
+    starDiscards: { '0': [], '1': [] },
     shurikenVote: null,
     log: [],
     matchResult: null,
@@ -107,6 +107,26 @@ describe('TheMindBoard', () => {
       />,
     );
     expect(screen.getByText('5').closest('button')).toBeDisabled();
+  });
+
+  it('shows shuriken-revealed cards attributed to the specific seat they came from', () => {
+    render(
+      <TheMindBoard
+        G={view({ starDiscards: { '0': [7], '1': [9] } })}
+        ctx={makeCtx()}
+        moves={{ playCard: vi.fn() }}
+        playerID="0"
+        isActive={true}
+      />,
+    );
+    expect(screen.getByText('TEST_star_discards')).toBeInTheDocument();
+    expect(screen.getByText('7')).toBeInTheDocument();
+    expect(screen.getByText('9')).toBeInTheDocument();
+    // Both seat labels legitimately appear twice on this board (once in the
+    // hand-count list, once as this reveal's row header) -- assert presence
+    // via count rather than getByText's single-match requirement.
+    expect(screen.getAllByText('Seat 1')).toHaveLength(2);
+    expect(screen.getAllByText('Seat 2')).toHaveLength(2);
   });
 
   it('shows the win banner and hides the shuriken panel once the match is won', () => {
