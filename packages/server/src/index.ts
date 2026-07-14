@@ -14,6 +14,8 @@ import { SqliteStorageAdapter } from './bgio/storage/sqliteStorageAdapter.js';
 import { createBgioServer } from './bgio/serverConfig.js';
 import { createPresenceSystem } from './presence/presenceChannel.js';
 import { createChatSystem } from './chat/chatChannel.js';
+import { createRoomEventsSystem } from './roomEvents/roomEventsChannel.js';
+import type { RoomEventsBroadcaster } from './rooms/roomRoutes.js';
 
 const PORT = Number(process.env.PORT ?? 8000);
 const DB_STORAGE = process.env.DB_STORAGE ?? './tableverse.sqlite3';
@@ -55,7 +57,12 @@ async function main(): Promise<void> {
   );
 
   const identityRouter = createIdentityRouter(users);
-  const roomRouter = createRoomRouter({ users, rooms, seats, roomService });
+  // roomEvents' real broadcaster can't exist until the HTTP server below
+  // does -- this no-op placeholder is swapped out in place once
+  // createRoomEventsSystem runs, mirroring roomService.setPresenceManager's
+  // own deferred-attachment pattern for the same ordering constraint.
+  const roomEvents: RoomEventsBroadcaster = { roomChanged: () => {} };
+  const roomRouter = createRoomRouter({ users, rooms, seats, roomService, roomEvents });
 
   // Room/identity routes are mounted onto the SAME Koa app boardgame.io's
   // own Server() builds internally, as a separate route tree — this file
@@ -92,6 +99,13 @@ async function main(): Promise<void> {
   // Chat gets its own namespace too (/chat-socket), for the same reason --
   // never sharing a channel with boardgame.io's own state sync or presence.
   createChatSystem(appServer, { users, rooms, seats }, CLIENT_ORIGINS);
+
+  // Room-events gets its own namespace too (/room-events-socket) -- a
+  // content-free "roomID X changed" ping every mutating room route emits,
+  // so every connected browser re-runs its own already-correct room fetch
+  // instead of needing a manual reload (spec/features/017-room-live-sync).
+  const { roomChanged } = createRoomEventsSystem(appServer, CLIENT_ORIGINS);
+  roomEvents.roomChanged = roomChanged;
 
   // eslint-disable-next-line no-console
   console.log(`Tableverse server listening on :${PORT}`);

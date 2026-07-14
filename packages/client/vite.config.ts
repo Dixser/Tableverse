@@ -28,6 +28,7 @@ export default defineConfig({
       '/socket.io': { target: BACKEND, changeOrigin: true, ws: true },
       '/presence-socket': { target: BACKEND, changeOrigin: true, ws: true },
       '/chat-socket': { target: BACKEND, changeOrigin: true, ws: true },
+      '/room-events-socket': { target: BACKEND, changeOrigin: true, ws: true },
     },
   },
 });

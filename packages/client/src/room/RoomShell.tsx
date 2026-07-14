@@ -10,6 +10,7 @@ import {
 import { gamesCatalog, getEffectiveMaxPlayers, getGameModule } from '@tableverse/game-core';
 import { roomApi } from '../api/roomApi.js';
 import { usePresence } from '../presence/usePresence.js';
+import { useRoomEvents } from '../roomEvents/useRoomEvents.js';
 import { seatCredentialStore } from '../seats/seatCredentialStore.js';
 import { ChatPanel } from '../chat/ChatPanel.js';
 import { PresenceBadge } from './PresenceBadge.js';
@@ -112,6 +113,10 @@ export function RoomShell({
   }, [refresh]);
 
   const presence = usePresence(roomID);
+  // Every browser in the room (not just the one that acted) re-fetches on
+  // this content-free ping -- see useRoomEvents' doc comment for why the
+  // event itself carries no data.
+  useRoomEvents(roomID, refresh);
 
   const role = room?.members.find((m) => m.userID === user.id)?.role;
 
