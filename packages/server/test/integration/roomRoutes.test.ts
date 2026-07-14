@@ -20,16 +20,23 @@ describe('room routes: permission enforcement', () => {
     server = undefined;
   });
 
+  function stubRoomEvents() {
+    const roomChangedCalls: string[] = [];
+    return { roomEvents: { roomChanged: (roomID: string) => roomChangedCalls.push(roomID) }, roomChangedCalls };
+  }
+
   async function setup() {
     harness = await createTestHarness();
+    const { roomEvents, roomChangedCalls } = stubRoomEvents();
     const router = createRoomRouter({
       users: harness.users,
       rooms: harness.rooms,
       seats: harness.seats,
       roomService: harness.roomService,
+      roomEvents,
     });
     server = await startTestServer(router);
-    return { harness, server };
+    return { harness, server, roomChangedCalls };
   }
 
   it('AC13/18: a non-host attempting a host-only action (manageSeats/releaseSeat) is rejected with 403 before any state change', async () => {
@@ -164,11 +171,13 @@ describe('room routes: permission enforcement', () => {
 
   it('POST /:roomID/settings validates gameSettings against the selected game\'s schema: valid input persists (200), invalid input is rejected (400, unchanged), a non-host is rejected (403)', async () => {
     harness = await createTestHarness([dummyGameModule]);
+    const { roomEvents } = stubRoomEvents();
     const router = createRoomRouter({
       users: harness.users,
       rooms: harness.rooms,
       seats: harness.seats,
       roomService: harness.roomService,
+      roomEvents,
     });
     server = await startTestServer(router);
     const host = await createSessionedUser(harness, 'HostSettings');
@@ -389,6 +398,54 @@ describe('room routes: permission enforcement', () => {
     const { server } = await setup();
     const res = await fetch(`${server.baseUrl}/api/rooms`, { method: 'POST' });
     expect(res.status).toBe(401);
+  });
+
+  it('feature 017 AC3: every mutating route notifies roomEvents.roomChanged(roomID) on success, and not on a rejected (403) attempt', async () => {
+    const { harness, server, roomChangedCalls } = await setup();
+    const host = await createSessionedUser(harness, 'HostEvents');
+    const member = await createSessionedUser(harness, 'MemberEvents');
+
+    const createRes = await fetch(`${server.baseUrl}/api/rooms`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    const { room } = (await createRes.json()) as { room: { roomID: string; inviteCode: string } };
+    // createRoom itself does not broadcast (nothing else could be watching yet).
+    expect(roomChangedCalls).toHaveLength(0);
+
+    const joinRes = await fetch(`${server.baseUrl}/api/rooms/join`, {
+      method: 'POST',
+      headers: {
+        [SESSION_TOKEN_HEADER]: member.sessionToken,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ inviteCode: room.inviteCode }),
+    });
+    expect(joinRes.status).toBe(200);
+    expect(roomChangedCalls).toEqual([room.roomID]);
+
+    // A rejected (403) action must not broadcast.
+    const forbiddenRes = await fetch(
+      `${server.baseUrl}/api/rooms/${room.roomID}/seats/0/release`,
+      { method: 'POST', headers: { [SESSION_TOKEN_HEADER]: member.sessionToken } },
+    );
+    expect(forbiddenRes.status).toBe(403);
+    expect(roomChangedCalls).toEqual([room.roomID]); // unchanged
+
+    const claimRes = await fetch(
+      `${server.baseUrl}/api/rooms/${room.roomID}/seats/0/claim`,
+      { method: 'POST', headers: { [SESSION_TOKEN_HEADER]: member.sessionToken } },
+    );
+    expect(claimRes.status).toBe(200);
+    expect(roomChangedCalls).toEqual([room.roomID, room.roomID]);
+
+    const releaseRes = await fetch(
+      `${server.baseUrl}/api/rooms/${room.roomID}/seats/0/release`,
+      { method: 'POST', headers: { [SESSION_TOKEN_HEADER]: host.sessionToken } },
+    );
+    expect(releaseRes.status).toBe(204);
+    expect(roomChangedCalls).toHaveLength(3);
+    expect(roomChangedCalls.every((id) => id === room.roomID)).toBe(true);
   });
 
   it('rejects a non-member acting on a room they have not joined with 403', async () => {

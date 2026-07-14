@@ -9,11 +9,16 @@ import { SeatClaimError, type SeatService } from './seatService.js';
 import { RoomServiceError, type RoomService } from './roomService.js';
 import { getRoleInRoom } from './roomAccess.js';
 
+export interface RoomEventsBroadcaster {
+  roomChanged(roomID: string): void;
+}
+
 export interface RoomRoutesDeps {
   users: UserRepository;
   rooms: RoomRepository;
   seats: SeatService;
   roomService: RoomService;
+  roomEvents: RoomEventsBroadcaster;
 }
 
 function getBody<T>(ctx: Context): T {
@@ -78,6 +83,7 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
         inviteCode,
         ctx.state.user!.id,
       );
+      deps.roomEvents.roomChanged(room.roomID);
       ctx.body = { room };
     } catch (err) {
       ctx.status = 404;
@@ -109,6 +115,7 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
         param(ctx, 'playerID'),
         ctx.state.user!.id,
       );
+      deps.roomEvents.roomChanged(room.roomID);
       ctx.body = { assignment, credential };
     } catch (err) {
       if (err instanceof SeatClaimError) {
@@ -124,6 +131,7 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
     const room = await authorize(ctx, deps, param(ctx, 'roomID'), 'leaveSeat');
     if (!room) return;
     await deps.seats.leaveSeat(room.roomID, param(ctx, 'playerID'));
+    deps.roomEvents.roomChanged(room.roomID);
     ctx.status = 204;
   });
 
@@ -136,6 +144,7 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
     );
     if (!room) return;
     await deps.seats.releaseSeat(room.roomID, param(ctx, 'playerID'));
+    deps.roomEvents.roomChanged(room.roomID);
     ctx.status = 204;
   });
 
@@ -143,6 +152,7 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
     const room = await authorize(ctx, deps, param(ctx, 'roomID'), 'leaveRoom');
     if (!room) return;
     const updated = await deps.roomService.leaveRoom(room.roomID, ctx.state.user!.id);
+    deps.roomEvents.roomChanged(room.roomID);
     ctx.body = { room: updated };
   });
 
@@ -161,6 +171,7 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
         ctx.state.user!.id,
         targetUserID,
       );
+      deps.roomEvents.roomChanged(room.roomID);
       ctx.body = { room: updated };
     } catch (err) {
       ctx.status = 409;
@@ -199,6 +210,7 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
         return;
       }
     }
+    deps.roomEvents.roomChanged(room.roomID);
     ctx.body = { room: updated };
   });
 
@@ -213,6 +225,7 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
     }
     try {
       const updated = await deps.roomService.changeGame(room.roomID, gameID);
+      deps.roomEvents.roomChanged(room.roomID);
       ctx.body = { room: updated };
     } catch (err) {
       ctx.status = 409;
@@ -225,6 +238,7 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
     if (!room) return;
     try {
       const result = await deps.roomService.startMatch(room.roomID);
+      deps.roomEvents.roomChanged(room.roomID);
       ctx.body = {
         room: result.room,
         credentialsByUserID: Object.fromEntries(result.credentialsByUserID),
@@ -240,6 +254,7 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
     if (!room) return;
     try {
       const updated = await deps.roomService.endMatch(room.roomID);
+      deps.roomEvents.roomChanged(room.roomID);
       ctx.body = { room: updated };
     } catch (err) {
       ctx.status = 409;

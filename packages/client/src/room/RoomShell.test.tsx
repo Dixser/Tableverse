@@ -8,6 +8,16 @@ vi.mock('../presence/usePresence.js', () => ({
   usePresence: () => ({}),
 }));
 
+// Captures the onChanged callback RoomShell passes in, so a test can invoke
+// it directly to simulate a real /room-events 'roomChanged' push without
+// needing an actual socket connection.
+let capturedRoomEventsOnChanged: (() => void) | undefined;
+vi.mock('../roomEvents/useRoomEvents.js', () => ({
+  useRoomEvents: (_roomID: string | null, onChanged: () => void) => {
+    capturedRoomEventsOnChanged = onChanged;
+  },
+}));
+
 vi.mock('../chat/useChat.js', () => ({
   useChat: () => ({ messages: [], sendMessage: vi.fn() }),
 }));
@@ -83,6 +93,7 @@ function makeRoom(overrides: Partial<Room> = {}): Room {
 describe('RoomShell', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    capturedRoomEventsOnChanged = undefined;
   });
 
   it('renders the player list and invite code once the room loads', async () => {
@@ -108,6 +119,29 @@ describe('RoomShell', () => {
     await waitFor(() => screen.getByText('Room ABC123'));
     expect(screen.getByText(/You — Host/)).toBeInTheDocument();
     expect(screen.getByText(/guest-1 — Member/)).toBeInTheDocument();
+  });
+
+  it('feature 017: a roomChanged event from useRoomEvents triggers a re-fetch of the room', async () => {
+    const getRoom = vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+      room: makeRoom(),
+      seats: [],
+      myCredentials: [],
+    });
+
+    render(
+      <RoomShell
+        user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+        sessionToken="tok"
+        roomID="room-1"
+      />,
+    );
+
+    await waitFor(() => screen.getByText('Room ABC123'));
+    expect(getRoom).toHaveBeenCalledTimes(1);
+
+    capturedRoomEventsOnChanged?.();
+
+    await waitFor(() => expect(getRoom).toHaveBeenCalledTimes(2));
   });
 
   it('shows a claim-seat form for a member (claimSeat is permitted) but hides host-only release for a member seat they do not manage', async () => {
