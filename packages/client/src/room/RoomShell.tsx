@@ -52,6 +52,15 @@ export interface RoomShellProps {
    * GameLogEntry[], since a non-conforming game's G shouldn't crash the
    * panel (same defensive posture as GameoverBanner's `gameover: unknown`). */
   gameLog?: unknown;
+  /**
+   * Rendered alongside the Start/End match button, grouped into the same
+   * row as the Players and Seats sections -- ActiveRoom passes
+   * `<SeatSwitcher />` here instead of bundling it into `children`, so this
+   * chrome-owned row can lay it out next to the match controls it's
+   * conceptually part of (which seat's board you're viewing), rather than
+   * stacked above the board itself.
+   */
+  seatSwitcher?: React.ReactNode;
 }
 
 /**
@@ -68,6 +77,7 @@ export function RoomShell({
   onSeatClaimed,
   onLeftRoom,
   gameLog,
+  seatSwitcher,
 }: RoomShellProps) {
   const { t } = useTranslation();
   const [room, setRoom] = useState<Room | null>(null);
@@ -262,37 +272,6 @@ export function RoomShell({
         </p>
       )}
 
-      <section className={styles.section} aria-label={t('room.players')}>
-        <h2 className={styles.sectionTitle}>{t('room.players')}</h2>
-        <ul className={styles.list}>
-          {room.members.map((m) => (
-            <li className={styles.listItem} key={m.userID}>
-              {m.userID === user.id ? t('room.you') : m.userID} —{' '}
-              {t(`room.role.${m.role}`)}
-              <span className={styles.spacer} />
-              {m.userID === user.id && canLeaveRoom && (
-                <button
-                  className={styles.buttonDanger}
-                  type="button"
-                  onClick={() => void leaveRoom()}
-                >
-                  {t('room.leaveRoom')}
-                </button>
-              )}
-              {canKick && m.userID !== user.id && (
-                <button
-                  className={styles.buttonDanger}
-                  type="button"
-                  onClick={() => void kickPlayer(m.userID)}
-                >
-                  {t('room.kick')}
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
-
       {room.status === 'lobby' && canChangeGame && (
         <section className={styles.section} aria-label={t('room.game')}>
           <h2 className={styles.sectionTitle}>{t('room.game')}</h2>
@@ -322,6 +301,38 @@ export function RoomShell({
           )}
         </section>
       )}
+
+      <div className={styles.topRow}>
+        <section className={styles.section} aria-label={t('room.players')}>
+        <h2 className={styles.sectionTitle}>{t('room.players')}</h2>
+        <ul className={styles.list}>
+          {room.members.map((m) => (
+            <li className={styles.listItem} key={m.userID}>
+              {m.userID === user.id ? t('room.you') : m.userID} —{' '}
+              {t(`room.role.${m.role}`)}
+              <span className={styles.spacer} />
+              {m.userID === user.id && canLeaveRoom && (
+                <button
+                  className={styles.buttonDanger}
+                  type="button"
+                  onClick={() => void leaveRoom()}
+                >
+                  {t('room.leaveRoom')}
+                </button>
+              )}
+              {canKick && m.userID !== user.id && (
+                <button
+                  className={styles.buttonDanger}
+                  type="button"
+                  onClick={() => void kickPlayer(m.userID)}
+                >
+                  {t('room.kick')}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className={styles.section} aria-label={t('room.seats')}>
         <h2 className={styles.sectionTitle}>{t('room.seats')}</h2>
@@ -379,16 +390,20 @@ export function RoomShell({
         )}
       </section>
 
-      {room.status === 'lobby' && canStart && room.selectedGameID && (
-        <button className={styles.buttonStart} type="button" onClick={() => void startMatch()}>
-          {t('room.startMatch')}
-        </button>
-      )}
-      {room.status === 'in_game' && canEnd && (
-        <button className={styles.buttonDanger} type="button" onClick={() => void endMatch()}>
-          {t('room.endMatch')}
-        </button>
-      )}
+      <div className={styles.matchControls}>
+        {room.status === 'lobby' && canStart && room.selectedGameID && (
+          <button className={styles.buttonStart} type="button" onClick={() => void startMatch()}>
+            {t('room.startMatch')}
+          </button>
+        )}
+        {room.status === 'in_game' && canEnd && (
+          <button className={styles.buttonDanger} type="button" onClick={() => void endMatch()}>
+            {t('room.endMatch')}
+          </button>
+        )}
+        {seatSwitcher}
+        </div>
+      </div>
 
       <div className={styles.boardArea}>{children}</div>
 

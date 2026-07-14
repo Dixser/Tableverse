@@ -179,12 +179,14 @@ function ActiveRoom({
       gameLog={
         seatClients.boardProps?.G && (seatClients.boardProps.G as { log?: unknown }).log
       }
+      seatSwitcher={
+        <SeatSwitcher
+          seatIDs={seatClients.seatIDs}
+          activeSeatID={seatClients.activeSeatID}
+          onSelect={seatClients.setActiveSeatID}
+        />
+      }
     >
-      <SeatSwitcher
-        seatIDs={seatClients.seatIDs}
-        activeSeatID={seatClients.activeSeatID}
-        onSelect={seatClients.setActiveSeatID}
-      />
       <GameMount
         selectedGameID={selectedGameID}
         boardProps={seatClients.boardProps}

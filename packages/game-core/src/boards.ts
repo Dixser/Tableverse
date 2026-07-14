@@ -6,3 +6,4 @@
  * board registry (packages/client/src/boardRegistry.ts) imports from here.
  */
 export { TicTacToeBoard } from './games/tictactoe/BoardComponent.js';
+export { LoveLetterBoard } from './games/loveletter/BoardComponent.js';

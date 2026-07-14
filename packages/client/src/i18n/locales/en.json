@@ -46,8 +46,7 @@
     "ariaLabel": "Language"
   },
   "seatSwitcher": {
-    "ariaLabel": "Your seats",
-    "seatTab": "Seat {{playerID}}"
+    "ariaLabel": "Your seats"
   },
   "presence": {
     "connected": "Connected",
@@ -71,5 +70,101 @@
     "title": "Chat",
     "inputPlaceholder": "Type a message…",
     "send": "Send"
+  },
+  "loveLetter": {
+    "cards": {
+      "0": {
+        "name": "Spy",
+        "text": "If you're the only player who played a Spy this round, you gain an extra favor token when the round ends."
+      },
+      "1": {
+        "name": "Guard",
+        "text": "Name a rank other than Guard and pick an opponent. If they're holding that rank, they're out."
+      },
+      "2": {
+        "name": "Priest",
+        "text": "Privately look at another player's hand."
+      },
+      "3": {
+        "name": "Baron",
+        "text": "Privately compare hands with another player. Whoever holds the lower rank is out."
+      },
+      "4": {
+        "name": "Handmaid",
+        "text": "You can't be targeted by any card effect until your next turn."
+      },
+      "5": {
+        "name": "Prince",
+        "text": "Pick any player, including yourself. They discard their hand and draw a new card."
+      },
+      "6": {
+        "name": "Chancellor",
+        "text": "Draw two cards, then return two of your three cards to the bottom of the deck in an order you choose, keeping one."
+      },
+      "7": {
+        "name": "King",
+        "text": "Trade hands with another player."
+      },
+      "8": {
+        "name": "Countess",
+        "text": "You must discard this card if your other card is the King or the Prince."
+      },
+      "9": {
+        "name": "Princess",
+        "text": "If you discard this card for any reason, you're out."
+      }
+    },
+    "countessForced": "You must play the Countess while holding the King or the Prince.",
+    "hand": {
+      "ariaLabel": "Your hand"
+    },
+    "target": {
+      "pickTitle": "Choose a target",
+      "guessTitle": "Guess a rank",
+      "self": "Yourself",
+      "cancel": "Cancel"
+    },
+    "playOrDiscard": {
+      "title": "Play or discard this card?",
+      "play": "Play",
+      "discard": "Discard"
+    },
+    "chancellor": {
+      "title": "Choose a card to keep",
+      "keep": "Keep this one",
+      "orderTitle": "Click the cards in the order they should return to the bottom of the deck"
+    },
+    "playArea": {
+      "title": "Play area",
+      "eliminated": "Eliminated",
+      "protected": "Protected"
+    },
+    "roundWins": {
+      "title": "Round wins"
+    },
+    "currentTurn": "Current turn: {{name}}",
+    "deckCount": "Cards left in deck: {{count}}",
+    "reveal": {
+      "priestViewed": "You looked at {{opponent}}'s hand: it's a {{opponentRank}}.",
+      "baronCompared": "You compared hands with {{opponent}}: you had {{ownRank}}, they had {{opponentRank}}."
+    },
+    "log": {
+      "eliminated": "Player {{player}} is out.",
+      "guardGuess": "Player {{actor}} played the Guard on Player {{target}}, guessing rank {{rank}}.",
+      "priestUsed": "Player {{actor}} played the Priest on Player {{target}}.",
+      "baronUsed": "Player {{actor}} played the Baron on Player {{target}}.",
+      "handmaidUsed": "Player {{actor}} played the Handmaid.",
+      "princeUsed": "Player {{actor}} played the Prince on Player {{target}}.",
+      "kingUsed": "Player {{actor}} played the King on Player {{target}}.",
+      "chancellorUsed": "Player {{actor}} played the Chancellor.",
+      "spyPlayed": "Player {{actor}} played the Spy.",
+      "cardPlayedNoTarget": "Player {{actor}} played a card (rank {{card}}) with no legal target.",
+      "cardDiscarded": "Player {{actor}} discarded a card (rank {{card}}) without playing its effect.",
+      "countessPlayed": "Player {{actor}} played the Countess.",
+      "princessPlayed": "Player {{actor}} played the Princess.",
+      "roundWinner": "Round won by: {{winners}}.",
+      "spyBonus": "Player {{player}} gets a bonus token as the round's only Spy player.",
+      "matchWinner": "Match won by: {{winners}}!"
+    }
   }
 }

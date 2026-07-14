@@ -1,0 +1,7 @@
+.tracker ul {
+  list-style: none;
+  display: flex;
+  gap: var(--space-3);
+  padding: 0;
+  margin: 0;
+}

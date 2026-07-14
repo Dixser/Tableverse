@@ -255,8 +255,20 @@ export class RoomService {
     const matchID = nanoid(16);
     const created = bgioCreateMatch({
       game: { ...gameModule.gameDef, name: gameModule.id },
+      // Always gameModule.maxPlayers engine seats, regardless of how many
+      // are actually claimed -- renumbering claimed seats to a contiguous
+      // 0..N-1 range to shrink this would be a much bigger platform
+      // change (credentials, mid-game claimSeat, SeatSwitcher all assume
+      // room seat number === boardgame.io playerID). `claimedSeatIDs`
+      // below is how a game whose own rules depend on the real player
+      // count (e.g. Love Letter's "last one standing" round-ending) tells
+      // its own seats actually claimed at match-start time apart from
+      // permanent, nobody-controls-them phantom seats.
       numPlayers: gameModule.maxPlayers,
-      setupData: room.gameSettings,
+      setupData: {
+        ...room.gameSettings,
+        claimedSeatIDs: claimedSeats.map((seat) => seat.playerID),
+      },
       unlisted: true,
     });
     if ('setupDataError' in created) {

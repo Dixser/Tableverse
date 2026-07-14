@@ -1,0 +1,31 @@
+.playArea {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.seat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.seatHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 600;
+}
+
+.badge {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  background: color-mix(in srgb, var(--color-warning) 20%, transparent);
+  color: var(--color-warning);
+}
+
+.cards {
+  display: flex;
+  gap: var(--space-1);
+}

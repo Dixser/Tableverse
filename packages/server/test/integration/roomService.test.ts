@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { createTestHarness, type TestHarness } from '../helpers/testHarness.js';
 import { dummyGameModule } from '@tableverse/game-core/testing/fixtures/dummyGame.js';
+import { getGameModule } from '@tableverse/game-core';
 import { PresenceManager } from '../../src/presence/presenceManager.js';
 import type { SeatStatusChangedEvent } from '@tableverse/shared';
 
@@ -85,6 +86,35 @@ describe('RoomService', () => {
       metadata: true,
     });
     expect(fetched.metadata?.players[0]?.credentials).toBeTruthy();
+  });
+
+  it('startMatch tells the game which seats are actually claimed, so a game whose rules depend on the real player count is not stuck with permanent phantom seats', async () => {
+    const loveletterModule = getGameModule('loveletter-v1')!;
+    harness = await createTestHarness([loveletterModule]);
+    await harness.users.createUser('Alice');
+    await harness.users.createUser('Bob');
+    const room = await harness.roomService.createRoom('user-a');
+    await harness.roomService.changeGame(room.roomID, loveletterModule.id);
+    // loveletterModule.maxPlayers is 6, but only 2 real seats are claimed --
+    // this is exactly the "2 players game" shape that used to leave 4
+    // engine seats permanently alive, since roomService.startMatch always
+    // creates the boardgame.io match with numPlayers: maxPlayers.
+    await harness.seats.claimSeat(room.roomID, '0', 'user-a');
+    await harness.seats.claimSeat(room.roomID, '1', 'user-b');
+
+    const { room: started } = await harness.roomService.startMatch(room.roomID);
+    const fetched = await harness.storage.fetch(started.currentMatchID!, { state: true });
+    const G = fetched.state?.G as { activeSeatIDs: string[]; eliminated: Record<string, boolean> };
+
+    expect(G.activeSeatIDs).toEqual(['0', '1']);
+    expect(G.eliminated).toEqual({
+      '0': false,
+      '1': false,
+      '2': true,
+      '3': true,
+      '4': true,
+      '5': true,
+    });
   });
 
   it('AC6: claiming a seat while lobby creates a room-level reservation only (no credentials); claiming an open seat while in_game immediately issues credentials', async () => {

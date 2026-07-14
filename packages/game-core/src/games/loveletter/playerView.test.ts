@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Client } from 'boardgame.io/client';
 import {
   loveletterGameDef,
+  type CardRank,
   type LoveLetterG,
   type LoveLetterSetupData,
 } from './gameDef.js';
@@ -51,13 +52,48 @@ describe('loveletter playerView (AC9)', () => {
     assertDeckNeverLeaks(client.store.getState().G, ['0', '1', null]);
   });
 
-  it('never exposes _deck or _setAsideFacedown after a Chancellor draw', () => {
+  it('never exposes _deck or _setAsideFacedown across a Chancellor draw and keep', () => {
     const client = clientWithFixture(2, () => ({
       hands: { '0': [6], '1': [9] },
       _deck: [3, 4, 0],
     }));
-    client.moves.playCard!(0, { chancellorKeep: 0 });
+    client.moves.playCard!(0, {});
     assertDeckNeverLeaks(client.store.getState().G, ['0', '1', null]);
+    client.moves.chancellorKeep!(0, [1, 2]);
+    assertDeckNeverLeaks(client.store.getState().G, ['0', '1', null]);
+  });
+
+  it("chancellorDraw is narrowed to the viewer's own entry while a choice is pending", () => {
+    const client = clientWithFixture(2, () => ({
+      hands: { '0': [6], '1': [9] },
+      _deck: [3, 4, 0],
+    }));
+    client.moves.playCard!(0, {});
+    const G = client.store.getState().G;
+
+    // '0' (the acting player) sees their own pending candidates.
+    const viewAsZero = loveletterGameDef.playerView!({
+      G,
+      ctx: { numPlayers: 2 } as never,
+      playerID: '0',
+    }) as { chancellorDraw: Record<string, CardRank[]> };
+    expect(viewAsZero.chancellorDraw).toEqual({ '0': [0, 4, 3] });
+
+    // '1' sees their own (empty) entry only -- never '0's pending candidates,
+    // same narrowing shape as hands/privateReveals.
+    const viewAsOne = loveletterGameDef.playerView!({
+      G,
+      ctx: { numPlayers: 2 } as never,
+      playerID: '1',
+    }) as { chancellorDraw: Record<string, CardRank[]> };
+    expect(viewAsOne.chancellorDraw).toEqual({ '1': [] });
+
+    const viewAsSpectator = loveletterGameDef.playerView!({
+      G,
+      ctx: { numPlayers: 2 } as never,
+      playerID: null,
+    }) as { chancellorDraw: Record<string, CardRank[]> };
+    expect(viewAsSpectator.chancellorDraw).toEqual({});
   });
 
   it('never exposes _deck or _setAsideFacedown after a Prince-triggered empty-deck draw', () => {

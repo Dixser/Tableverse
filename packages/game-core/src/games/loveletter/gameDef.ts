@@ -24,6 +24,16 @@ export interface LoveLetterG {
   hands: Record<string, CardRank[]>;
   /** Per-player secret -- conformance suite secretKey. Baron/Priest results. */
   privateReveals: Record<string, GameLogEntry[]>;
+  /**
+   * Per-player secret -- conformance suite secretKey. The Chancellor's own
+   * card plus the 0-2 freshly drawn candidates, populated by playCard and
+   * awaiting the player's own chancellorKeep move to resolve; empty outside
+   * that window. See feature 015's plan.md/BoardComponent for why this is a
+   * separate move rather than a single-call `playCard` param: the drawn
+   * cards don't exist yet at the moment a client would need to choose among
+   * them, so "draw" and "keep" must be two atomic moves, not one.
+   */
+  chancellorDraw: Record<string, CardRank[]>;
 
   /** All public. */
   eliminated: Record<string, boolean>;
@@ -38,6 +48,24 @@ export interface LoveLetterG {
   matchWinners: string[] | null;
   /** True once a turn's draw failed because the deck ran out -- ends the round. */
   deckExhausted: boolean;
+
+  /**
+   * Every seat actually claimed by a real user at match-start time, fixed
+   * for the whole match. The platform always creates a match with
+   * `gameModule.maxPlayers` engine seats regardless of how many users
+   * actually claimed one (roomService.startMatch never shrinks
+   * `numPlayers` to the real seat count -- renumbering claimed seats to a
+   * contiguous range would be a much bigger platform change). Without this,
+   * every seat NOT in this list is a permanent phantom that nobody can
+   * ever act for: it would never get eliminated, so `isRoundOver` could
+   * never trigger once real players are down to one, and turn order would
+   * eventually hand a turn to a seat no client holds credentials for,
+   * stalling the match outright. `buildInitialG`/`dealNewRound` instead
+   * pre-eliminate every non-active seat from round 1 onward, and
+   * `concludeRound`'s token threshold and the 2-player set-aside rule key
+   * off this list's length, not `ctx.numPlayers`.
+   */
+  activeSeatIDs: string[];
 }
 
 export interface LoveLetterView extends Omit<LoveLetterG, '_deck' | '_setAsideFacedown'> {
@@ -47,6 +75,15 @@ export interface LoveLetterView extends Omit<LoveLetterG, '_deck' | '_setAsideFa
 
 export interface LoveLetterSetupData {
   edition?: LoveLetterEdition; // defaults to 'normal'
+  /** Seats actually claimed when the match was started -- see LoveLetterG.activeSeatIDs. */
+  claimedSeatIDs?: string[];
+}
+
+/** The subset of boardgame.io's EventsAPI playCard/chancellorKeep actually use. */
+interface ChancellorEvents {
+  endTurn(): void;
+  setStage(stage: string): void;
+  endStage(): void;
 }
 
 interface PlayCardParams {
@@ -54,8 +91,17 @@ interface PlayCardParams {
   target?: string;
   /** Guard only. */
   guessRank?: CardRank;
-  /** Chancellor only -- index into [originalCard, ...drawnCards]. */
-  chancellorKeep?: number;
+  /**
+   * True to discard the card instead of playing it -- it's still
+   * publicly revealed (goes to playedCards, logged) exactly like a play,
+   * but its effect never resolves. Rank 9 (Princess) is the one
+   * exception in name only, not behavior: discarding it still eliminates
+   * the player, because the real card text ("discarded for any reason")
+   * already covers this -- see the discard branch in playCard below.
+   * Mutually exclusive with `target`/`guessRank`: a discard never takes
+   * either, by construction (nothing to target when no effect resolves).
+   */
+  discard?: boolean;
 }
 
 /** Tokens needed to win the match, keyed by seated player count. */
@@ -70,13 +116,21 @@ function validateLoveLetterSetupData(
   numPlayers: number,
 ): string | undefined {
   const edition = setupData?.edition ?? 'normal';
-  if (edition === 'classic' && numPlayers > 4) {
-    return `loveletter-v1: classic edition supports at most 4 players, got ${numPlayers}`;
+  // The real seat count once claimedSeatIDs is known -- numPlayers alone
+  // is the platform's fixed engine seat count (gameModule.maxPlayers),
+  // not how many people are actually playing (see LoveLetterG.activeSeatIDs).
+  const effectiveCount = setupData?.claimedSeatIDs?.length ?? numPlayers;
+  if (edition === 'classic' && effectiveCount > 4) {
+    return `loveletter-v1: classic edition supports at most 4 players, got ${effectiveCount}`;
   }
   return undefined;
 }
 
-function buildInitialG(edition: LoveLetterEdition, ctx: Ctx): LoveLetterG {
+function buildInitialG(
+  edition: LoveLetterEdition,
+  ctx: Ctx,
+  activeSeatIDs: string[],
+): LoveLetterG {
   const seats = seatIDs(ctx);
   return {
     edition,
@@ -85,7 +139,11 @@ function buildInitialG(edition: LoveLetterEdition, ctx: Ctx): LoveLetterG {
     setAsideFaceup: [],
     hands: Object.fromEntries(seats.map((id) => [id, []])),
     privateReveals: Object.fromEntries(seats.map((id) => [id, []])),
-    eliminated: Object.fromEntries(seats.map((id) => [id, false])),
+    chancellorDraw: Object.fromEntries(seats.map((id) => [id, []])),
+    // Phantom (unclaimed) seats start -- and, per dealNewRound, always
+    // stay -- eliminated, so they never count toward isRoundOver's
+    // remaining-players check and turn order never hands them a turn.
+    eliminated: Object.fromEntries(seats.map((id) => [id, !activeSeatIDs.includes(id)])),
     handmaidProtected: Object.fromEntries(seats.map((id) => [id, false])),
     playedCards: Object.fromEntries(seats.map((id) => [id, []])),
     roundWins: Object.fromEntries(seats.map((id) => [id, 0])),
@@ -93,14 +151,19 @@ function buildInitialG(edition: LoveLetterEdition, ctx: Ctx): LoveLetterG {
     nextRoundStartPlayerID: null,
     matchWinners: null,
     deckExhausted: false,
+    activeSeatIDs,
   };
 }
 
 /**
- * Shuffles a fresh deck, sets aside the facedown (and, at 2 players, the
- * faceup) cards, and deals one card to every seat -- shared between setup
- * (the match's first round) and concludeRound (every subsequent round), per
- * plan.md, to avoid duplicating this logic.
+ * Shuffles a fresh deck, sets aside the facedown (and, at 2 *active*
+ * players, the faceup) cards, and deals one card to every active seat --
+ * shared between setup (the match's first round) and concludeRound (every
+ * subsequent round), per plan.md, to avoid duplicating this logic. Phantom
+ * seats (see LoveLetterG.activeSeatIDs) are skipped entirely -- no card
+ * dealt, and re-pinned to eliminated on every call, since this also runs
+ * at the start of round 2+, which would otherwise reset G.eliminated back
+ * to all-false and revive them.
  */
 function dealNewRound(
   G: LoveLetterG,
@@ -108,18 +171,20 @@ function dealNewRound(
   random: { Shuffle<T>(deck: T[]): T[] },
 ): void {
   const seats = seatIDs(ctx);
+  const isActive = (id: string) => G.activeSeatIDs.includes(id);
   const deck = random.Shuffle(buildDeck(G.edition));
 
   G._setAsideFacedown = deck.pop() ?? null;
-  G.setAsideFaceup = ctx.numPlayers === 2 ? [deck.pop()!, deck.pop()!, deck.pop()!] : [];
+  G.setAsideFaceup = G.activeSeatIDs.length === 2 ? [deck.pop()!, deck.pop()!, deck.pop()!] : [];
 
   const hands: Record<string, CardRank[]> = {};
-  for (const id of seats) hands[id] = [deck.pop()!];
+  for (const id of seats) hands[id] = isActive(id) ? [deck.pop()!] : [];
   G.hands = hands;
   G._deck = deck;
 
   G.privateReveals = Object.fromEntries(seats.map((id) => [id, []]));
-  G.eliminated = Object.fromEntries(seats.map((id) => [id, false]));
+  G.chancellorDraw = Object.fromEntries(seats.map((id) => [id, []]));
+  G.eliminated = Object.fromEntries(seats.map((id) => [id, !isActive(id)]));
   G.handmaidProtected = Object.fromEntries(seats.map((id) => [id, false]));
   G.playedCards = Object.fromEntries(seats.map((id) => [id, []]));
   G.deckExhausted = false;
@@ -249,26 +314,65 @@ function resolveKing(G: LoveLetterG, actingID: string, targetID: string): void {
   targetHand.push(...actingCards);
 }
 
-function resolveChancellor(
-  G: LoveLetterG,
-  actingID: string,
-  chancellorKeep: number | undefined,
-): typeof INVALID_MOVE | void {
+/**
+ * Draws up to 2 cards into a holding area (G.chancellorDraw) rather than
+ * resolving the keep/return choice immediately -- the drawn cards don't
+ * exist yet at move-call time, so the client can't supply a keep index in
+ * the same call that triggers the draw (see LoveLetterG.chancellorDraw's
+ * doc comment). The turn stays open, gated to the chancellorKeep move
+ * only, until that follow-up move resolves it.
+ */
+function beginChancellorChoice(G: LoveLetterG, actingID: string): void {
   G.log.push({ key: 'loveLetter.log.chancellorUsed', params: { actor: actingID } });
   const hand = G.hands[actingID]!;
   const drawn: CardRank[] = [];
   for (let i = 0; i < 2 && G._deck.length > 0; i++) drawn.push(G._deck.pop()!);
-  const combined = [...hand, ...drawn];
+  G.chancellorDraw[actingID] = [...hand, ...drawn];
+  G.hands[actingID] = [];
+}
+
+/**
+ * The chancellorChoice stage's only legal move -- resolves
+ * beginChancellorChoice's draw. `returnOrder` is the player's own chosen
+ * order for the non-kept candidates going to the bottom of the deck (the
+ * real card's own text: "...in an order you choose"), expressed as
+ * indices into `candidates` -- must be exactly a permutation of every
+ * index other than `keepIndex`. `returnOrder[0]` ends up deepest in the
+ * deck (index 0 of `_deck`, the very last card anyone could ever draw);
+ * `returnOrder`'s last entry sits just above it.
+ */
+function chancellorKeep(
+  { G, playerID, events }: { G: LoveLetterG; playerID: string; events: ChancellorEvents },
+  keepIndex: number,
+  returnOrder: number[],
+): typeof INVALID_MOVE | void {
+  const candidates = G.chancellorDraw[playerID]!;
   if (
-    chancellorKeep === undefined ||
-    chancellorKeep < 0 ||
-    chancellorKeep >= combined.length
+    candidates.length === 0 ||
+    keepIndex === undefined ||
+    keepIndex < 0 ||
+    keepIndex >= candidates.length
   ) {
     return INVALID_MOVE;
   }
-  const [kept] = combined.splice(chancellorKeep, 1);
-  G.hands[actingID] = [kept!];
-  G._deck.unshift(...combined); // returned to the bottom of the deck.
+  const expectedReturnIndices = candidates
+    .map((_, i) => i)
+    .filter((i) => i !== keepIndex);
+  if (
+    !Array.isArray(returnOrder) ||
+    returnOrder.length !== expectedReturnIndices.length ||
+    !expectedReturnIndices.every((i) => returnOrder.includes(i)) ||
+    new Set(returnOrder).size !== returnOrder.length
+  ) {
+    return INVALID_MOVE;
+  }
+  const kept = candidates[keepIndex]!;
+  const toReturn = returnOrder.map((i) => candidates[i]!);
+  G.hands[playerID] = [kept];
+  G._deck.unshift(...toReturn); // the rest, returned to the bottom of the deck in the chosen order.
+  G.chancellorDraw[playerID] = [];
+  events.endStage();
+  events.endTurn();
 }
 
 // --- The playCard move -------------------------------------------------
@@ -276,7 +380,7 @@ function resolveChancellor(
 const TARGETED_RANKS = new Set<CardRank>([1, 2, 3, 5, 7]);
 
 function playCard(
-  { G, ctx, playerID }: { G: LoveLetterG; ctx: Ctx; playerID: string },
+  { G, ctx, playerID, events }: { G: LoveLetterG; ctx: Ctx; playerID: string; events: ChancellorEvents },
   cardIndex: number,
   params: PlayCardParams = {},
 ): typeof INVALID_MOVE | void {
@@ -289,8 +393,12 @@ function playCard(
     return INVALID_MOVE; // Countess forced-play rule.
   }
 
-  const { target } = params;
-  if (TARGETED_RANKS.has(rank)) {
+  const { target, discard } = params;
+  if (discard) {
+    // A discard never carries a target -- nothing resolves, so nothing to
+    // aim it at. A client sending one anyway is a bug, not a legal choice.
+    if (target !== undefined) return INVALID_MOVE;
+  } else if (TARGETED_RANKS.has(rank)) {
     const princeMayTargetSelf = rank === 5;
     const hasValidTarget = anyValidTarget(G, playerID, ctx) || princeMayTargetSelf;
     if (hasValidTarget) {
@@ -306,67 +414,89 @@ function playCard(
   hand.splice(cardIndex, 1);
   G.playedCards[playerID]!.push(rank);
 
+  if (discard) {
+    // Publicly revealed exactly like a play (already pushed to
+    // playedCards above), but no card effect ever resolves -- per the
+    // house rule that any card may be discarded instead of played. Rank 9
+    // is the one apparent exception: the Princess's own card text ("if you
+    // discard this card for any reason, you're out") already covers a
+    // deliberate discard, not just a Prince-forced one, so it still
+    // eliminates here -- this isn't the Princess's "effect" resolving,
+    // it's the same discard-triggered rule eliminate() enforces elsewhere.
+    G.log.push({ key: 'loveLetter.log.cardDiscarded', params: { actor: playerID, card: rank } });
+    if (rank === 9) eliminate(G, playerID);
+    events.endTurn();
+    return;
+  }
+
+  // Every branch below fully resolves the turn EXCEPT Chancellor (rank 6),
+  // which instead opens the chancellorChoice stage and ends the turn itself
+  // only once that follow-up move resolves -- see beginChancellorChoice's
+  // doc comment.
   switch (rank) {
     case 0:
       G.log.push({ key: 'loveLetter.log.spyPlayed', params: { actor: playerID } });
-      return;
+      break;
     case 1:
       if (target === undefined) {
         G.log.push({
           key: 'loveLetter.log.cardPlayedNoTarget',
           params: { actor: playerID, card: rank },
         });
-        return;
+        break;
       }
       if (params.guessRank === undefined || params.guessRank === 1) return INVALID_MOVE;
       resolveGuard(G, playerID, target, params.guessRank);
-      return;
+      break;
     case 2:
       if (target === undefined) {
         G.log.push({
           key: 'loveLetter.log.cardPlayedNoTarget',
           params: { actor: playerID, card: rank },
         });
-        return;
+        break;
       }
       resolvePriest(G, playerID, target);
-      return;
+      break;
     case 3:
       if (target === undefined) {
         G.log.push({
           key: 'loveLetter.log.cardPlayedNoTarget',
           params: { actor: playerID, card: rank },
         });
-        return;
+        break;
       }
       resolveBaron(G, playerID, target);
-      return;
+      break;
     case 4:
       resolveHandmaid(G, playerID);
-      return;
+      break;
     case 5:
       resolvePrince(G, playerID, target!);
-      return;
+      break;
     case 6:
-      return resolveChancellor(G, playerID, params.chancellorKeep);
+      beginChancellorChoice(G, playerID);
+      events.setStage('chancellorChoice');
+      return;
     case 7:
       if (target === undefined) {
         G.log.push({
           key: 'loveLetter.log.cardPlayedNoTarget',
           params: { actor: playerID, card: rank },
         });
-        return;
+        break;
       }
       resolveKing(G, playerID, target);
-      return;
+      break;
     case 8:
       G.log.push({ key: 'loveLetter.log.countessPlayed', params: { actor: playerID } });
-      return;
+      break;
     case 9:
       G.log.push({ key: 'loveLetter.log.princessPlayed', params: { actor: playerID } });
       eliminate(G, playerID);
-      return;
+      break;
   }
+  events.endTurn();
 }
 
 // --- Round -> match handoff ---------------------------------------------
@@ -397,7 +527,7 @@ function concludeRound(
     G.log.push({ key: 'loveLetter.log.spyBonus', params: { player: spyID! } });
   }
 
-  const threshold = TOKENS_TO_WIN[ctx.numPlayers]!;
+  const threshold = TOKENS_TO_WIN[G.activeSeatIDs.length]!;
   const matchWinners = seats.filter((id) => G.roundWins[id]! >= threshold);
 
   if (matchWinners.length > 0) {
@@ -422,7 +552,12 @@ export const loveletterGameDef: Game<LoveLetterG, Record<string, unknown>, LoveL
     const error = validateLoveLetterSetupData(setupData, ctx.numPlayers);
     if (error) throw new Error(error);
     const edition = setupData?.edition ?? 'normal';
-    const G = buildInitialG(edition, ctx);
+    // Falls back to every engine seat when the caller doesn't supply
+    // claimedSeatIDs (e.g. a headless test Client() with no room/seat
+    // service in front of it) -- preserves the old "every seat is real"
+    // behavior for those callers instead of silently eliminating everyone.
+    const activeSeatIDs = setupData?.claimedSeatIDs ?? seatIDs(ctx);
+    const G = buildInitialG(edition, ctx, activeSeatIDs);
     dealNewRound(G, ctx, random);
     return G;
   },
@@ -445,10 +580,32 @@ export const loveletterGameDef: Game<LoveLetterG, Record<string, unknown>, LoveL
       turn: {
         order: skipEliminatedTurnOrder,
         onBegin: ({ G, ctx }) => drawIntoActiveHand(G, ctx),
-        minMoves: 1,
-        maxMoves: 1,
+        // No minMoves/maxMoves -- every playCard branch ends its own turn
+        // explicitly via events.endTurn() (see playCard's switch), except
+        // Chancellor, which instead opens this stage; a move-count-based
+        // limit can't express "1 move normally, 2 for Chancellor" cleanly.
+        stages: {
+          chancellorChoice: {
+            // client: false -- see playCard's own note just below; this
+            // move reads G._deck too (via candidates already stashed by
+            // beginChancellorChoice, but the bottom-of-deck return still
+            // touches G._deck directly).
+            moves: { chancellorKeep: { move: chancellorKeep, client: false } },
+          },
+        },
       },
-      moves: { playCard },
+      // client: false -- every branch of playCard reads either G._deck
+      // (blanket-hidden from every viewer, always) or another player's
+      // G.hands/handmaidProtected entry (narrowed to the acting viewer's
+      // own entry only). boardgame.io's default optimistic client-side
+      // move execution runs against exactly that filtered view, so without
+      // this the local dry-run throws on the viewer's own already-redacted
+      // copy before the move ever reaches the server -- discovered via
+      // feature 015's manual browser verification (spec.md AC11), not
+      // caught by feature 014's own (server-only, headless Client()) test
+      // suite, which never exercises the multiplayer optimistic-execution
+      // path at all.
+      moves: { playCard: { move: playCard, client: false } },
     },
   },
 
@@ -460,12 +617,13 @@ export const loveletterGameDef: Game<LoveLetterG, Record<string, unknown>, LoveL
     // it must never reach any viewer (spec.md AC9), unlike _deck which is
     // read just below to derive the one thing about it anyone may know.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { _deck, _setAsideFacedown, hands, privateReveals, ...publicG } = G;
+    const { _deck, _setAsideFacedown, hands, privateReveals, chancellorDraw, ...publicG } = G;
     const view: LoveLetterView = {
       ...publicG,
       deckCount: _deck.length,
       hands: playerID != null ? { [playerID]: hands[playerID] ?? [] } : {},
       privateReveals: playerID != null ? { [playerID]: privateReveals[playerID] ?? [] } : {},
+      chancellorDraw: playerID != null ? { [playerID]: chancellorDraw[playerID] ?? [] } : {},
     };
     return view;
   },

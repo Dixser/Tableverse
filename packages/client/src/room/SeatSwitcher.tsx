@@ -27,7 +27,7 @@ export function SeatSwitcher({ seatIDs, activeSeatID, onSelect }: SeatSwitcherPr
           aria-selected={playerID === activeSeatID}
           onClick={() => onSelect(playerID)}
         >
-          {t('seatSwitcher.seatTab', { playerID })}
+          {t('room.seatLabel', { seatNumber: Number(playerID) + 1 })}
         </button>
       ))}
     </div>

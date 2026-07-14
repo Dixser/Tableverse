@@ -79,6 +79,114 @@ describe('loveletter gameDef', () => {
     });
   });
 
+  describe('phantom seats (roomService.startMatch always creates numPlayers=maxPlayers regardless of how many seats are actually claimed)', () => {
+    it('pre-eliminates every seat not in claimedSeatIDs from setup onward', () => {
+      const G = newClient(6, { claimedSeatIDs: ['0', '1'] }).store.getState().G;
+      expect(G.activeSeatIDs).toEqual(['0', '1']);
+      expect(G.eliminated).toEqual({
+        '0': false,
+        '1': false,
+        '2': true,
+        '3': true,
+        '4': true,
+        '5': true,
+      });
+      // Phantom seats never get dealt a hand at all.
+      expect(G.hands['2']).toEqual([]);
+      expect(G.hands['5']).toEqual([]);
+    });
+
+    it('the 2-player set-aside-faceup rule keys off activeSeatIDs, not the engine numPlayers', () => {
+      // 6 engine seats, but only 2 real players -- still the 2-player rule.
+      const G = newClient(6, { claimedSeatIDs: ['0', '1'] }).store.getState().G;
+      expect(G.setAsideFaceup).toHaveLength(3);
+    });
+
+    it('classic edition\'s player cap checks claimedSeatIDs, not the engine numPlayers', () => {
+      // 6 engine seats but only 3 real players -- classic's real cap (4) is satisfied.
+      expect(() =>
+        newClient(6, { edition: 'classic', claimedSeatIDs: ['0', '1', '2'] }),
+      ).not.toThrow();
+      // 6 engine seats, 5 real players -- exceeds classic's real cap.
+      expect(() =>
+        newClient(6, { edition: 'classic', claimedSeatIDs: ['0', '1', '2', '3', '4'] }),
+      ).toThrow();
+    });
+
+    it('a self-eliminating Baron in a 2-real-player match (6 engine seats) still ends the round and awards the token -- the reported bug', () => {
+      const client = clientWithFixture(
+        6,
+        () => ({
+          hands: { '0': [3], '1': [7] },
+          // '0' draws 2 (Priest) at turn start, not 0 (Spy) -- keeps this
+          // fixture's forcibly-revealed-on-elimination card from
+          // incidentally also triggering the (separate, pre-existing)
+          // Spy-bonus token, which would muddy the roundWins assertion
+          // below.
+          _deck: [2],
+        }),
+        { claimedSeatIDs: ['0', '1'] },
+      );
+      // '0' plays Baron; their remaining card (2) loses to '1's 7, so '0'
+      // self-eliminates -- '1' is the sole remaining ACTIVE player (the 4
+      // phantom seats were never in contention), so the round must end
+      // immediately, not stay stuck waiting for a phantom seat's turn.
+      client.moves.playCard!(0, { target: '1' });
+      const G = client.store.getState().G;
+      expect(G.roundWins).toEqual({ '0': 0, '1': 1, '2': 0, '3': 0, '4': 0, '5': 0 });
+      expect(G.log.some((e: GameLogEntry) => e.key === 'loveLetter.log.roundWinner')).toBe(true);
+      // Match isn't over yet (2-player threshold is 6, not the 6-engine-
+      // seat threshold of 3) -- a fresh round must have been dealt: both
+      // real seats have a hand again, and neither is left "eliminated"
+      // going into it -- only the 4 permanent phantom seats stay so.
+      expect(G.hands['0']!.length).toBeGreaterThan(0);
+      expect(G.hands['1']!.length).toBeGreaterThan(0);
+      expect(G.eliminated).toEqual({
+        '0': false,
+        '1': false,
+        '2': true,
+        '3': true,
+        '4': true,
+        '5': true,
+      });
+      // The next round's turn goes to the winner, never to a phantom seat.
+      expect(client.store.getState().ctx.currentPlayer).toBe('1');
+    });
+
+    it("the match-winning token threshold uses the real 2-player count (6), not the engine's 6-seat threshold (3)", () => {
+      const client = clientWithFixture(
+        6,
+        (base) => ({
+          hands: { '0': [3], '1': [7] },
+          _deck: [2], // see the previous test's note on avoiding the Spy-bonus quirk.
+          // Already satisfies the WRONG 6-seat threshold (3) -- must not
+          // matter, since '0' doesn't even win this particular round.
+          roundWins: { ...base.roundWins, '0': 3 },
+        }),
+        { claimedSeatIDs: ['0', '1'] },
+      );
+      client.moves.playCard!(0, { target: '1' }); // '0' self-eliminates again; their count doesn't change.
+      const G = client.store.getState().G;
+      expect(G.roundWins['0']).toBe(3); // unchanged -- still below the real (6) threshold.
+      expect(G.matchWinners).toBeNull(); // must not end despite already satisfying the wrong (3) threshold.
+    });
+
+    it('turn order skips every phantom seat, cycling only between the 2 real players', () => {
+      const client = clientWithFixture(
+        6,
+        () => ({
+          hands: { '0': [4], '1': [4] },
+          _deck: [0, 2],
+        }),
+        { claimedSeatIDs: ['0', '1'] },
+      );
+      client.moves.playCard!(0, {}); // '0' plays Handmaid, no elimination.
+      expect(client.store.getState().ctx.currentPlayer).toBe('1');
+      client.moves.playCard!(0, {}); // '1' plays Handmaid too.
+      expect(client.store.getState().ctx.currentPlayer).toBe('0');
+    });
+  });
+
   describe('card effects (AC2)', () => {
     it('Guard eliminates the target on a correct guess', () => {
       const client = clientWithFixture(2, () => ({
@@ -250,18 +358,76 @@ describe('loveletter gameDef', () => {
       expect(G.hands['1']).toEqual([0, 0]);
     });
 
-    it('Chancellor draws two, keeps one, returns the rest to the deck bottom', () => {
+    it('Chancellor draws two into a holding area, awaiting a separate chancellorKeep move', () => {
+      const client = clientWithFixture(2, () => ({
+        hands: { '0': [6], '1': [9] },
+        _deck: [3, 4, 0], // '0' draws 0 at turn start; 4 and 3 remain for Chancellor.
+      }));
+      client.moves.playCard!(0, {});
+      const G = client.store.getState().G;
+      // Hand is empty and the turn hasn't advanced -- '0' still owns the
+      // decision, just not yet resolved.
+      expect(G.hands['0']).toEqual([]);
+      expect(G.chancellorDraw['0']).toEqual([0, 4, 3]);
+      expect(client.store.getState().ctx.currentPlayer).toBe('0');
+    });
+
+    it('chancellorKeep resolves the draw, returns the rest to the deck bottom, and ends the turn', () => {
       const client = clientWithFixture(2, () => ({
         hands: { '0': [6], '1': [9] },
         _deck: [3, 4, 0], // '0' draws 0 at turn start; 4 and 3 remain for Chancellor.
       }));
       const deckBefore = client.store.getState().G._deck.length;
-      client.moves.playCard!(0, { chancellorKeep: 0 }); // keep the original filler (0)
+      client.moves.playCard!(0, {});
+      // candidates = [0, 4, 3] (hand's filler, then the two draws); keep
+      // index 0 (the filler), return indices 1 and 2 in that order.
+      client.moves.chancellorKeep!(0, [1, 2]);
       const G = client.store.getState().G;
       expect(G.hands['0']).toEqual([0]);
+      expect(G.chancellorDraw['0']).toEqual([]);
       // Drew 2, returned 2 (net zero), then '1's own turn-start draw takes 1.
       expect(G._deck).toHaveLength(deckBefore - 1);
       expect(G._deck).toContain(4); // the returned card that '1' didn't draw.
+      expect(client.store.getState().ctx.currentPlayer).toBe('1');
+    });
+
+    it("the player's chosen returnOrder determines which returned card ends up deepest in the deck", () => {
+      // candidates = [0, 4, 3]; keep index 0, return index 2 (value 3)
+      // first, then index 1 (value 4) -- 3 lands at the very bottom
+      // (_deck[0]), 4 just above it. '1's own turn-start draw immediately
+      // pops from the END of _deck (the top), taking the 4 -- proving the
+      // chosen order (not array order) determined which one sat on top.
+      const client = clientWithFixture(2, () => ({
+        hands: { '0': [6], '1': [9] },
+        _deck: [3, 4, 0],
+      }));
+      client.moves.playCard!(0, {});
+      client.moves.chancellorKeep!(0, [2, 1]); // return index 2 (value 3) first, then index 1 (value 4).
+      const G = client.store.getState().G;
+      expect(G.hands['1']).toContain(4); // '1' drew the card placed on top.
+      expect(G._deck).toEqual([3]); // the other sits deepest, still undrawn.
+    });
+
+    it('chancellorKeep rejects a returnOrder that omits or duplicates a non-kept candidate index', () => {
+      const client = clientWithFixture(2, () => ({
+        hands: { '0': [6], '1': [9] },
+        _deck: [3, 4, 0],
+      }));
+      client.moves.playCard!(0, {});
+      const before = client.store.getState().G.chancellorDraw['0']!.slice();
+      client.moves.chancellorKeep!(0, [1, 1]); // duplicates index 1, omits index 2.
+      expect(client.store.getState().G.chancellorDraw['0']).toEqual(before);
+    });
+
+    it('playCard is rejected while a chancellorKeep decision is still pending', () => {
+      const client = clientWithFixture(2, () => ({
+        hands: { '0': [6], '1': [9] },
+        _deck: [3, 4, 0],
+      }));
+      client.moves.playCard!(0, {});
+      const before = client.store.getState().G.chancellorDraw['0']!.slice();
+      client.moves.playCard!(0, {}); // no cards left in hand to play anyway; also wrong stage.
+      expect(client.store.getState().G.chancellorDraw['0']).toEqual(before);
     });
 
     it('Chancellor with a near-empty deck only draws what is available', () => {
@@ -269,7 +435,9 @@ describe('loveletter gameDef', () => {
         hands: { '0': [6], '1': [9] },
         _deck: [3, 0], // '0' draws 0 at turn start; only 3 remains for Chancellor.
       }));
-      client.moves.playCard!(0, { chancellorKeep: 0 });
+      client.moves.playCard!(0, {});
+      // candidates = [0, 3]; keep index 0, the sole remaining index is 1.
+      client.moves.chancellorKeep!(0, [1]);
       const G = client.store.getState().G;
       expect(G.hands['0']).toEqual([0]);
       // Chancellor drew the only card (3) and returned it; '1's own turn-start
@@ -283,7 +451,9 @@ describe('loveletter gameDef', () => {
         hands: { '0': [6], '1': [9] },
         _deck: [0], // consumed entirely by '0's own turn-start draw.
       }));
-      client.moves.playCard!(0, { chancellorKeep: 0 });
+      client.moves.playCard!(0, {});
+      // candidates = [0] (nothing drew); keep the only one, nothing returns.
+      client.moves.chancellorKeep!(0, []);
       const G = client.store.getState().G;
       // Chancellor drew and returned nothing; '1's own next turn-start draw
       // then fails too (deck empty), ending the round via a reveal that '1'
@@ -342,6 +512,72 @@ describe('loveletter gameDef', () => {
       const G = client.store.getState().G;
       expect(G.eliminated['0']).toBe(false);
       expect(G.playedCards['0']).toContain(0);
+    });
+  });
+
+  describe('discard (house rule: any card may be discarded instead of played)', () => {
+    it('discarding the Prince reveals it publicly but skips discard-and-draw entirely', () => {
+      const client = clientWithFixture(2, () => ({
+        hands: { '0': [5], '1': [2] },
+        _deck: [4, 3, 0],
+      }));
+      client.moves.playCard!(0, { discard: true });
+      const G = client.store.getState().G;
+      expect(G.playedCards['0']).toContain(5);
+      // '1' still has their original card 2 (Prince's forced discard never
+      // fired) plus their own normal turn-start draw -- exactly 2 cards,
+      // not the single fresh card a real discard-and-draw would leave them
+      // with.
+      expect(G.hands['1']).toContain(2);
+      expect(G.hands['1']).toHaveLength(2);
+      expect(G.log.some((e: GameLogEntry) => e.key === 'loveLetter.log.cardDiscarded')).toBe(true);
+      expect(client.store.getState().ctx.currentPlayer).toBe('1'); // turn still ended normally.
+    });
+
+    it('a discard is rejected if a target is supplied -- nothing to aim it at', () => {
+      const client = clientWithFixture(2, () => ({
+        hands: { '0': [5], '1': [2] },
+        _deck: [4, 3, 0],
+      }));
+      const before = client.store.getState().G.hands['0']!.slice();
+      client.moves.playCard!(0, { discard: true, target: '1' });
+      expect(client.store.getState().G.hands['0']).toEqual(before);
+    });
+
+    it('discarding the Princess still eliminates the player (her own card text, not a resolved effect)', () => {
+      const client = clientWithFixture(2, () => ({
+        hands: { '0': [9], '1': [7] },
+        _deck: [0],
+      }));
+      client.moves.playCard!(0, { discard: true });
+      const G = client.store.getState().G;
+      // Eliminating self immediately ends the round (last player standing).
+      expect(G.roundWins['1']).toBe(1);
+    });
+
+    it('discarding the Chancellor skips the draw-two-keep-one entirely -- no chancellorChoice stage opens', () => {
+      const client = clientWithFixture(2, () => ({
+        hands: { '0': [6], '1': [9] },
+        _deck: [3, 4, 0],
+      }));
+      const deckBefore = client.store.getState().G._deck.length;
+      client.moves.playCard!(0, { discard: true });
+      const G = client.store.getState().G;
+      expect(G.chancellorDraw['0']).toEqual([]); // never populated -- no draw happened.
+      // Only '1's own normal turn-start draw consumes a card -- Chancellor's
+      // real draw-2 never fired (that would have taken 2 more).
+      expect(G._deck).toHaveLength(deckBefore - 1);
+      expect(client.store.getState().ctx.currentPlayer).toBe('1'); // turn ended immediately, no pending stage.
+    });
+
+    it("the Countess forced-play rule still blocks discarding the King/Prince while holding the Countess", () => {
+      const client = clientWithFixture(2, () => ({
+        hands: { '0': [8], '1': [9] },
+        _deck: [5], // '0' draws Prince(5), now holds [8, 5].
+      }));
+      const before = client.store.getState().G.hands['0']!.slice();
+      client.moves.playCard!(1, { discard: true }); // attempt to discard the Prince instead of the Countess.
+      expect(client.store.getState().G.hands['0']).toEqual(before);
     });
   });
 

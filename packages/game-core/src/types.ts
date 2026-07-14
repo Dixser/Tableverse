@@ -12,6 +12,15 @@ export interface BoardProps<G = unknown> {
   moves: Record<string, (...args: unknown[]) => void>;
   playerID: string | null;
   isActive: boolean;
+  /**
+   * playerID -> display name, threaded through from useSeatClients (the
+   * same map GameoverBanner already receives). Optional -- a game's
+   * BoardComponent that doesn't care about names (e.g. Tic-Tac-Toe) can
+   * simply not destructure it. Only carries seats with a synced name; a
+   * board that wants a fallback for an unnamed/unclaimed seat handles that
+   * itself, same convention as GameoverBanner's own nameFor.
+   */
+  playerNames?: Record<string, string>;
 }
 
 export interface JSONSchema {

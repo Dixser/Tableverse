@@ -1,7 +1,31 @@
 .container {
-  max-width: 40rem;
+  max-width: 60rem;
   margin: 0 auto;
   padding: var(--space-4) var(--space-3);
+}
+
+/* Players, Seats, and the match-control column (Start/End match +
+   SeatSwitcher) side by side -- keeps this chrome compact instead of
+   stacking three full-width blocks above every game's board. */
+.topRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.topRow .section {
+  flex: 1 1 16rem;
+  margin-bottom: 0;
+}
+
+.matchControls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  flex: 0 0 auto;
 }
 
 .heading {
@@ -71,7 +95,6 @@
 
 .buttonStart {
   composes: button;
-  margin-bottom: var(--space-3);
 }
 
 .hint {

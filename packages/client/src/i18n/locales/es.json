@@ -46,8 +46,7 @@
     "ariaLabel": "Idioma"
   },
   "seatSwitcher": {
-    "ariaLabel": "Tus asientos",
-    "seatTab": "Asiento {{playerID}}"
+    "ariaLabel": "Tus asientos"
   },
   "presence": {
     "connected": "Conectado",
@@ -71,5 +70,101 @@
     "title": "Chat",
     "inputPlaceholder": "Escribe un mensaje…",
     "send": "Enviar"
+  },
+  "loveLetter": {
+    "cards": {
+      "0": {
+        "name": "Espía",
+        "text": "Si eres el único jugador que jugó un Espía esta ronda, ganas una ficha de favor extra cuando termine la ronda."
+      },
+      "1": {
+        "name": "Guardia",
+        "text": "Nombra un rango que no sea Guardia y elige a un oponente. Si tiene ese rango, queda eliminado."
+      },
+      "2": {
+        "name": "Sacerdotisa",
+        "text": "Mira en privado la mano de otro jugador."
+      },
+      "3": {
+        "name": "Barón",
+        "text": "Compara en privado tu mano con la de otro jugador. Quien tenga el rango más bajo queda eliminado."
+      },
+      "4": {
+        "name": "Doncella",
+        "text": "No puedes ser objetivo de ningún efecto de carta hasta tu próximo turno."
+      },
+      "5": {
+        "name": "Príncipe",
+        "text": "Elige a cualquier jugador, incluido tú mismo. Descarta su mano y roba una carta nueva."
+      },
+      "6": {
+        "name": "Canciller",
+        "text": "Roba dos cartas, luego devuelve dos de tus tres cartas al fondo del mazo en el orden que elijas, quedándote con una."
+      },
+      "7": {
+        "name": "Rey",
+        "text": "Intercambia tu mano con la de otro jugador."
+      },
+      "8": {
+        "name": "Condesa",
+        "text": "Debes descartar esta carta si tu otra carta es el Rey o el Príncipe."
+      },
+      "9": {
+        "name": "Princesa",
+        "text": "Si descartas esta carta por cualquier motivo, quedas eliminado."
+      }
+    },
+    "countessForced": "Debes jugar la Condesa mientras tengas al Rey o al Príncipe.",
+    "hand": {
+      "ariaLabel": "Tu mano"
+    },
+    "target": {
+      "pickTitle": "Elige un objetivo",
+      "guessTitle": "Adivina un rango",
+      "self": "A ti mismo",
+      "cancel": "Cancelar"
+    },
+    "playOrDiscard": {
+      "title": "¿Jugar o descartar esta carta?",
+      "play": "Jugar",
+      "discard": "Descartar"
+    },
+    "chancellor": {
+      "title": "Elige una carta para quedarte",
+      "keep": "Quedarme con esta",
+      "orderTitle": "Haz clic en las cartas en el orden en que deben volver al fondo del mazo"
+    },
+    "playArea": {
+      "title": "Área de juego",
+      "eliminated": "Eliminado",
+      "protected": "Protegido"
+    },
+    "roundWins": {
+      "title": "Rondas ganadas"
+    },
+    "currentTurn": "Turno actual: {{name}}",
+    "deckCount": "Cartas restantes en el mazo: {{count}}",
+    "reveal": {
+      "priestViewed": "Miraste la mano de {{opponent}}: es un {{opponentRank}}.",
+      "baronCompared": "Comparaste tu mano con {{opponent}}: tú tenías {{ownRank}}, ellos tenían {{opponentRank}}."
+    },
+    "log": {
+      "eliminated": "El jugador {{player}} queda eliminado.",
+      "guardGuess": "El jugador {{actor}} jugó al Guardia contra el jugador {{target}}, adivinando el rango {{rank}}.",
+      "priestUsed": "El jugador {{actor}} jugó a la Sacerdotisa contra el jugador {{target}}.",
+      "baronUsed": "El jugador {{actor}} jugó al Barón contra el jugador {{target}}.",
+      "handmaidUsed": "El jugador {{actor}} jugó a la Doncella.",
+      "princeUsed": "El jugador {{actor}} jugó al Príncipe contra el jugador {{target}}.",
+      "kingUsed": "El jugador {{actor}} jugó al Rey contra el jugador {{target}}.",
+      "chancellorUsed": "El jugador {{actor}} jugó al Canciller.",
+      "spyPlayed": "El jugador {{actor}} jugó al Espía.",
+      "cardPlayedNoTarget": "El jugador {{actor}} jugó una carta (rango {{card}}) sin objetivo válido.",
+      "cardDiscarded": "El jugador {{actor}} descartó una carta (rango {{card}}) sin jugar su efecto.",
+      "countessPlayed": "El jugador {{actor}} jugó a la Condesa.",
+      "princessPlayed": "El jugador {{actor}} jugó a la Princesa.",
+      "roundWinner": "Ronda ganada por: {{winners}}.",
+      "spyBonus": "El jugador {{player}} gana una ficha extra por ser el único jugador con Espía.",
+      "matchWinner": "¡Partida ganada por: {{winners}}!"
+    }
   }
 }
