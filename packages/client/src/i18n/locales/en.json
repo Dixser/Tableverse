@@ -166,5 +166,52 @@
       "spyBonus": "Player {{player}} gets a bonus token as the round's only Spy player.",
       "matchWinner": "Match won by: {{winners}}!"
     }
+  },
+  "theMind": {
+    "level": "Level {{level}} / {{totalLevels}}",
+    "lives": "Lives: {{count}}",
+    "stars": "Stars: {{count}}",
+    "matchWon": "The team completed every level -- you win!",
+    "matchLost": "Out of lives -- the team loses.",
+    "hand": {
+      "ariaLabel": "Your hand",
+      "empty": "No cards left in your hand."
+    },
+    "playedCards": {
+      "title": "Played this level",
+      "empty": "No cards played yet."
+    },
+    "setAsideCards": {
+      "title": "Revealed by a mistake"
+    },
+    "starDiscards": {
+      "title": "Revealed by a shuriken"
+    },
+    "playerStatus": {
+      "title": "Cards in hand",
+      "cardsLeft": "Cards left: {{count}}"
+    },
+    "shuriken": {
+      "propose": "Propose a shuriken ({{count}} available)",
+      "voteTitle": "Shuriken vote",
+      "voteProposedBy": "{{proposer}} proposed using a shuriken. Everyone must agree.",
+      "agree": "Agree",
+      "decline": "Decline",
+      "cancel": "Cancel proposal",
+      "agreed": "Agreed",
+      "waiting": "Waiting…"
+    },
+    "log": {
+      "cardPlayed": "Player {{actor}} played {{card}}.",
+      "mistake": "Player {{actor}} played {{card}} out of order -- the team loses a life.",
+      "levelComplete": "Level {{level}} complete!",
+      "rewardLife": "Reward for level {{level}}: +1 life.",
+      "rewardStar": "Reward for level {{level}}: +1 star.",
+      "matchWon": "The team completed every level!",
+      "matchLost": "The team ran out of lives.",
+      "shurikenProposed": "Player {{actor}} proposed using a shuriken.",
+      "shurikenCancelled": "Player {{actor}} declined the shuriken proposal.",
+      "shurikenUsed": "The team used a shuriken."
+    }
   }
 }

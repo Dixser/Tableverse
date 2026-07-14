@@ -166,5 +166,52 @@
       "spyBonus": "El jugador {{player}} gana una ficha extra por ser el único jugador con Espía.",
       "matchWinner": "¡Partida ganada por: {{winners}}!"
     }
+  },
+  "theMind": {
+    "level": "Nivel {{level}} / {{totalLevels}}",
+    "lives": "Vidas: {{count}}",
+    "stars": "Estrellas: {{count}}",
+    "matchWon": "El equipo completó todos los niveles: ¡ganaron!",
+    "matchLost": "Sin vidas: el equipo pierde.",
+    "hand": {
+      "ariaLabel": "Tu mano",
+      "empty": "No te quedan cartas en la mano."
+    },
+    "playedCards": {
+      "title": "Jugadas en este nivel",
+      "empty": "Todavía no se ha jugado ninguna carta."
+    },
+    "setAsideCards": {
+      "title": "Reveladas por un error"
+    },
+    "starDiscards": {
+      "title": "Reveladas por un shuriken"
+    },
+    "playerStatus": {
+      "title": "Cartas en mano",
+      "cardsLeft": "Cartas restantes: {{count}}"
+    },
+    "shuriken": {
+      "propose": "Proponer un shuriken ({{count}} disponibles)",
+      "voteTitle": "Votación de shuriken",
+      "voteProposedBy": "{{proposer}} propuso usar un shuriken. Todos deben estar de acuerdo.",
+      "agree": "Aceptar",
+      "decline": "Rechazar",
+      "cancel": "Cancelar propuesta",
+      "agreed": "De acuerdo",
+      "waiting": "Esperando…"
+    },
+    "log": {
+      "cardPlayed": "El jugador {{actor}} jugó {{card}}.",
+      "mistake": "El jugador {{actor}} jugó {{card}} fuera de orden: el equipo pierde una vida.",
+      "levelComplete": "¡Nivel {{level}} completado!",
+      "rewardLife": "Recompensa del nivel {{level}}: +1 vida.",
+      "rewardStar": "Recompensa del nivel {{level}}: +1 estrella.",
+      "matchWon": "¡El equipo completó todos los niveles!",
+      "matchLost": "El equipo se quedó sin vidas.",
+      "shurikenProposed": "El jugador {{actor}} propuso usar un shuriken.",
+      "shurikenCancelled": "El jugador {{actor}} rechazó la propuesta de shuriken.",
+      "shurikenUsed": "El equipo usó un shuriken."
+    }
   }
 }

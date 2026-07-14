@@ -13,8 +13,17 @@
  * BoardComponent.tsx and testing/conformance.ts are only ever loaded
  * through Vite/Vitest, which resolve boardgame.io's subpaths natively.
  */
-import type { INVALID_MOVE as InvalidMoveType } from 'boardgame.io/core';
+import type { INVALID_MOVE as InvalidMoveType, ActivePlayers as ActivePlayersType } from 'boardgame.io/core';
 // @ts-expect-error -- real file, but boardgame.io ships no .d.ts alongside its compiled CJS output.
 import * as CoreRuntime from 'boardgame.io/dist/cjs/core.js';
 
 export const INVALID_MOVE = CoreRuntime.INVALID_MOVE as typeof InvalidMoveType;
+
+/**
+ * `ActivePlayers.ALL` (`{ all: Stage.NULL }`) keeps every seat permanently
+ * active with nothing to yield -- the pattern tech-stack.md's "Known engine
+ * limitations" names by name for simultaneous-action/turn-less games (The
+ * Mind). Both `Stage.NULL` and `ActivePlayers.ALL` are plain data (not
+ * functions), so re-exporting the object is enough; no call needed.
+ */
+export const ActivePlayers = CoreRuntime.ActivePlayers as typeof ActivePlayersType;

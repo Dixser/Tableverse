@@ -1,0 +1,6 @@
+.counter {
+  display: inline-flex;
+  gap: 0.1em;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+}

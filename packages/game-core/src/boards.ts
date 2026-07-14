@@ -7,3 +7,4 @@
  */
 export { TicTacToeBoard } from './games/tictactoe/BoardComponent.js';
 export { LoveLetterBoard } from './games/loveletter/BoardComponent.js';
+export { TheMindBoard } from './games/themind/BoardComponent.js';

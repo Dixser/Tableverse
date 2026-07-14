@@ -1,0 +1,41 @@
+.list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: 0;
+  margin: 0;
+}
+
+.list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.self {
+  border-color: var(--color-accent);
+}
+
+.cardBacks {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.cardBack {
+  width: 0.9rem;
+  height: 1.3rem;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--color-accent),
+    var(--color-accent) 3px,
+    var(--color-surface) 3px,
+    var(--color-surface) 6px
+  );
+  border: 1px solid var(--color-border);
+}

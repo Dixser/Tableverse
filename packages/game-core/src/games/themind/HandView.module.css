@@ -1,0 +1,39 @@
+.hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.card,
+.cardLowest {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 4rem;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+}
+
+.card {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.cardLowest {
+  border-color: var(--color-accent);
+}
+
+.cardLowest:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.empty {
+  color: var(--color-text-muted);
+  margin: 0;
+}
