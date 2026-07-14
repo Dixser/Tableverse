@@ -20,3 +20,22 @@
 .self {
   border-color: var(--color-accent);
 }
+
+.cardBacks {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.cardBack {
+  width: 0.9rem;
+  height: 1.3rem;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--color-accent),
+    var(--color-accent) 3px,
+    var(--color-surface) 3px,
+    var(--color-surface) 6px
+  );
+  border: 1px solid var(--color-border);
+}

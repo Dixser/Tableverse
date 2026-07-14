@@ -1,11 +1,17 @@
 import { useTranslation } from 'react-i18next';
 import type { BoardProps } from '../../types.js';
 import type { TheMindView } from './gameDef.js';
+import { EmojiCounter } from './EmojiCounter.js';
 import { HandView } from './HandView.js';
 import { PlayedCardsZone } from './PlayedCardsZone.js';
 import { PlayerStatusList } from './PlayerStatusList.js';
 import { ShurikenPanel } from './ShurikenPanel.js';
 import styles from './BoardComponent.module.css';
+
+/** One rabbit per remaining life -- see EmojiCounter. */
+const LIFE_EMOJI = '🐰';
+/** One sparkle per available shuriken. */
+const STAR_EMOJI = '💫';
 
 /**
  * Renders ONLY the The Mind board -- status, played-cards zones, every
@@ -38,8 +44,16 @@ export const TheMindBoard: React.FC<BoardProps<TheMindView>> = ({
 
       <div className={styles.status}>
         <span>{t('theMind.level', { level: G.level, totalLevels: G.totalLevels })}</span>
-        <span>{t('theMind.lives', { count: G.lives })}</span>
-        <span>{t('theMind.stars', { count: G.stars })}</span>
+        <EmojiCounter
+          emoji={LIFE_EMOJI}
+          count={G.lives}
+          ariaLabel={t('theMind.lives', { count: G.lives })}
+        />
+        <EmojiCounter
+          emoji={STAR_EMOJI}
+          count={G.stars}
+          ariaLabel={t('theMind.stars', { count: G.stars })}
+        />
       </div>
 
       <PlayerStatusList

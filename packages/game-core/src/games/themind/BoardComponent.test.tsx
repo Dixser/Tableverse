@@ -39,7 +39,7 @@ function view(overrides: Partial<TheMindView> = {}): TheMindView {
 }
 
 describe('TheMindBoard', () => {
-  it('renders level/lives/stars status, hand counts, and own hand', () => {
+  it('renders level status, lives/stars as looped emoji (not digits), hand counts, and own hand', () => {
     render(
       <TheMindBoard
         G={view()}
@@ -50,8 +50,11 @@ describe('TheMindBoard', () => {
       />,
     );
     expect(screen.getByText('TEST_level 1 12')).toBeInTheDocument();
-    expect(screen.getByText('TEST_lives 2')).toBeInTheDocument();
-    expect(screen.getByText('TEST_stars 1')).toBeInTheDocument();
+    // 2 lives, 1 star (view()'s defaults) -- rendered as repeated emoji, not "Lives: 2".
+    expect(screen.getByLabelText('TEST_lives 2').textContent).toBe('🐰🐰');
+    expect(screen.getByLabelText('TEST_stars 1').textContent).toBe('💫');
+    expect(screen.queryByText('TEST_lives 2')).toBeNull();
+    expect(screen.queryByText('TEST_stars 1')).toBeNull();
     expect(screen.getByText('5')).toBeInTheDocument();
   });
 
