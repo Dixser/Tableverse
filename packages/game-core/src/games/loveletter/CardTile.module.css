@@ -1,0 +1,53 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 9rem;
+  padding: var(--space-2);
+  text-align: left;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+}
+
+.card:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.rank {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.name {
+  font-weight: 600;
+}
+
+.text {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* PlayArea's played-card badges -- deliberately smaller than .card so they
+   read as a passive discard pile, not as more of the player's own
+   (actionable) hand sitting right below them. */
+.cardCompact {
+  composes: card;
+  width: 5.5rem;
+  padding: var(--space-1);
+  gap: 0;
+}
+
+.cardCompact .rank {
+  font-size: var(--font-size-base);
+}
+
+.cardCompact .name {
+  font-size: 0.75rem;
+}
+
+.cardCompact .text {
+  display: none;
+}

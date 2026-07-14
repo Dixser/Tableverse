@@ -39,7 +39,7 @@ export function GameMount({ selectedGameID, boardProps, playerNames }: GameMount
         playerID={boardProps.playerID}
         playerNames={playerNames}
       />
-      <BoardComponent {...boardProps} />
+      <BoardComponent {...boardProps} playerNames={playerNames} />
     </div>
   );
 }

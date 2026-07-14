@@ -47,3 +47,6 @@ Desktop.ini
 # Claude Code local settings (personal, not shared) -- launch.json is kept,
 # it's project-wide dev-server config other contributors need too.
 .claude/settings.local.json
+
+#ssh
+*.ssh
