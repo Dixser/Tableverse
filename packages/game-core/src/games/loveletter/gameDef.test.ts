@@ -125,20 +125,32 @@ describe('loveletter gameDef', () => {
           // below.
           _deck: [2],
         }),
-        { claimedSeatIDs: ['0', '1'] },
+        // '1' ends up ctx.currentPlayer once the round ends (see below) --
+        // set as host so the round-confirm wait can be force-advanced
+        // through with a single move, same as a real host would do to
+        // skip waiting on a since-disconnected opponent.
+        { claimedSeatIDs: ['0', '1'], hostPlayerID: '1' },
       );
       // '0' plays Baron; their remaining card (2) loses to '1's 7, so '0'
       // self-eliminates -- '1' is the sole remaining ACTIVE player (the 4
       // phantom seats were never in contention), so the round must end
       // immediately, not stay stuck waiting for a phantom seat's turn.
       client.moves.playCard!(0, { target: '1' });
-      const G = client.store.getState().G;
-      expect(G.roundWins).toEqual({ '0': 0, '1': 1, '2': 0, '3': 0, '4': 0, '5': 0 });
-      expect(G.log.some((e: GameLogEntry) => e.key === 'loveLetter.log.roundWinner')).toBe(true);
+      const roundEndedG = client.store.getState().G;
+      expect(roundEndedG.roundWins).toEqual({ '0': 0, '1': 1, '2': 0, '3': 0, '4': 0, '5': 0 });
+      expect(roundEndedG.log.some((e: GameLogEntry) => e.key === 'loveLetter.log.roundWinner')).toBe(true);
+      // The next round doesn't deal until the round-confirm wait resolves
+      // -- both real seats are pending, including the one just eliminated
+      // this round (elimination resets every round; they're still a
+      // participant expected to confirm, same as the winner).
+      expect(roundEndedG.roundConfirm).toEqual({ pendingSeatIDs: ['0', '1'], confirmedSeatIDs: [] });
+      client.moves.forceAdvanceRound!();
+
       // Match isn't over yet (2-player threshold is 6, not the 6-engine-
       // seat threshold of 3) -- a fresh round must have been dealt: both
       // real seats have a hand again, and neither is left "eliminated"
       // going into it -- only the 4 permanent phantom seats stay so.
+      const G = client.store.getState().G;
       expect(G.hands['0']!.length).toBeGreaterThan(0);
       expect(G.hands['1']!.length).toBeGreaterThan(0);
       expect(G.eliminated).toEqual({
@@ -151,6 +163,42 @@ describe('loveletter gameDef', () => {
       });
       // The next round's turn goes to the winner, never to a phantom seat.
       expect(client.store.getState().ctx.currentPlayer).toBe('1');
+    });
+
+    it('playCard is rejected (board stays frozen on the just-ended round) while a round-confirm wait is pending', () => {
+      const client = clientWithFixture(
+        6,
+        () => ({ hands: { '0': [3], '1': [7] }, _deck: [2] }),
+        { claimedSeatIDs: ['0', '1'] },
+      );
+      client.moves.playCard!(0, { target: '1' }); // '0' self-eliminates via Baron, round ends.
+      const frozenG = client.store.getState().G;
+      expect(frozenG.roundConfirm).not.toBeNull();
+
+      // playCard isn't registered as a move for the roundConfirm phase at
+      // all -- boardgame.io rejects it outright, same mechanism the
+      // pre-existing "playCard is rejected while a chancellorKeep decision
+      // is still pending" test above already relies on.
+      client.moves.playCard!(0, {});
+      expect(client.store.getState().G).toEqual(frozenG);
+      expect(client.store.getState().ctx.phase).toBe('roundConfirm');
+    });
+
+    it('a round that ends the match (final token) never enters the round-confirm wait at all', () => {
+      const client = clientWithFixture(
+        6,
+        (base) => ({
+          hands: { '0': [3], '1': [7] },
+          _deck: [2],
+          roundWins: { ...base.roundWins, '1': 5 }, // one win away from the 6-token threshold.
+        }),
+        { claimedSeatIDs: ['0', '1'] },
+      );
+      client.moves.playCard!(0, { target: '1' }); // '0' self-eliminates; '1' reaches 6 tokens.
+      const G = client.store.getState().G;
+      expect(G.matchWinners).toEqual(['1']);
+      expect(G.roundConfirm).toBeNull();
+      expect(client.store.getState().ctx.gameover).toEqual({ winner: '1' });
     });
 
     it("the match-winning token threshold uses the real 2-player count (6), not the engine's 6-seat threshold (3)", () => {
@@ -176,7 +224,11 @@ describe('loveletter gameDef', () => {
         6,
         () => ({
           hands: { '0': [4], '1': [4] },
-          _deck: [0, 2],
+          // 3 cards -- enough for the auto first-turn draw plus one draw
+          // per move below, so the deck never runs out and coincidentally
+          // ends the round mid-test (a 2-card deck did, previously, which
+          // this test wasn't actually trying to exercise).
+          _deck: [0, 2, 9],
         }),
         { claimedSeatIDs: ['0', '1'] },
       );

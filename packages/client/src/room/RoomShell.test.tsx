@@ -957,4 +957,127 @@ describe('RoomShell', () => {
       await waitFor(() => expect(leaveSeat).toHaveBeenCalledWith('tok', 'room-1', '0'));
     });
   });
+
+  describe('rematch', () => {
+    it('shows the Rematch button for the host once the game engine reports gameover, even though room.status is still in_game', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'in_game' }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+          gameover={{ winner: '0' }}
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      expect(screen.getByText('Rematch')).toBeInTheDocument();
+    });
+
+    it('does not show Rematch while the match is still in progress (no gameover yet)', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'in_game' }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      expect(screen.queryByText('Rematch')).not.toBeInTheDocument();
+    });
+
+    it('does not show Rematch to a non-host member, even with gameover set', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({
+          status: 'in_game',
+          members: [
+            { userID: 'host-1', role: 'host' },
+            { userID: 'guest-1', role: 'member' },
+          ],
+        }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'guest-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'guest-1', displayName: 'Guest', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+          gameover={{ winner: '0' }}
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      expect(screen.queryByText('Rematch')).not.toBeInTheDocument();
+    });
+
+    it('clicking Rematch calls roomApi.rematch and refreshes the room', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'in_game' }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+      const rematch = vi.spyOn(roomApi, 'rematch').mockResolvedValue({
+        room: makeRoom({ status: 'in_game' }),
+        credentialsByUserID: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+          gameover={{ winner: '0' }}
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      fireEvent.click(screen.getByText('Rematch'));
+
+      await waitFor(() => expect(rematch).toHaveBeenCalledWith('tok', 'room-1'));
+    });
+
+    it('surfaces a failed rematch call via actionError without discarding the room chrome', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'in_game' }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+      vi.spyOn(roomApi, 'rematch').mockRejectedValue(new Error('not in lobby'));
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+          gameover={{ winner: '0' }}
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      fireEvent.click(screen.getByText('Rematch'));
+
+      await waitFor(() => screen.getByRole('alert'));
+      expect(screen.getByRole('alert')).toHaveTextContent('not in lobby');
+      expect(screen.getByText('Room ABC123')).toBeInTheDocument();
+    });
+  });
 });

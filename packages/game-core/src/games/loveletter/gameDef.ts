@@ -1,11 +1,18 @@
 import type { Ctx, Game, TurnOrderConfig } from 'boardgame.io';
 import type { GameLogEntry, GameoverResult } from '../../types.js';
-import { INVALID_MOVE } from '../../vendor.js';
+import { ActivePlayers, INVALID_MOVE } from '../../vendor.js';
+import {
+  beginRoundConfirm,
+  confirmRoundReadyMove,
+  forceAdvanceRoundMove,
+  isRoundConfirmComplete,
+  type RoundConfirmG,
+} from '../../roundConfirm.js';
 import { buildDeck, type CardRank, type LoveLetterEdition } from './deck.js';
 
 export type { CardRank, LoveLetterEdition } from './deck.js';
 
-export interface LoveLetterG {
+export interface LoveLetterG extends RoundConfirmG {
   edition: LoveLetterEdition;
 
   /**
@@ -77,6 +84,8 @@ export interface LoveLetterSetupData {
   edition?: LoveLetterEdition; // defaults to 'normal'
   /** Seats actually claimed when the match was started -- see LoveLetterG.activeSeatIDs. */
   claimedSeatIDs?: string[];
+  /** The host's own seat, if any -- see RoundConfirmG.hostPlayerID. */
+  hostPlayerID?: string | null;
 }
 
 /** The subset of boardgame.io's EventsAPI playCard/chancellorKeep actually use. */
@@ -130,10 +139,13 @@ function buildInitialG(
   edition: LoveLetterEdition,
   ctx: Ctx,
   activeSeatIDs: string[],
+  hostPlayerID: string | null,
 ): LoveLetterG {
   const seats = seatIDs(ctx);
   return {
     edition,
+    roundConfirm: null,
+    hostPlayerID,
     _deck: [],
     _setAsideFacedown: null,
     setAsideFaceup: [],
@@ -536,8 +548,11 @@ function concludeRound(
     return;
   }
 
+  // Dealing is deferred to the roundConfirm phase's own onEnd (see the
+  // phases block below) -- everyone must confirm before the next round's
+  // cards are dealt, instead of dealing immediately here.
   G.nextRoundStartPlayerID = winners.length === 1 ? winners[0]! : random.Shuffle(winners)[0]!;
-  dealNewRound(G, ctx, random);
+  beginRoundConfirm(G, G.activeSeatIDs);
 }
 
 function matchGameoverResult(G: LoveLetterG): GameoverResult | undefined {
@@ -557,7 +572,7 @@ export const loveletterGameDef: Game<LoveLetterG, Record<string, unknown>, LoveL
     // service in front of it) -- preserves the old "every seat is real"
     // behavior for those callers instead of silently eliminating everyone.
     const activeSeatIDs = setupData?.claimedSeatIDs ?? seatIDs(ctx);
-    const G = buildInitialG(edition, ctx, activeSeatIDs);
+    const G = buildInitialG(edition, ctx, activeSeatIDs, setupData?.hostPlayerID ?? null);
     dealNewRound(G, ctx, random);
     return G;
   },
@@ -573,10 +588,10 @@ export const loveletterGameDef: Game<LoveLetterG, Record<string, unknown>, LoveL
       // Awards tokens, appends the round-winner G.log entry, decides
       // whether the match is now over.
       onEnd: ({ G, ctx, random }) => concludeRound(G, ctx, random),
-      // Loop back into a fresh round unless the match is already decided --
-      // otherwise a phantom round would be dealt only to be discarded the
+      // Into the roundConfirm wait unless the match is already decided --
+      // otherwise a phantom wait would begin only to be discarded the
       // instant the top-level endIf below catches G.matchWinners.
-      next: ({ G }) => (G.matchWinners ? undefined : 'round'),
+      next: ({ G }) => (G.matchWinners ? undefined : 'roundConfirm'),
       turn: {
         order: skipEliminatedTurnOrder,
         onBegin: ({ G, ctx }) => drawIntoActiveHand(G, ctx),
@@ -606,6 +621,31 @@ export const loveletterGameDef: Game<LoveLetterG, Record<string, unknown>, LoveL
       // suite, which never exercises the multiplayer optimistic-execution
       // path at all.
       moves: { playCard: { move: playCard, client: false } },
+    },
+    // Pause between a round ending (concludeRound, above) and the next
+    // round's cards being dealt -- every active seat must confirm (or the
+    // host force-advance) before dealNewRound runs. G.nextRoundStartPlayerID
+    // survives this phase untouched (concludeRound sets it, drawIntoActiveHand
+    // clears it once `round` resumes), so the round-loop's starting-player
+    // logic is unaffected by this pause. Deliberately a separate phase, not
+    // a stage bolted onto `round` -- boardgame.io disallows setActivePlayers
+    // from a phase's onBegin hook, and staying inside the same `round`
+    // phase instance would run turn.onBegin's drawIntoActiveHand against
+    // not-yet-dealt state. confirmRoundReady/forceAdvanceRound don't need
+    // client: false -- unlike playCard/chancellorKeep, they only touch
+    // G.roundConfirm/G.hostPlayerID, neither of which playerView redacts.
+    roundConfirm: {
+      turn: { activePlayers: ActivePlayers.ALL },
+      endIf: ({ G }) => isRoundConfirmComplete(G.roundConfirm),
+      onEnd: ({ G, ctx, random }) => {
+        G.roundConfirm = null;
+        dealNewRound(G, ctx, random);
+      },
+      next: () => 'round',
+      moves: {
+        confirmRoundReady: confirmRoundReadyMove,
+        forceAdvanceRound: forceAdvanceRoundMove,
+      },
     },
   },
 

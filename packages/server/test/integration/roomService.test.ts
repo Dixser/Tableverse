@@ -117,6 +117,43 @@ describe('RoomService', () => {
     });
   });
 
+  it('rematch on an in_game room ends the current match and starts a fresh one with the same config/seats', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const room = await harness.roomService.createRoom('user-host');
+    await harness.roomService.changeGame(room.roomID, dummyGameModule.id);
+    await harness.seats.claimSeat(room.roomID, '0', 'user-host');
+    const { room: started } = await harness.roomService.startMatch(room.roomID);
+    const firstMatchID = started.currentMatchID;
+
+    const { room: rematched } = await harness.roomService.rematch(started.roomID);
+
+    expect(rematched.status).toBe('in_game');
+    expect(rematched.currentMatchID).toBeTruthy();
+    expect(rematched.currentMatchID).not.toBe(firstMatchID);
+    expect(rematched.selectedGameID).toBe(dummyGameModule.id);
+    const seatsAfter = await harness.seats.getSeatsForRoom(room.roomID);
+    expect(seatsAfter).toHaveLength(1);
+    expect(seatsAfter[0]?.userID).toBe('user-host');
+
+    // The old match's storage was wiped by the endMatch it ran internally.
+    const oldFetch = await harness.storage.fetch(firstMatchID!, { metadata: true });
+    expect(oldFetch.metadata).toBeUndefined();
+  });
+
+  it('rematch on an already-lobby room (host manually ended the match first) just starts fresh, without erroring on a redundant endMatch', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const room = await harness.roomService.createRoom('user-host');
+    await harness.roomService.changeGame(room.roomID, dummyGameModule.id);
+    await harness.seats.claimSeat(room.roomID, '0', 'user-host');
+    const { room: started } = await harness.roomService.startMatch(room.roomID);
+    await harness.roomService.endMatch(started.roomID);
+
+    const { room: rematched } = await harness.roomService.rematch(room.roomID);
+
+    expect(rematched.status).toBe('in_game');
+    expect(rematched.currentMatchID).toBeTruthy();
+  });
+
   it('AC6: claiming a seat while lobby creates a room-level reservation only (no credentials); claiming an open seat while in_game immediately issues credentials', async () => {
     harness = await createTestHarness([dummyGameModule]);
     await harness.users.createUser('Alice');

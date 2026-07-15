@@ -268,6 +268,15 @@ export class RoomService {
       setupData: {
         ...room.gameSettings,
         claimedSeatIDs: claimedSeats.map((seat) => seat.playerID),
+        // Snapshot of "who is host at match-start", not a live binding to
+        // Room.hostUserID -- there's no host-transfer feature today, but
+        // if one's ever added mid-match this would go stale for the rest
+        // of the match. Used by games' round-confirm force-advance move
+        // (packages/game-core/src/roundConfirm.ts) to authorize a host
+        // seat to skip waiting on other players; null if the host hasn't
+        // claimed a seat (a spectating host has no match credentials at
+        // all, so they structurally can't call any move regardless).
+        hostPlayerID: claimedSeats.find((seat) => seat.userID === room.hostUserID)?.playerID ?? null,
       },
       unlisted: true,
     });
@@ -376,6 +385,28 @@ export class RoomService {
       status: 'lobby',
     });
     return { ...room, currentMatchID: null, status: 'lobby' };
+  }
+
+  /**
+   * Starts a fresh match with the room's unchanged configuration (same
+   * selectedGameID/gameSettings/seats -- endMatch never touches any of
+   * these, see its own doc comment). Exists because ctx.gameover (the
+   * game engine's own match-over signal) is completely independent of
+   * room.status: nothing calls endMatch automatically when a game's win
+   * condition fires, so the host would otherwise have to click "End
+   * match" before a plain startMatch() call would even be legal. This
+   * collapses that into one action -- reuses endMatch/startMatch as-is,
+   * no new persistence.
+   */
+  async rematch(roomID: string): Promise<{
+    room: Room;
+    credentialsByUserID: Map<string, SeatCredential[]>;
+  }> {
+    const room = await this.mustGetRoom(roomID);
+    if (room.status === 'in_game') {
+      await this.endMatch(roomID);
+    }
+    return this.startMatch(roomID);
   }
 
   private async mustGetRoom(roomID: string): Promise<Room> {

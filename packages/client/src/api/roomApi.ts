@@ -139,4 +139,11 @@ export const roomApi = {
   endMatch(sessionToken: string, roomID: string): Promise<{ room: Room }> {
     return request(`/api/rooms/${roomID}/end`, sessionToken, { method: 'POST' });
   },
+
+  rematch(
+    sessionToken: string,
+    roomID: string,
+  ): Promise<{ room: Room; credentialsByUserID: Record<string, SeatCredential[]> }> {
+    return request(`/api/rooms/${roomID}/rematch`, sessionToken, { method: 'POST' });
+  },
 };

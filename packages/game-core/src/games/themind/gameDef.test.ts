@@ -157,12 +157,20 @@ describe('themind gameDef', () => {
       actAs(client, '1').playCard!(); // plays 10
       actAs(client, '0').playCard!(); // plays 15
       actAs(client, '1').playCard!(); // plays 20 -- both hands now empty.
+      const levelEndedG = client.store.getState().G;
+      expect(levelEndedG.level).toBe(3);
+      expect(levelEndedG.stars).toBe(2); // completing level 2 rewards a star.
+      // The next level doesn't deal until both seats confirm.
+      expect(levelEndedG.hands['0']).toEqual([]);
+      expect(levelEndedG.roundConfirm).not.toBeNull();
+      actAs(client, '0').confirmRoundReady!();
+      actAs(client, '1').confirmRoundReady!();
+
       const G = client.store.getState().G;
-      expect(G.level).toBe(3);
       expect(G.hands['0']).toHaveLength(3);
       expect(G.hands['1']).toHaveLength(3);
       expect(G.playedCards).toEqual([]); // reset for the new level.
-      expect(G.stars).toBe(2); // completing level 2 rewards a star.
+      expect(G.roundConfirm).toBeNull();
     });
 
     it('completing the final level ends the match in a win for every active seat', () => {
@@ -196,11 +204,16 @@ describe('themind gameDef', () => {
       actAs(client, '0').proposeShuriken!();
       actAs(client, '1').voteShuriken!(true);
       actAs(client, '2').voteShuriken!(true);
-      const G = client.store.getState().G;
-      expect(G.level).toBe(3);
+      const levelEndedG = client.store.getState().G;
+      expect(levelEndedG.level).toBe(3);
       // Completing level 2 rewards a star: 1 spent on the shuriken, +1 reward = 1.
-      expect(G.stars).toBe(1);
-      expect(G.hands['0']).toHaveLength(3);
+      expect(levelEndedG.stars).toBe(1);
+      expect(levelEndedG.roundConfirm).not.toBeNull();
+      actAs(client, '0').confirmRoundReady!();
+      actAs(client, '1').confirmRoundReady!();
+      actAs(client, '2').confirmRoundReady!();
+
+      expect(client.store.getState().G.hands['0']).toHaveLength(3);
     });
 
     it('level 1 is the natural case where a shuriken alone always completes the level -- every hand starts with exactly 1 card', () => {
@@ -212,11 +225,65 @@ describe('themind gameDef', () => {
       expect(client.store.getState().G.hands['0']).toHaveLength(1); // sanity: level 1's real deal.
       actAs(client, '0').proposeShuriken!();
       actAs(client, '1').voteShuriken!(true);
+      const levelEndedG = client.store.getState().G;
+      expect(levelEndedG.level).toBe(2); // advanced, not stuck on an emptied level 1.
+      expect(levelEndedG.roundConfirm).not.toBeNull();
+      actAs(client, '0').confirmRoundReady!();
+      actAs(client, '1').confirmRoundReady!();
+
       const G = client.store.getState().G;
-      expect(G.level).toBe(2); // advanced, not stuck on an emptied level 1.
       expect(G.hands['0']).toHaveLength(2); // freshly dealt for level 2, not left empty.
       expect(G.hands['1']).toHaveLength(2);
       expect(G.matchResult).toBeNull(); // 2-player match has 12 levels -- nowhere near a win yet.
+    });
+
+    it('proposeShuriken/playCard are rejected while a round-confirm wait is pending', () => {
+      const client = clientWithFixture(
+        2,
+        () => ({ hands: { '0': [5], '1': [10] }, stars: 1, level: 2 }),
+      );
+      actAs(client, '0').playCard!();
+      actAs(client, '1').playCard!(); // both hands now empty, level ends.
+      const frozenG = client.store.getState().G;
+      expect(frozenG.roundConfirm).not.toBeNull();
+
+      actAs(client, '0').proposeShuriken!();
+      expect(client.store.getState().G).toEqual(frozenG);
+      actAs(client, '0').playCard!();
+      expect(client.store.getState().G).toEqual(frozenG);
+    });
+
+    it("forceAdvanceRound is rejected for a non-host seat, but the host seat can skip waiting on the rest with one call", () => {
+      const client = clientWithFixture(
+        2,
+        () => ({ hands: { '0': [5], '1': [10] }, stars: 1, level: 2 }),
+        { claimedSeatIDs: ['0', '1'], hostPlayerID: '1' },
+      );
+      actAs(client, '0').playCard!();
+      actAs(client, '1').playCard!();
+      const frozenG = client.store.getState().G;
+      expect(frozenG.roundConfirm).toEqual({ pendingSeatIDs: ['0', '1'], confirmedSeatIDs: [] });
+
+      actAs(client, '0').forceAdvanceRound!();
+      expect(client.store.getState().G).toEqual(frozenG); // non-host: rejected, no change.
+
+      actAs(client, '1').forceAdvanceRound!();
+      const G = client.store.getState().G;
+      expect(G.roundConfirm).toBeNull();
+      expect(G.hands['0']).toHaveLength(3);
+      expect(G.hands['1']).toHaveLength(3);
+    });
+
+    it('completing the final level never enters the round-confirm wait at all', () => {
+      const client = clientWithFixture(
+        2,
+        () => ({ hands: { '0': [1], '1': [2] }, level: 12 }),
+      );
+      actAs(client, '0').playCard!();
+      actAs(client, '1').playCard!();
+      const G = client.store.getState().G;
+      expect(G.matchResult).toBe('won');
+      expect(G.roundConfirm).toBeNull();
     });
   });
 
@@ -275,6 +342,8 @@ describe('themind gameDef', () => {
     it('exposes only the viewer\'s own hand plus every seat\'s public hand count', () => {
       const G: TheMindG = {
         activeSeatIDs: ['0', '1'],
+        roundConfirm: null,
+        hostPlayerID: null,
         totalLevels: 12,
         level: 1,
         lives: 2,

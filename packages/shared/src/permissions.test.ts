@@ -13,6 +13,7 @@ const ALL_ACTIONS: RoomAction[] = [
   'manageSeats',
   'startMatch',
   'endMatch',
+  'rematch',
   'editRoomSettings',
   'claimSeat',
   'leaveSeat',

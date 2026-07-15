@@ -1,6 +1,13 @@
 import type { Ctx, Game } from 'boardgame.io';
 import type { GameLogEntry, GameoverResult } from '../../types.js';
 import { ActivePlayers, INVALID_MOVE } from '../../vendor.js';
+import {
+  beginRoundConfirm,
+  confirmRoundReadyMove,
+  forceAdvanceRoundMove,
+  isRoundConfirmComplete,
+  type RoundConfirmG,
+} from '../../roundConfirm.js';
 
 export interface TheMindShurikenVote {
   proposerID: string;
@@ -8,7 +15,7 @@ export interface TheMindShurikenVote {
   votes: Record<string, boolean>;
 }
 
-export interface TheMindG {
+export interface TheMindG extends RoundConfirmG {
   /**
    * Every seat actually claimed by a real user at match-start time, fixed
    * for the whole match -- same pattern and same reason as Love Letter's
@@ -61,6 +68,8 @@ export interface TheMindView extends Omit<TheMindG, 'hands'> {
 export interface TheMindSetupData {
   /** Seats actually claimed when the match was started -- see TheMindG.activeSeatIDs. */
   claimedSeatIDs?: string[];
+  /** The host's own seat, if any -- see RoundConfirmG.hostPlayerID. */
+  hostPlayerID?: string | null;
 }
 
 interface LevelConfig {
@@ -114,11 +123,13 @@ function validateTheMindSetupData(
   return undefined;
 }
 
-function buildInitialG(activeSeatIDs: string[], ctx: Ctx): TheMindG {
+function buildInitialG(activeSeatIDs: string[], ctx: Ctx, hostPlayerID: string | null): TheMindG {
   const seats = seatIDs(ctx);
   const config = LEVEL_CONFIG[activeSeatIDs.length]!;
   return {
     activeSeatIDs,
+    roundConfirm: null,
+    hostPlayerID,
     totalLevels: config.levels,
     level: 1,
     lives: config.startingLives,
@@ -191,8 +202,14 @@ function checkLevelComplete(G: TheMindG, ctx: Ctx, random: ShuffleFn): void {
     G.log.push({ key: 'theMind.log.matchWon' });
     return;
   }
+  // Dealing is deferred until every active seat confirms (or the host
+  // force-advances) -- see confirmRoundReady/forceAdvanceRound below,
+  // which call dealLevel themselves once the wait resolves. Unlike Love
+  // Letter, there's no phase machinery here to lean on (The Mind has none
+  // at all -- flat ActivePlayers.ALL for the whole match), so the wait is
+  // just a G-level flag every move already checks.
   G.level += 1;
-  dealLevel(G, ctx, random);
+  beginRoundConfirm(G, G.activeSeatIDs);
 }
 
 function loseLife(G: TheMindG): void {
@@ -272,6 +289,10 @@ function proposeShuriken({
   playerID: string;
 }): typeof INVALID_MOVE | void {
   if (G.matchResult) return INVALID_MOVE;
+  // No point proposing a shuriken for a level that's already over and
+  // waiting to be confirmed -- every hand is empty, there's nothing left
+  // to reveal.
+  if (G.roundConfirm) return INVALID_MOVE;
   if (G.stars <= 0) return INVALID_MOVE;
   if (G.shurikenVote) return INVALID_MOVE;
   if (!G.activeSeatIDs.includes(playerID)) return INVALID_MOVE;
@@ -336,6 +357,40 @@ function voteShuriken(
   checkLevelComplete(G, ctx, random);
 }
 
+/**
+ * client: false -- unlike the confirm/force-advance moves themselves
+ * (which only touch G.roundConfirm/G.hostPlayerID, neither redacted by
+ * playerView), dealLevel below writes a freshly dealt hand for every
+ * active seat, not just the caller's own. boardgame.io's optimistic
+ * client-side dry-run would otherwise run this against the caller's
+ * already-playerView-filtered G and briefly render OTHER seats' hands
+ * with locally-predicted (not the server's real) card values -- the same
+ * category of leak client:false exists to prevent elsewhere in this file.
+ * The Mind has no phase machinery to defer dealing into an onEnd hook the
+ * way Love Letter's roundConfirm phase does (see its own gameDef.ts), so
+ * dealLevel is called inline here once the wait resolves.
+ */
+function confirmRoundReady(
+  context: { G: TheMindG; ctx: Ctx; playerID: string; random: ShuffleFn },
+): typeof INVALID_MOVE | void {
+  const result = confirmRoundReadyMove(context);
+  if (result === INVALID_MOVE) return INVALID_MOVE;
+  if (isRoundConfirmComplete(context.G.roundConfirm)) {
+    context.G.roundConfirm = null;
+    dealLevel(context.G, context.ctx, context.random);
+  }
+}
+
+/** client: false -- see confirmRoundReady's own note just above. */
+function forceAdvanceRound(
+  context: { G: TheMindG; ctx: Ctx; playerID: string; random: ShuffleFn },
+): typeof INVALID_MOVE | void {
+  const result = forceAdvanceRoundMove(context);
+  if (result === INVALID_MOVE) return INVALID_MOVE;
+  context.G.roundConfirm = null;
+  dealLevel(context.G, context.ctx, context.random);
+}
+
 function matchGameoverResult(G: TheMindG): GameoverResult | undefined {
   if (G.matchResult === 'won') return { winner: G.activeSeatIDs };
   // {} (no winner, not a draw) is a fully conforming GameoverResult -- see
@@ -352,7 +407,7 @@ export const themindGameDef: Game<TheMindG, Record<string, unknown>, TheMindSetu
     // claimedSeatIDs (e.g. a headless test Client() with no room/seat
     // service in front of it) -- same convention as Love Letter's setup.
     const activeSeatIDs = setupData?.claimedSeatIDs ?? seatIDs(ctx);
-    const G = buildInitialG(activeSeatIDs, ctx);
+    const G = buildInitialG(activeSeatIDs, ctx, setupData?.hostPlayerID ?? null);
     dealLevel(G, ctx, random);
     return G;
   },
@@ -364,6 +419,8 @@ export const themindGameDef: Game<TheMindG, Record<string, unknown>, TheMindSetu
     proposeShuriken: { move: proposeShuriken, client: false },
     voteShuriken: { move: voteShuriken, client: false },
     cancelShurikenVote: { move: cancelShurikenVote, client: false },
+    confirmRoundReady: { move: confirmRoundReady, client: false },
+    forceAdvanceRound: { move: forceAdvanceRound, client: false },
   },
 
   // Every seat stays permanently active with nothing to yield -- the

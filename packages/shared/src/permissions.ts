@@ -6,6 +6,7 @@ export type RoomAction =
   | 'manageSeats'
   | 'startMatch'
   | 'endMatch'
+  | 'rematch'
   | 'editRoomSettings'
   | 'claimSeat'
   | 'leaveSeat'
@@ -18,6 +19,7 @@ export const ROOM_PERMISSIONS: Record<RoomRole, Set<RoomAction>> = {
     'manageSeats',
     'startMatch',
     'endMatch',
+    'rematch',
     'editRoomSettings',
     // Host is also always a room member and must be able to play,
     // including solo play (claiming every seat) — see spec.md user

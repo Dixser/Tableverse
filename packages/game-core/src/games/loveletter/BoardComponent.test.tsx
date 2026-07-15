@@ -22,6 +22,8 @@ function makeCtx(overrides: Partial<Ctx> = {}): Ctx {
 function seatedView(overrides: Partial<LoveLetterView> = {}): LoveLetterView {
   return {
     edition: 'normal',
+    roundConfirm: null,
+    hostPlayerID: null,
     deckCount: 10,
     setAsideFaceup: [],
     hands: { '0': [2, 8] },
