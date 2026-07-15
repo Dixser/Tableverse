@@ -69,7 +69,9 @@
   "chat": {
     "title": "Chat",
     "inputPlaceholder": "Type a message…",
-    "send": "Send"
+    "send": "Send",
+    "newMessages_one": "{{count}} new message",
+    "newMessages_other": "{{count}} new messages"
   },
   "loveLetter": {
     "cards": {

@@ -71,6 +71,11 @@ export function extractGameLogEntries(gameLog: unknown): GameLogEntry[] {
   );
 }
 
+/** How close to the bottom (in px of unscrolled content below the
+ * viewport) still counts as "at the bottom" for auto-scroll/unread
+ * purposes -- a user doesn't have to be pixel-perfect at the very end. */
+const NEAR_BOTTOM_THRESHOLD_PX = 48;
+
 interface StampedLogEntry extends GameLogEntry {
   /** Client-local Date.now(), stamped the moment this entry is first
    * observed (new array index since the last render) -- see plan.md's
@@ -95,6 +100,13 @@ export function ChatPanel({ roomID, sessionToken, gameLog, playerNames }: ChatPa
   const [body, setBody] = useState('');
   const [stampedLog, setStampedLog] = useState<StampedLogEntry[]>([]);
   const feedRef = useRef<HTMLUListElement>(null);
+  // Read/written outside React's render cycle (scroll/resize handlers,
+  // the pre-append check in the feed-growth effect below) -- doesn't need
+  // to be state since nothing needs to re-render off its value alone.
+  const isNearBottomRef = useRef(true);
+  const prevFeedLengthRef = useRef(0);
+  const hasMountedRef = useRef(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const logEntries = extractGameLogEntries(gameLog);
   useEffect(() => {
@@ -123,38 +135,89 @@ export function ChatPanel({ roomID, sessionToken, gameLog, playerNames }: ChatPa
     })),
   ].sort((a, b) => a.timestamp - b.timestamp);
 
+  // Keyed on the feed's length so this also runs on initial mount (the
+  // panel should open already scrolled to the latest message, not the
+  // oldest) as well as every time a new chat/log entry appends. Only
+  // force-scrolls when the reader was already at (or near) the bottom --
+  // otherwise a reader scrolled up to reread earlier messages would get
+  // yanked back down by every incoming message, so this bumps the unread
+  // counter instead and leaves their scroll position alone.
   useEffect(() => {
+    const el = feedRef.current;
+    const delta = feed.length - prevFeedLengthRef.current;
+    prevFeedLengthRef.current = feed.length;
+    if (!el) return;
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+    if (delta <= 0) return;
+    if (isNearBottomRef.current) {
+      el.scrollTop = el.scrollHeight;
+    } else {
+      setUnreadCount((prev) => prev + delta);
+    }
+  }, [feed.length]);
+
+  const updateNearBottom = () => {
+    const el = feedRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= NEAR_BOTTOM_THRESHOLD_PX;
+    isNearBottomRef.current = nearBottom;
+    if (nearBottom) setUnreadCount(0);
+  };
+
+  // A viewport resize (e.g. mobile rotation) can change whether the
+  // current scroll position counts as "near the bottom" without firing a
+  // scroll event at all.
+  useEffect(() => {
+    window.addEventListener('resize', updateNearBottom);
+    return () => window.removeEventListener('resize', updateNearBottom);
+  }, []);
+
+  const scrollToBottom = () => {
     const el = feedRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-    // Keyed on the feed's length so this also runs on initial mount (the
-    // panel should open already scrolled to the latest message, not the
-    // oldest) as well as every time a new chat/log entry appends.
-  }, [feed.length]);
+    isNearBottomRef.current = true;
+    setUnreadCount(0);
+  };
 
   return (
     <div className={styles.panel} aria-label={t('chat.title')}>
-      <ul className={styles.feed} ref={feedRef}>
-        {feed.map((item) =>
-          item.kind === 'chat' ? (
-            <li key={item.message.id} className={styles.chatRow}>
-              <span className={styles.author}>{item.message.authorDisplayName}</span>
-              <span>{item.message.body}</span>
-            </li>
-          ) : (
-            <li
-              key={`${item.entry.key}-${item.timestamp}`}
-              className={
-                item.entry.key.endsWith('.eliminated')
-                  ? `${styles.logRow} ${styles.logRowElimination}`
-                  : styles.logRow
-              }
-            >
-              {t(item.entry.key, resolveLogParams(item.entry.params, playerNames, t))}
-            </li>
-          ),
+      <div className={styles.feedWrapper}>
+        <ul className={styles.feed} ref={feedRef} onScroll={updateNearBottom}>
+          {feed.map((item) =>
+            item.kind === 'chat' ? (
+              <li key={item.message.id} className={styles.chatRow}>
+                <span className={styles.author}>{item.message.authorDisplayName}</span>
+                <span>{item.message.body}</span>
+              </li>
+            ) : (
+              <li
+                key={`${item.entry.key}-${item.timestamp}`}
+                className={
+                  item.entry.key.endsWith('.eliminated')
+                    ? `${styles.logRow} ${styles.logRowElimination}`
+                    : styles.logRow
+                }
+              >
+                {t(item.entry.key, resolveLogParams(item.entry.params, playerNames, t))}
+              </li>
+            ),
+          )}
+        </ul>
+        {unreadCount > 0 && (
+          <button
+            type="button"
+            className={styles.newMessagesCta}
+            onClick={scrollToBottom}
+          >
+            {t('chat.newMessages', { count: unreadCount })}
+          </button>
         )}
-      </ul>
+      </div>
       <form
         className={styles.composer}
         onSubmit={(e) => {

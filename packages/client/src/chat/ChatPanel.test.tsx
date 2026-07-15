@@ -233,4 +233,121 @@ describe('ChatPanel', () => {
 
     expect(feed.scrollTop).toBe(500);
   });
+
+  function makeScrolledUpFeed(feed: HTMLUListElement): void {
+    Object.defineProperty(feed, 'scrollHeight', { value: 1000, configurable: true });
+    Object.defineProperty(feed, 'clientHeight', { value: 300, configurable: true });
+    feed.scrollTop = 100; // 1000 - 100 - 300 = 600px from bottom, well past the threshold.
+    fireEvent.scroll(feed);
+  }
+
+  it('does not auto-scroll and shows an unread indicator when a message arrives while scrolled up', () => {
+    mockUseChat.mockReturnValue({
+      messages: [makeMessage({ id: 'msg-1', body: 'first' })],
+      sendMessage: vi.fn(),
+    });
+
+    const { rerender } = render(<ChatPanel roomID="room-1" sessionToken="tok" />);
+    const feed = screen.getByText('first').closest('ul')!;
+    makeScrolledUpFeed(feed);
+
+    expect(screen.queryByText(i18n.t('chat.newMessages', { count: 1 }))).not.toBeInTheDocument();
+
+    mockUseChat.mockReturnValue({
+      messages: [
+        makeMessage({ id: 'msg-1', body: 'first' }),
+        makeMessage({ id: 'msg-2', body: 'second' }),
+      ],
+      sendMessage: vi.fn(),
+    });
+    rerender(<ChatPanel roomID="room-1" sessionToken="tok" />);
+
+    expect(feed.scrollTop).toBe(100); // unchanged -- no auto-scroll while reading earlier messages.
+    expect(screen.getByText(i18n.t('chat.newMessages', { count: 1 }))).toBeInTheDocument();
+  });
+
+  it('aggregates multiple new messages into a single indicator rather than stacking', () => {
+    mockUseChat.mockReturnValue({
+      messages: [makeMessage({ id: 'msg-1', body: 'first' })],
+      sendMessage: vi.fn(),
+    });
+
+    const { rerender } = render(<ChatPanel roomID="room-1" sessionToken="tok" />);
+    const feed = screen.getByText('first').closest('ul')!;
+    makeScrolledUpFeed(feed);
+
+    mockUseChat.mockReturnValue({
+      messages: [
+        makeMessage({ id: 'msg-1', body: 'first' }),
+        makeMessage({ id: 'msg-2', body: 'second' }),
+      ],
+      sendMessage: vi.fn(),
+    });
+    rerender(<ChatPanel roomID="room-1" sessionToken="tok" />);
+
+    mockUseChat.mockReturnValue({
+      messages: [
+        makeMessage({ id: 'msg-1', body: 'first' }),
+        makeMessage({ id: 'msg-2', body: 'second' }),
+        makeMessage({ id: 'msg-3', body: 'third' }),
+      ],
+      sendMessage: vi.fn(),
+    });
+    rerender(<ChatPanel roomID="room-1" sessionToken="tok" />);
+
+    expect(screen.queryByText(i18n.t('chat.newMessages', { count: 1 }))).not.toBeInTheDocument();
+    expect(screen.getByText(i18n.t('chat.newMessages', { count: 2 }))).toBeInTheDocument();
+  });
+
+  it('clicking the unread indicator scrolls to the bottom and dismisses it', () => {
+    mockUseChat.mockReturnValue({
+      messages: [makeMessage({ id: 'msg-1', body: 'first' })],
+      sendMessage: vi.fn(),
+    });
+
+    const { rerender } = render(<ChatPanel roomID="room-1" sessionToken="tok" />);
+    const feed = screen.getByText('first').closest('ul')!;
+    makeScrolledUpFeed(feed);
+
+    mockUseChat.mockReturnValue({
+      messages: [
+        makeMessage({ id: 'msg-1', body: 'first' }),
+        makeMessage({ id: 'msg-2', body: 'second' }),
+      ],
+      sendMessage: vi.fn(),
+    });
+    rerender(<ChatPanel roomID="room-1" sessionToken="tok" />);
+
+    fireEvent.click(screen.getByText(i18n.t('chat.newMessages', { count: 1 })));
+
+    expect(feed.scrollTop).toBe(feed.scrollHeight);
+    expect(screen.queryByText(i18n.t('chat.newMessages', { count: 1 }))).not.toBeInTheDocument();
+  });
+
+  it('clears the unread indicator when the reader scrolls back to the bottom themselves', () => {
+    mockUseChat.mockReturnValue({
+      messages: [makeMessage({ id: 'msg-1', body: 'first' })],
+      sendMessage: vi.fn(),
+    });
+
+    const { rerender } = render(<ChatPanel roomID="room-1" sessionToken="tok" />);
+    const feed = screen.getByText('first').closest('ul')!;
+    makeScrolledUpFeed(feed);
+
+    mockUseChat.mockReturnValue({
+      messages: [
+        makeMessage({ id: 'msg-1', body: 'first' }),
+        makeMessage({ id: 'msg-2', body: 'second' }),
+      ],
+      sendMessage: vi.fn(),
+    });
+    rerender(<ChatPanel roomID="room-1" sessionToken="tok" />);
+    expect(screen.getByText(i18n.t('chat.newMessages', { count: 1 }))).toBeInTheDocument();
+
+    // Reader scrolls back down to the bottom themselves (not via the CTA).
+    feed.scrollTop = 700; // 1000 - 700 - 300 = 0px from bottom.
+    fireEvent.scroll(feed);
+
+    expect(screen.queryByText(i18n.t('chat.newMessages', { count: 1 }))).not.toBeInTheDocument();
+  });
 });
