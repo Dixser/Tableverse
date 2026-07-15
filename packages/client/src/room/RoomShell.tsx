@@ -54,6 +54,13 @@ export interface RoomShellProps {
    * GameLogEntry[], since a non-conforming game's G shouldn't crash the
    * panel (same defensive posture as GameoverBanner's `gameover: unknown`). */
   gameLog?: unknown;
+  /** boardgame.io's own ctx.gameover -- unknown, not a specific shape, same
+   * defensive posture as gameLog above. This is the game engine's own
+   * match-over signal, entirely independent of `room.status` (nothing
+   * calls endMatch automatically when a game's win condition fires) --
+   * used to show the Rematch button as soon as the match concludes,
+   * without requiring the host to first manually click "End match". */
+  gameover?: unknown;
   /** playerID -> display name for the active match, passed straight through
    * to ChatPanel so it can resolve the player-identifying params on a
    * game's own G.log entries -- see ChatPanel's `playerNames` doc comment. */
@@ -83,6 +90,7 @@ export function RoomShell({
   onSeatClaimed,
   onLeftRoom,
   gameLog,
+  gameover,
   playerNames,
   seatSwitcher,
 }: RoomShellProps) {
@@ -218,6 +226,16 @@ export function RoomShell({
     }
   }, [sessionToken, roomID, refresh]);
 
+  const rematch = useCallback(async () => {
+    setActionError(null);
+    try {
+      await roomApi.rematch(sessionToken, roomID);
+      await refresh();
+    } catch (err) {
+      setActionError((err as Error).message);
+    }
+  }, [sessionToken, roomID, refresh]);
+
   const leaveRoom = useCallback(async () => {
     setActionError(null);
     try {
@@ -279,6 +297,7 @@ export function RoomShell({
   const canChangeGame = role != null && canPerform(role, 'changeGame');
   const canStart = role != null && canPerform(role, 'startMatch');
   const canEnd = role != null && canPerform(role, 'endMatch');
+  const canRematch = role != null && canPerform(role, 'rematch');
   const canEditSettings = role != null && canPerform(role, 'editRoomSettings');
   const canLeaveSeat = role != null && canPerform(role, 'leaveSeat');
   const canLeaveRoom = role != null && canPerform(role, 'leaveRoom');
@@ -439,6 +458,11 @@ export function RoomShell({
         {room.status === 'in_game' && canEnd && (
           <button className={styles.buttonDanger} type="button" onClick={() => void endMatch()}>
             {t('room.endMatch')}
+          </button>
+        )}
+        {room.status === 'in_game' && canRematch && gameover != null && (
+          <button className={styles.buttonStart} type="button" onClick={() => void rematch()}>
+            {t('room.rematch')}
           </button>
         )}
         {seatSwitcher}

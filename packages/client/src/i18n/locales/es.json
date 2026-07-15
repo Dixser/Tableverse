@@ -31,6 +31,7 @@
     "noGamesAvailable": "Todavía no hay juegos disponibles.",
     "startMatch": "Iniciar partida",
     "endMatch": "Terminar partida",
+    "rematch": "Revancha",
     "seatLabel": "Asiento {{seatNumber}}",
     "seatOccupied": "Asiento {{seatNumber}}: {{occupant}}",
     "drawerToggle": "Menú de sala",
@@ -67,6 +68,12 @@
     "othersWin_one": "¡{{names}} gana!",
     "othersWin_other": "¡{{names}} ganan!",
     "fallback": "Fin de la partida."
+  },
+  "roundConfirm": {
+    "title": "Ronda completada",
+    "progress": "{{confirmed}} de {{total}} confirmados",
+    "confirmButton": "Listo para la siguiente ronda",
+    "forceAdvanceButton": "Omitir espera (anfitrión)"
   },
   "chat": {
     "title": "Chat",

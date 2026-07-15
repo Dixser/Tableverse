@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { getGameModule, type BoardProps } from '@tableverse/game-core';
 import { boardComponents } from '../boardRegistry.js';
 import { GameoverBanner } from './GameoverBanner.js';
+import { RoundConfirmBanner } from './RoundConfirmBanner.js';
 
 export interface GameMountProps {
   selectedGameID: string | null;
@@ -32,12 +33,21 @@ export function GameMount({ selectedGameID, boardProps, playerNames }: GameMount
   if (!boardProps) {
     return <div>{t('gameMount.waitingForMatch')}</div>;
   }
+  const G = boardProps.G as { roundConfirm?: unknown; hostPlayerID?: unknown };
   return (
     <div data-testid="game-mount">
       <GameoverBanner
         gameover={boardProps.ctx.gameover}
         playerID={boardProps.playerID}
         playerNames={playerNames}
+      />
+      <RoundConfirmBanner
+        roundConfirm={G.roundConfirm}
+        hostPlayerID={G.hostPlayerID}
+        playerID={boardProps.playerID}
+        playerNames={playerNames}
+        onConfirm={() => boardProps.moves.confirmRoundReady?.()}
+        onForceAdvance={() => boardProps.moves.forceAdvanceRound?.()}
       />
       <BoardComponent {...boardProps} playerNames={playerNames} />
     </div>

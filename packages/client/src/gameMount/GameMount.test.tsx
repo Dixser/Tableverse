@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { GameMount } from './GameMount.js';
 
 describe('GameMount', () => {
@@ -130,5 +130,62 @@ describe('GameMount', () => {
       />,
     );
     expect(screen.getByRole('status')).toHaveTextContent('Seat 1 wins!');
+  });
+
+  it('renders the round-confirm banner above the board when G.roundConfirm is set, and wires its Confirm button to boardProps.moves.confirmRoundReady', () => {
+    const confirmRoundReady = vi.fn();
+    render(
+      <GameMount
+        selectedGameID="tictactoe-v1"
+        boardProps={{
+          G: {
+            cells: Array(9).fill(null),
+            roundConfirm: { pendingSeatIDs: ['0', '1'], confirmedSeatIDs: ['1'] },
+            hostPlayerID: null,
+          },
+          ctx: {
+            numPlayers: 2,
+            playOrder: ['0', '1'],
+            playOrderPos: 0,
+            activePlayers: null,
+            currentPlayer: '0',
+            turn: 1,
+            phase: 'default',
+          },
+          moves: { play: () => {}, confirmRoundReady },
+          playerID: '0',
+          isActive: true,
+        }}
+        playerNames={{}}
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('1 of 2 confirmed');
+    fireEvent.click(screen.getByText('Ready for next round'));
+    expect(confirmRoundReady).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders no round-confirm banner for a game whose G has no roundConfirm field at all', () => {
+    render(
+      <GameMount
+        selectedGameID="tictactoe-v1"
+        boardProps={{
+          G: { cells: Array(9).fill(null) },
+          ctx: {
+            numPlayers: 2,
+            playOrder: ['0', '1'],
+            playOrderPos: 0,
+            activePlayers: null,
+            currentPlayer: '0',
+            turn: 1,
+            phase: 'default',
+          },
+          moves: { play: () => {} },
+          playerID: '0',
+          isActive: true,
+        }}
+        playerNames={{}}
+      />,
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });

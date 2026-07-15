@@ -277,5 +277,21 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
     }
   });
 
+  router.post('/:roomID/rematch', async (ctx) => {
+    const room = await authorize(ctx, deps, param(ctx, 'roomID'), 'rematch');
+    if (!room) return;
+    try {
+      const result = await deps.roomService.rematch(room.roomID);
+      deps.roomEvents.roomChanged(room.roomID);
+      ctx.body = {
+        room: result.room,
+        credentialsByUserID: Object.fromEntries(result.credentialsByUserID),
+      };
+    } catch (err) {
+      ctx.status = 409;
+      ctx.body = { error: (err as RoomServiceError).message };
+    }
+  });
+
   return router;
 }

@@ -31,6 +31,7 @@
     "noGamesAvailable": "No games available yet.",
     "startMatch": "Start match",
     "endMatch": "End match",
+    "rematch": "Rematch",
     "seatLabel": "Seat {{seatNumber}}",
     "seatOccupied": "Seat {{seatNumber}}: {{occupant}}",
     "drawerToggle": "Room menu",
@@ -67,6 +68,12 @@
     "othersWin_one": "{{names}} wins!",
     "othersWin_other": "{{names}} win!",
     "fallback": "Game over."
+  },
+  "roundConfirm": {
+    "title": "Round complete",
+    "progress": "{{confirmed}} of {{total}} confirmed",
+    "confirmButton": "Ready for next round",
+    "forceAdvanceButton": "Skip waiting (host)"
   },
   "chat": {
     "title": "Chat",

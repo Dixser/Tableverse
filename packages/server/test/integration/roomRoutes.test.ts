@@ -448,6 +448,69 @@ describe('room routes: permission enforcement', () => {
     expect(roomChangedCalls.every((id) => id === room.roomID)).toBe(true);
   });
 
+  it('POST /:roomID/rematch: a non-host is rejected with 403; the host gets a fresh match with the same config, before manually ending the previous one', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const { roomEvents } = stubRoomEvents();
+    const router = createRoomRouter({
+      users: harness.users,
+      rooms: harness.rooms,
+      seats: harness.seats,
+      roomService: harness.roomService,
+      roomEvents,
+    });
+    server = await startTestServer(router);
+    const host = await createSessionedUser(harness, 'HostRematch');
+    const member = await createSessionedUser(harness, 'MemberRematch');
+
+    const createRes = await fetch(`${server.baseUrl}/api/rooms`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    const { room } = (await createRes.json()) as { room: { roomID: string; inviteCode: string } };
+
+    await fetch(`${server.baseUrl}/api/rooms/join`, {
+      method: 'POST',
+      headers: {
+        [SESSION_TOKEN_HEADER]: member.sessionToken,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ inviteCode: room.inviteCode }),
+    });
+    await harness.roomService.changeGame(room.roomID, dummyGameModule.id);
+    await fetch(`${server.baseUrl}/api/rooms/${room.roomID}/seats/0/claim`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    const startRes = await fetch(`${server.baseUrl}/api/rooms/${room.roomID}/start`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    const { room: started } = (await startRes.json()) as { room: { currentMatchID: string } };
+
+    // A non-host member cannot rematch, and the still-in-progress match is
+    // untouched by the rejected attempt.
+    const memberRematchRes = await fetch(
+      `${server.baseUrl}/api/rooms/${room.roomID}/rematch`,
+      { method: 'POST', headers: { [SESSION_TOKEN_HEADER]: member.sessionToken } },
+    );
+    expect(memberRematchRes.status).toBe(403);
+    expect((await harness.rooms.getById(room.roomID))?.currentMatchID).toBe(started.currentMatchID);
+
+    // The host can rematch straight from the in_game state -- no need to
+    // call /end first (that's the whole point of the endpoint).
+    const rematchRes = await fetch(`${server.baseUrl}/api/rooms/${room.roomID}/rematch`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    expect(rematchRes.status).toBe(200);
+    const { room: rematched } = (await rematchRes.json()) as {
+      room: { status: string; currentMatchID: string; selectedGameID: string };
+    };
+    expect(rematched.status).toBe('in_game');
+    expect(rematched.currentMatchID).not.toBe(started.currentMatchID);
+    expect(rematched.selectedGameID).toBe(dummyGameModule.id);
+  });
+
   it('rejects a non-member acting on a room they have not joined with 403', async () => {
     const { harness, server } = await setup();
     const host = await createSessionedUser(harness, 'Host');

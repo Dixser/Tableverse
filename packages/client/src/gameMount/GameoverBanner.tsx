@@ -14,7 +14,9 @@ export interface GameoverBannerProps {
   playerNames: Record<string, string>;
 }
 
-function nameFor(id: string, playerNames: Record<string, string>, t: TFunction): string {
+/** Shared with RoundConfirmBanner -- both resolve a playerID to a display
+ * name the same way (synced name, or a "Seat N" fallback). */
+export function nameFor(id: string, playerNames: Record<string, string>, t: TFunction): string {
   // Seats are 0-indexed internally (boardgame.io's playerID convention) but
   // displayed 1-indexed, matching RoomShell's seat picker/list.
   return playerNames[id] ?? t('room.seatLabel', { seatNumber: Number(id) + 1 });

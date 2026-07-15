@@ -22,6 +22,8 @@ function makeCtx(overrides: Partial<Ctx> = {}): Ctx {
 function view(overrides: Partial<TheMindView> = {}): TheMindView {
   return {
     activeSeatIDs: ['0', '1'],
+    roundConfirm: null,
+    hostPlayerID: null,
     totalLevels: 12,
     level: 1,
     lives: 2,
