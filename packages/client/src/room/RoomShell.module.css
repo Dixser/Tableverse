@@ -4,9 +4,8 @@
   padding: var(--space-4) var(--space-3);
 }
 
-/* Players, Seats, and the match-control column (Start/End match +
-   SeatSwitcher) side by side -- keeps this chrome compact instead of
-   stacking three full-width blocks above every game's board. */
+/* Players and Seats side by side inside the room drawer -- wraps to
+   stacked full-width sections on the drawer's own narrower width. */
 .topRow {
   display: flex;
   flex-wrap: wrap;
@@ -20,17 +19,44 @@
   margin-bottom: 0;
 }
 
+/* Always visible (outside the room drawer, see RoomShell.tsx) -- the
+   primary always-needed action row (Start/End match + SeatSwitcher), not
+   room-management chrome. `position: relative` + `z-index: var(--z-toggle)`
+   (same fix/tier as ThemeToggle/LanguageToggle) keeps it clickable even
+   while the drawer is open -- `.container` is centered on the page, so its
+   normal-flow content can land underneath the drawer's fixed left-edge
+   overlay without this, exactly the collision the toggles needed the same
+   fix for. */
 .matchControls {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
-  flex: 0 0 auto;
+  margin-bottom: var(--space-3);
+  position: relative;
+  z-index: var(--z-toggle);
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .heading {
   font-size: var(--font-size-xl);
-  margin-bottom: var(--space-4);
+}
+
+.drawerToggle {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  flex: 0 0 auto;
 }
 
 .section {
@@ -102,9 +128,21 @@
   font-size: 0.9rem;
 }
 
+/* Fixed footprint regardless of match progress -- a game's own board can
+   grow without bound (Love Letter's discard piles, The Mind's played-card
+   pile), so this box's height is constant and overflow scrolls internally
+   instead of pushing ChatPanel/everything below it down the page. Not
+   `max-height` -- it must stay constant, not merely capped, so the
+   bounding box is identical at round 1 and round 20. `min(38rem, 72vh)`
+   keeps it generous on desktop while never exceeding a short viewport.
+   `align-items: flex-start` (not the default stretch/center) keeps the
+   overflow reachable by scrolling down rather than clipped from the top. */
 .boardArea {
   display: flex;
   justify-content: center;
+  align-items: flex-start;
+  height: min(38rem, 72vh);
+  overflow-y: auto;
   padding: var(--space-3) 0;
 }
 

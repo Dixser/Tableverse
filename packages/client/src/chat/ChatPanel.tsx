@@ -76,6 +76,15 @@ export function extractGameLogEntries(gameLog: unknown): GameLogEntry[] {
  * purposes -- a user doesn't have to be pixel-perfect at the very end. */
 const NEAR_BOTTOM_THRESHOLD_PX = 48;
 
+/** Matches RoomShell/global.css's mobile breakpoint (see
+ * spec/020-layout-restructure) -- kept as a literal since CSS custom
+ * properties can't be referenced inside a JS media-width check. Below
+ * this width, chat starts collapsed to a small pill instead of the full
+ * panel, since a permanently-expanded fixed bottom-left panel would sit
+ * on top of a game's own hand/board area on a narrow screen -- the same
+ * misclick problem this layout pass exists to fix, just relocated. */
+const MOBILE_BREAKPOINT_PX = 768;
+
 interface StampedLogEntry extends GameLogEntry {
   /** Client-local Date.now(), stamped the moment this entry is first
    * observed (new array index since the last render) -- see plan.md's
@@ -104,9 +113,27 @@ export function ChatPanel({ roomID, sessionToken, gameLog, playerNames }: ChatPa
   // the pre-append check in the feed-growth effect below) -- doesn't need
   // to be state since nothing needs to re-render off its value alone.
   const isNearBottomRef = useRef(true);
-  const prevFeedLengthRef = useRef(0);
-  const hasMountedRef = useRef(false);
+  // null until the first effect run, so the initial batch of already-
+  // existing messages is never counted as "new" (a mobile session that
+  // starts collapsed would otherwise treat its whole starting history as
+  // unread, since there's no <ul> yet for the old "just mounted, snap to
+  // bottom" branch to intercept it before the delta-based counting below).
+  const prevFeedLengthRef = useRef<number | null>(null);
+  // Whether the <ul> was present as of the last effect run -- not just
+  // "has this component ever mounted", since the feed itself unmounts
+  // while the mobile pill is collapsed (see the render below) and needs
+  // the same "just became visible" treatment every time it reappears, not
+  // only the very first time.
+  const feedMountedRef = useRef(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT_PX,
+  );
+  // Only the initial value depends on isMobile -- toggling the browser
+  // between mobile/desktop width mid-session doesn't force-collapse or
+  // force-expand an already-decided panel, it just changes whether the
+  // collapse/expand controls below are reachable at all.
+  const [collapsed, setCollapsed] = useState(isMobile);
 
   const logEntries = extractGameLogEntries(gameLog);
   useEffect(() => {
@@ -144,12 +171,24 @@ export function ChatPanel({ roomID, sessionToken, gameLog, playerNames }: ChatPa
   // counter instead and leaves their scroll position alone.
   useEffect(() => {
     const el = feedRef.current;
-    const delta = feed.length - prevFeedLengthRef.current;
+    const delta = prevFeedLengthRef.current === null ? 0 : feed.length - prevFeedLengthRef.current;
     prevFeedLengthRef.current = feed.length;
-    if (!el) return;
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
+    if (!el) {
+      // Collapsed to the mobile pill -- nothing to scroll, just tally the
+      // badge count for whenever it's next expanded.
+      feedMountedRef.current = false;
+      if (delta > 0) setUnreadCount((prev) => prev + delta);
+      return;
+    }
+    if (!feedMountedRef.current) {
+      // The feed just became visible (initial mount, or just expanded
+      // from the mobile-collapsed pill) -- always open already at the
+      // latest message with nothing marked unread, regardless of scroll
+      // history from before it was hidden.
+      feedMountedRef.current = true;
+      isNearBottomRef.current = true;
       el.scrollTop = el.scrollHeight;
+      setUnreadCount(0);
       return;
     }
     if (delta <= 0) return;
@@ -170,10 +209,14 @@ export function ChatPanel({ roomID, sessionToken, gameLog, playerNames }: ChatPa
 
   // A viewport resize (e.g. mobile rotation) can change whether the
   // current scroll position counts as "near the bottom" without firing a
-  // scroll event at all.
+  // scroll event at all, and can also cross the mobile breakpoint.
   useEffect(() => {
-    window.addEventListener('resize', updateNearBottom);
-    return () => window.removeEventListener('resize', updateNearBottom);
+    const onResize = () => {
+      updateNearBottom();
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT_PX);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
   const scrollToBottom = () => {
@@ -184,8 +227,32 @@ export function ChatPanel({ roomID, sessionToken, gameLog, playerNames }: ChatPa
     setUnreadCount(0);
   };
 
+  if (isMobile && collapsed) {
+    return (
+      <button
+        type="button"
+        className={styles.pill}
+        aria-label={t('chat.title')}
+        onClick={() => setCollapsed(false)}
+      >
+        {t('chat.title')}
+        {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}
+      </button>
+    );
+  }
+
   return (
-    <div className={styles.panel} aria-label={t('chat.title')}>
+    <div className={styles.panel} data-mobile={isMobile} aria-label={t('chat.title')}>
+      {isMobile && (
+        <button
+          type="button"
+          className={styles.collapseButton}
+          aria-label={t('chat.collapse')}
+          onClick={() => setCollapsed(true)}
+        >
+          {t('chat.collapse')}
+        </button>
+      )}
       <div className={styles.feedWrapper}>
         <ul className={styles.feed} ref={feedRef} onScroll={updateNearBottom}>
           {feed.map((item) =>

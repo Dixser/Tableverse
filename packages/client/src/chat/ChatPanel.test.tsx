@@ -9,6 +9,10 @@ import styles from './ChatPanel.module.css';
 const { mockUseChat } = vi.hoisted(() => ({ mockUseChat: vi.fn() }));
 vi.mock('./useChat.js', () => ({ useChat: mockUseChat }));
 
+function setViewportWidth(width: number): void {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
+}
+
 function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
   return {
     id: 'msg-1',
@@ -52,6 +56,7 @@ describe('ChatPanel', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockUseChat.mockReset();
+    setViewportWidth(1024);
   });
 
   it('AC9: with no gameLog present, renders free-text messages only, with no error and no system rows', () => {
@@ -349,5 +354,77 @@ describe('ChatPanel', () => {
     fireEvent.scroll(feed);
 
     expect(screen.queryByText(i18n.t('chat.newMessages', { count: 1 }))).not.toBeInTheDocument();
+  });
+
+  it('starts collapsed to a pill on a mobile-width viewport, expands on click', () => {
+    setViewportWidth(400);
+    mockUseChat.mockReturnValue({
+      messages: [makeMessage({ body: 'hello' })],
+      sendMessage: vi.fn(),
+    });
+
+    render(<ChatPanel roomID="room-1" sessionToken="tok" />);
+
+    // Collapsed: only the pill (labeled with the chat title) is present,
+    // not the feed/composer.
+    expect(screen.queryByText('hello')).not.toBeInTheDocument();
+    const pill = screen.getByRole('button', { name: i18n.t('chat.title') });
+
+    fireEvent.click(pill);
+
+    expect(screen.getByText('hello')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(i18n.t('chat.inputPlaceholder'))).toBeInTheDocument();
+  });
+
+  it('shows the unread count as a badge on the collapsed mobile pill', () => {
+    setViewportWidth(400);
+    mockUseChat.mockReturnValue({
+      messages: [makeMessage({ id: 'msg-1', body: 'first' })],
+      sendMessage: vi.fn(),
+    });
+
+    const { rerender } = render(<ChatPanel roomID="room-1" sessionToken="tok" />);
+    expect(screen.queryByText('1')).not.toBeInTheDocument();
+
+    mockUseChat.mockReturnValue({
+      messages: [
+        makeMessage({ id: 'msg-1', body: 'first' }),
+        makeMessage({ id: 'msg-2', body: 'second' }),
+      ],
+      sendMessage: vi.fn(),
+    });
+    rerender(<ChatPanel roomID="room-1" sessionToken="tok" />);
+
+    expect(screen.getByText('1')).toBeInTheDocument();
+  });
+
+  it('collapses back to the pill via the mobile collapse button', () => {
+    setViewportWidth(400);
+    mockUseChat.mockReturnValue({
+      messages: [makeMessage({ body: 'hello' })],
+      sendMessage: vi.fn(),
+    });
+
+    render(<ChatPanel roomID="room-1" sessionToken="tok" />);
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('chat.title') }));
+    expect(screen.getByText('hello')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('chat.collapse') }));
+
+    expect(screen.queryByText('hello')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: i18n.t('chat.title') })).toBeInTheDocument();
+  });
+
+  it('renders the full panel (never collapsed) on a desktop-width viewport', () => {
+    setViewportWidth(1280);
+    mockUseChat.mockReturnValue({
+      messages: [makeMessage({ body: 'hello' })],
+      sendMessage: vi.fn(),
+    });
+
+    render(<ChatPanel roomID="room-1" sessionToken="tok" />);
+
+    expect(screen.getByText('hello')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: i18n.t('chat.collapse') })).not.toBeInTheDocument();
   });
 });

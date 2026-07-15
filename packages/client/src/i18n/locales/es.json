@@ -33,6 +33,8 @@
     "endMatch": "Terminar partida",
     "seatLabel": "Asiento {{seatNumber}}",
     "seatOccupied": "Asiento {{seatNumber}}: {{occupant}}",
+    "drawerToggle": "Menú de sala",
+    "drawerTitle": "Sala",
     "role": {
       "host": "Anfitrión",
       "member": "Miembro"
@@ -71,7 +73,8 @@
     "inputPlaceholder": "Escribe un mensaje…",
     "send": "Enviar",
     "newMessages_one": "{{count}} mensaje nuevo",
-    "newMessages_other": "{{count}} mensajes nuevos"
+    "newMessages_other": "{{count}} mensajes nuevos",
+    "collapse": "Cerrar chat"
   },
   "loveLetter": {
     "cards": {
