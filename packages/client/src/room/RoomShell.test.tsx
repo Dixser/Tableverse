@@ -106,6 +106,7 @@ describe('RoomShell', () => {
       }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -126,6 +127,7 @@ describe('RoomShell', () => {
       room: makeRoom(),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -155,6 +157,7 @@ describe('RoomShell', () => {
       }),
       seats: [{ roomID: 'room-1', playerID: '0', userID: 'guest-1', claimedAt: '' }],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -175,6 +178,7 @@ describe('RoomShell', () => {
       room: makeRoom({ status: 'in_game' }),
       seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -203,6 +207,7 @@ describe('RoomShell', () => {
         { roomID: 'room-1', playerID: '1', userID: 'host-1', claimedAt: '' },
       ],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -225,6 +230,7 @@ describe('RoomShell', () => {
       room: makeRoom({ status: 'in_game' }),
       seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
       myCredentials: [],
+      memberNames: {},
     });
     const leaveSeat = vi.spyOn(roomApi, 'leaveSeat').mockResolvedValue(undefined);
 
@@ -249,6 +255,7 @@ describe('RoomShell', () => {
       room: makeRoom({ status: 'in_game' }),
       seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
       myCredentials: [],
+      memberNames: {},
     });
     vi.spyOn(roomApi, 'leaveSeat').mockRejectedValue(new Error('network error'));
 
@@ -273,6 +280,7 @@ describe('RoomShell', () => {
       room: makeRoom(),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
     const setAllowMultiSeat = vi
       .spyOn(roomApi, 'setAllowMultiSeat')
@@ -309,6 +317,7 @@ describe('RoomShell', () => {
       }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
     vi.spyOn(roomApi, 'claimSeat').mockRejectedValue(
       new Error('Seat 0 in room room-1 is already claimed'),
@@ -337,6 +346,7 @@ describe('RoomShell', () => {
       room: makeRoom({ selectedGameID: 'tictactoe-v1' }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
     const credential = { matchID: 'm-1', playerID: '0', credentials: 'cred-0' };
     vi.spyOn(roomApi, 'claimSeat').mockResolvedValue({
@@ -365,6 +375,7 @@ describe('RoomShell', () => {
       room: makeRoom({ selectedGameID: 'tictactoe-v1' }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -391,6 +402,7 @@ describe('RoomShell', () => {
       }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -416,6 +428,7 @@ describe('RoomShell', () => {
       }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -438,6 +451,7 @@ describe('RoomShell', () => {
       }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -469,6 +483,7 @@ describe('RoomShell', () => {
       }),
       seats: [{ roomID: 'room-1', playerID: '0', userID: 'guest-1', claimedAt: '' }],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -493,6 +508,7 @@ describe('RoomShell', () => {
       room: makeRoom({ selectedGameID: null }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -517,6 +533,7 @@ describe('RoomShell', () => {
       }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -543,6 +560,7 @@ describe('RoomShell', () => {
       }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -567,6 +585,7 @@ describe('RoomShell', () => {
       }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -594,6 +613,7 @@ describe('RoomShell', () => {
       }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -618,6 +638,7 @@ describe('RoomShell', () => {
       }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
     const leaveRoom = vi
       .spyOn(roomApi, 'leaveRoom')
@@ -650,6 +671,7 @@ describe('RoomShell', () => {
       }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
     const kickPlayer = vi
       .spyOn(roomApi, 'kickPlayer')
@@ -681,6 +703,7 @@ describe('RoomShell', () => {
       }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
     vi.spyOn(roomApi, 'kickPlayer').mockRejectedValue(new Error('cannot kick themself'));
 
@@ -720,6 +743,7 @@ describe('RoomShell', () => {
       room: makeRoom({ selectedGameID: 'tictactoe-v1' }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
 
     render(
@@ -739,6 +763,7 @@ describe('RoomShell', () => {
       room: makeRoom({ selectedGameID: SETTINGS_FIXTURE_GAME_ID, gameSettings: { edition: 'normal' } }),
       seats: [],
       myCredentials: [],
+      memberNames: {},
     });
     const setGameSettings = vi
       .spyOn(roomApi, 'setGameSettings')

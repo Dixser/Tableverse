@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { ChatPanel, extractGameLogEntries } from './ChatPanel.js';
 import type { ChatMessage } from './useChat.js';
 import i18n from '../i18n/i18n.js';
+import styles from './ChatPanel.module.css';
 
 const { mockUseChat } = vi.hoisted(() => ({ mockUseChat: vi.fn() }));
 vi.mock('./useChat.js', () => ({ useChat: mockUseChat }));
@@ -122,5 +123,114 @@ describe('ChatPanel', () => {
     fireEvent.submit(screen.getByText(i18n.t('chat.send')).closest('form')!);
 
     expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('marks an "eliminated" log entry with the elimination style, but not an ordinary log entry', () => {
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[{ key: 'test.log.eliminated', params: { name: 'Bob' } }]}
+      />,
+    );
+
+    const row = screen.getByText('Bob was eliminated').closest('li')!;
+    expect(row.className).toContain(styles.logRow);
+    expect(row.className).toContain(styles.logRowElimination);
+  });
+
+  it('does not apply the elimination style to a non-eliminated log entry', () => {
+    i18n.addResource('en', 'translation', 'test.log.cardPlayed', '{{name}} played a card');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[{ key: 'test.log.cardPlayed', params: { name: 'Bob' } }]}
+      />,
+    );
+
+    const row = screen.getByText('Bob played a card').closest('li')!;
+    expect(row.className).toContain(styles.logRow);
+    expect(row.className).not.toContain(styles.logRowElimination);
+  });
+
+  it('resolves a player-ID-shaped param (e.g. "actor") to the claimed seat name via playerNames', () => {
+    i18n.addResource('en', 'translation', 'test.log.actorEvent', '{{actor}} did something');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[{ key: 'test.log.actorEvent', params: { actor: '0' } }]}
+        playerNames={{ '0': 'Alice' }}
+      />,
+    );
+
+    expect(screen.getByText('Alice did something')).toBeInTheDocument();
+  });
+
+  it('falls back to the seat label for a player-ID param with no synced name yet', () => {
+    i18n.addResource('en', 'translation', 'test.log.actorEvent', '{{actor}} did something');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[{ key: 'test.log.actorEvent', params: { actor: '0' } }]}
+      />,
+    );
+
+    expect(screen.getByText(`${i18n.t('room.seatLabel', { seatNumber: 1 })} did something`)).toBeInTheDocument();
+  });
+
+  it('leaves non-player-ID params (e.g. a card rank) untouched', () => {
+    i18n.addResource('en', 'translation', 'test.log.cardRank', 'played rank {{card}}');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[{ key: 'test.log.cardRank', params: { card: 4 } }]}
+        playerNames={{ '4': 'ShouldNotBeUsed' }}
+      />,
+    );
+
+    expect(screen.getByText('played rank 4')).toBeInTheDocument();
+  });
+
+  it('scrolls the feed to the bottom on mount and when new entries arrive', () => {
+    mockUseChat.mockReturnValue({
+      messages: [makeMessage({ id: 'msg-1', body: 'first' })],
+      sendMessage: vi.fn(),
+    });
+    Object.defineProperty(HTMLUListElement.prototype, 'scrollHeight', {
+      configurable: true,
+      get() {
+        return 500;
+      },
+    });
+
+    const { rerender } = render(<ChatPanel roomID="room-1" sessionToken="tok" />);
+    const feed = screen.getByText('first').closest('ul')!;
+    expect(feed.scrollTop).toBe(500);
+
+    feed.scrollTop = 0;
+    mockUseChat.mockReturnValue({
+      messages: [
+        makeMessage({ id: 'msg-1', body: 'first' }),
+        makeMessage({ id: 'msg-2', body: 'second' }),
+      ],
+      sendMessage: vi.fn(),
+    });
+    rerender(<ChatPanel roomID="room-1" sessionToken="tok" />);
+
+    expect(feed.scrollTop).toBe(500);
   });
 });

@@ -53,6 +53,10 @@ export interface RoomShellProps {
    * GameLogEntry[], since a non-conforming game's G shouldn't crash the
    * panel (same defensive posture as GameoverBanner's `gameover: unknown`). */
   gameLog?: unknown;
+  /** playerID -> display name for the active match, passed straight through
+   * to ChatPanel so it can resolve the player-identifying params on a
+   * game's own G.log entries -- see ChatPanel's `playerNames` doc comment. */
+  playerNames?: Record<string, string>;
   /**
    * Rendered alongside the Start/End match button, grouped into the same
    * row as the Players and Seats sections -- ActiveRoom passes
@@ -78,11 +82,13 @@ export function RoomShell({
   onSeatClaimed,
   onLeftRoom,
   gameLog,
+  playerNames,
   seatSwitcher,
 }: RoomShellProps) {
   const { t } = useTranslation();
   const [room, setRoom] = useState<Room | null>(null);
   const [seats, setSeats] = useState<SeatAssignment[]>([]);
+  const [memberNames, setMemberNames] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   // Separate from `error` (load failures, which replace the whole chrome)
   // -- a failed room action (claim/release/settings) should surface
@@ -94,6 +100,7 @@ export function RoomShell({
       const result = await roomApi.getRoom(sessionToken, roomID);
       setRoom(result.room);
       setSeats(result.seats);
+      setMemberNames(result.memberNames);
       onRoomUpdate?.(result.room);
       // Picks up credentials for any of this user's seats minted since the
       // last refresh (e.g. a lobby-claimed seat's credential, issued only
@@ -313,7 +320,7 @@ export function RoomShell({
         <ul className={styles.list}>
           {room.members.map((m) => (
             <li className={styles.listItem} key={m.userID}>
-              {m.userID === user.id ? t('room.you') : m.userID} —{' '}
+              {m.userID === user.id ? t('room.you') : (memberNames[m.userID] ?? m.userID)} —{' '}
               {t(`room.role.${m.role}`)}
               <span className={styles.spacer} />
               {m.userID === user.id && canLeaveRoom && (
@@ -350,7 +357,10 @@ export function RoomShell({
                 // playerID '0' -- so non-technical players don't see a
                 // seat numbering that starts at 0.
                 seatNumber: Number(seat.playerID) + 1,
-                occupant: seat.userID === user.id ? t('room.you') : seat.userID,
+                occupant:
+                  seat.userID === user.id
+                    ? t('room.you')
+                    : (memberNames[seat.userID] ?? seat.userID),
               })}
               <PresenceBadge status={presence[seat.playerID] ?? 'connected'} />
               <span className={styles.spacer} />
@@ -390,6 +400,7 @@ export function RoomShell({
             maxPlayers={getEffectiveMaxPlayers(selectedModule, room.gameSettings)}
             seats={seats}
             currentUserID={user.id}
+            memberNames={memberNames}
             onClaim={claimSeat}
           />
         )}
@@ -412,7 +423,12 @@ export function RoomShell({
 
       <div className={styles.boardArea}>{children}</div>
 
-      <ChatPanel roomID={roomID} sessionToken={sessionToken} gameLog={gameLog} />
+      <ChatPanel
+        roomID={roomID}
+        sessionToken={sessionToken}
+        gameLog={gameLog}
+        playerNames={playerNames}
+      />
     </div>
   );
 }
@@ -428,11 +444,13 @@ function SeatPicker({
   maxPlayers,
   seats,
   currentUserID,
+  memberNames,
   onClaim,
 }: {
   maxPlayers: number;
   seats: SeatAssignment[];
   currentUserID: string;
+  memberNames: Record<string, string>;
   onClaim: (playerID: string) => void;
 }) {
   const { t } = useTranslation();
@@ -451,7 +469,11 @@ function SeatPicker({
           >
             {t('room.seatLabel', { seatNumber: Number(playerID) + 1 })}
             {occupant &&
-              ` — ${occupant.userID === currentUserID ? t('room.you') : occupant.userID}`}
+              ` — ${
+                occupant.userID === currentUserID
+                  ? t('room.you')
+                  : (memberNames[occupant.userID] ?? occupant.userID)
+              }`}
           </button>
         );
       })}
