@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import type { GameLogEntry } from '@tableverse/game-core';
 import { useChat, type ChatMessage } from './useChat.js';
 import styles from './ChatPanel.module.css';
@@ -11,6 +12,49 @@ export interface ChatPanelProps {
    * GameLogEntry[], since a non-conforming game's G shouldn't crash the
    * panel (same defensive posture as GameoverBanner's `gameover: unknown`). */
   gameLog?: unknown;
+  /** playerID -> display name for the active match, same shape/source as
+   * GameMount's own `playerNames` (App.tsx's `seatClients.playerNames`).
+   * Used to resolve the player-identifying params (see PLAYER_ID_PARAM_KEYS
+   * below) a game's G.log entries carry as raw seat IDs, e.g. "Player 0 is
+   * out." -> "Player Alice is out.". */
+  playerNames?: Record<string, string>;
+}
+
+/**
+ * Param keys that hold a seat ID (or, for `winners`, a comma-joined list of
+ * them) across every game's G.log entries -- see each game's gameDef.ts.
+ * Every other param key (card, rank, level, ...) is a plain value rendered
+ * as-is. Not derived from GameLogEntry itself since params carries no type
+ * information; this is the platform-chrome equivalent of each game's own
+ * playerLabel() helper, deliberately not imported from a specific game
+ * module since ChatPanel renders every game's log entries generically.
+ */
+const PLAYER_ID_PARAM_KEYS = new Set(['actor', 'target', 'opponent', 'player', 'winners']);
+
+function seatLabel(id: string, playerNames: Record<string, string> | undefined, t: TFunction): string {
+  const seatFallback = t('room.seatLabel', { seatNumber: Number(id) + 1 });
+  const name = playerNames?.[id];
+  if (!name) return seatFallback;
+  const sameNameCount = Object.values(playerNames ?? {}).filter((n) => n === name).length;
+  return sameNameCount > 1 ? `${name} (${seatFallback})` : name;
+}
+
+function resolveLogParams(
+  params: Record<string, string | number> | undefined,
+  playerNames: Record<string, string> | undefined,
+  t: TFunction,
+): Record<string, string | number> | undefined {
+  if (!params) return params;
+  const resolved: Record<string, string | number> = { ...params };
+  for (const key of Object.keys(params)) {
+    if (!PLAYER_ID_PARAM_KEYS.has(key)) continue;
+    const value = String(params[key]);
+    resolved[key] = value
+      .split(',')
+      .map((id) => seatLabel(id, playerNames, t))
+      .join(', ');
+  }
+  return resolved;
 }
 
 /**
@@ -45,11 +89,12 @@ type FeedEntry =
  * rendered as translated system rows. Never renders game-specific UI
  * itself. See spec/features/012-chat.
  */
-export function ChatPanel({ roomID, sessionToken, gameLog }: ChatPanelProps) {
+export function ChatPanel({ roomID, sessionToken, gameLog, playerNames }: ChatPanelProps) {
   const { t } = useTranslation();
   const { messages, sendMessage } = useChat(roomID, sessionToken);
   const [body, setBody] = useState('');
   const [stampedLog, setStampedLog] = useState<StampedLogEntry[]>([]);
+  const feedRef = useRef<HTMLUListElement>(null);
 
   const logEntries = extractGameLogEntries(gameLog);
   useEffect(() => {
@@ -78,9 +123,18 @@ export function ChatPanel({ roomID, sessionToken, gameLog }: ChatPanelProps) {
     })),
   ].sort((a, b) => a.timestamp - b.timestamp);
 
+  useEffect(() => {
+    const el = feedRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    // Keyed on the feed's length so this also runs on initial mount (the
+    // panel should open already scrolled to the latest message, not the
+    // oldest) as well as every time a new chat/log entry appends.
+  }, [feed.length]);
+
   return (
     <div className={styles.panel} aria-label={t('chat.title')}>
-      <ul className={styles.feed}>
+      <ul className={styles.feed} ref={feedRef}>
         {feed.map((item) =>
           item.kind === 'chat' ? (
             <li key={item.message.id} className={styles.chatRow}>
@@ -88,8 +142,15 @@ export function ChatPanel({ roomID, sessionToken, gameLog }: ChatPanelProps) {
               <span>{item.message.body}</span>
             </li>
           ) : (
-            <li key={`${item.entry.key}-${item.timestamp}`} className={styles.logRow}>
-              {t(item.entry.key, item.entry.params)}
+            <li
+              key={`${item.entry.key}-${item.timestamp}`}
+              className={
+                item.entry.key.endsWith('.eliminated')
+                  ? `${styles.logRow} ${styles.logRowElimination}`
+                  : styles.logRow
+              }
+            >
+              {t(item.entry.key, resolveLogParams(item.entry.params, playerNames, t))}
             </li>
           ),
         )}

@@ -103,7 +103,22 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
       room.roomID,
       ctx.state.user!.id,
     );
-    ctx.body = { room, seats, myCredentials };
+    // Members/seats only carry userIDs -- RoomShell's Players/Seats lists
+    // need a display name to show, so resolve every distinct userID
+    // referenced by this room once here, alongside the room/seats it
+    // already fetches (same pull-on-fetch shape as myCredentials above).
+    const userIDs = new Set([
+      ...room.members.map((m) => m.userID),
+      ...seats.map((s) => s.userID),
+    ]);
+    const memberNames: Record<string, string> = {};
+    await Promise.all(
+      Array.from(userIDs).map(async (userID) => {
+        const user = await deps.users.getById(userID);
+        if (user) memberNames[userID] = user.displayName;
+      }),
+    );
+    ctx.body = { room, seats, myCredentials, memberNames };
   });
 
   router.post('/:roomID/seats/:playerID/claim', async (ctx) => {

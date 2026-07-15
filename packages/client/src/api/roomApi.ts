@@ -54,6 +54,7 @@ export const roomApi = {
     room: Room;
     seats: SeatAssignment[];
     myCredentials: SeatCredential[];
+    memberNames: Record<string, string>;
   }> {
     return request(`/api/rooms/${roomID}`, sessionToken);
   },

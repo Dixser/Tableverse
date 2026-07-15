@@ -24,7 +24,7 @@
 }
 
 .author {
-  font-weight: 600;
+  font-weight: 700;
   margin-right: var(--space-1);
 }
 
@@ -32,6 +32,10 @@
   font-size: 0.85rem;
   font-style: italic;
   color: var(--color-text-muted);
+}
+
+.logRowElimination {
+  color: var(--color-danger);
 }
 
 .composer {

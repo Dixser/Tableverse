@@ -179,6 +179,7 @@ function ActiveRoom({
       gameLog={
         seatClients.boardProps?.G && (seatClients.boardProps.G as { log?: unknown }).log
       }
+      playerNames={seatClients.playerNames}
       seatSwitcher={
         <SeatSwitcher
           seatIDs={seatClients.seatIDs}
