@@ -789,4 +789,172 @@ describe('RoomShell', () => {
       expect(setGameSettings).toHaveBeenCalledWith('tok', 'room-1', { edition: 'classic' }),
     );
   });
+
+  describe('room drawer', () => {
+    it('defaults open in the lobby', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'lobby' }),
+        seats: [],
+        myCredentials: [],
+        memberNames: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      expect(screen.getByRole('button', { name: 'Room menu' })).toHaveAttribute(
+        'aria-expanded',
+        'true',
+      );
+    });
+
+    it('defaults closed once a match is in progress', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'in_game' }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      expect(screen.getByRole('button', { name: 'Room menu' })).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      );
+    });
+
+    it('toggles open/closed via the toggle button, independent of match status', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'in_game' }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      const toggle = screen.getByRole('button', { name: 'Room menu' });
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('auto-closes on the lobby -> in_game transition, even if manually opened', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValueOnce({
+        room: makeRoom({ status: 'lobby' }),
+        seats: [],
+        myCredentials: [],
+        memberNames: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      const toggle = screen.getByRole('button', { name: 'Room menu' });
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+      // A match starts (status transitions lobby -> in_game); the next
+      // room-events ping re-fetches and should auto-close the drawer.
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'in_game' }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+      capturedRoomEventsOnChanged?.();
+
+      await waitFor(() => expect(toggle).toHaveAttribute('aria-expanded', 'false'));
+    });
+
+    it('auto-reopens on the in_game -> lobby transition', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValueOnce({
+        room: makeRoom({ status: 'in_game' }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      const toggle = screen.getByRole('button', { name: 'Room menu' });
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+      // The match ends (status transitions in_game -> lobby).
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'lobby' }),
+        seats: [],
+        myCredentials: [],
+        memberNames: {},
+      });
+      capturedRoomEventsOnChanged?.();
+
+      await waitFor(() => expect(toggle).toHaveAttribute('aria-expanded', 'true'));
+    });
+
+    it('opening the drawer mid-match still exposes seat actions to assistive tech (not just a hidden-but-clickable subtree)', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'in_game' }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+      const leaveSeat = vi.spyOn(roomApi, 'leaveSeat').mockResolvedValue(undefined);
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      const toggle = screen.getByRole('button', { name: 'Room menu' });
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      fireEvent.click(screen.getByText('Leave seat'));
+
+      await waitFor(() => expect(leaveSeat).toHaveBeenCalledWith('tok', 'room-1', '0'));
+    });
+  });
 });

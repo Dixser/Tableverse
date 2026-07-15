@@ -33,6 +33,8 @@
     "endMatch": "End match",
     "seatLabel": "Seat {{seatNumber}}",
     "seatOccupied": "Seat {{seatNumber}}: {{occupant}}",
+    "drawerToggle": "Room menu",
+    "drawerTitle": "Room",
     "role": {
       "host": "Host",
       "member": "Member"
@@ -71,7 +73,8 @@
     "inputPlaceholder": "Type a message…",
     "send": "Send",
     "newMessages_one": "{{count}} new message",
-    "newMessages_other": "{{count}} new messages"
+    "newMessages_other": "{{count}} new messages",
+    "collapse": "Close chat"
   },
   "loveLetter": {
     "cards": {

@@ -14,6 +14,7 @@ import { useRoomEvents } from '../roomEvents/useRoomEvents.js';
 import { seatCredentialStore } from '../seats/seatCredentialStore.js';
 import { ChatPanel } from '../chat/ChatPanel.js';
 import { PresenceBadge } from './PresenceBadge.js';
+import { RoomDrawer } from './RoomDrawer.js';
 import { SettingsForm } from './SettingsForm.js';
 import styles from './RoomShell.module.css';
 
@@ -94,6 +95,16 @@ export function RoomShell({
   // -- a failed room action (claim/release/settings) should surface
   // without wiping out the room the user is already looking at.
   const [actionError, setActionError] = useState<string | null>(null);
+  // Room-management chrome (game picker, Players, Seats) as a toggleable
+  // drawer -- default-open in the lobby, default-closed once a match
+  // starts, per spec/020-layout-restructure. Keyed on `room.status` only
+  // (not `room` itself) so a manual toggle mid-status persists instead of
+  // being fought on every refresh() poll, which returns a new Room object
+  // reference each time even when status hasn't changed.
+  const [drawerOpen, setDrawerOpen] = useState(true);
+  useEffect(() => {
+    if (room) setDrawerOpen(room.status === 'lobby');
+  }, [room?.status]);
 
   const refresh = useCallback(async () => {
     try {
@@ -276,7 +287,17 @@ export function RoomShell({
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.heading}>{t('room.title', { inviteCode: room.inviteCode })}</h1>
+      <div className={styles.headerRow}>
+        <h1 className={styles.heading}>{t('room.title', { inviteCode: room.inviteCode })}</h1>
+        <button
+          type="button"
+          className={styles.drawerToggle}
+          aria-expanded={drawerOpen}
+          onClick={() => setDrawerOpen((v) => !v)}
+        >
+          {t('room.drawerToggle')}
+        </button>
+      </div>
 
       {actionError && (
         <p className={styles.error} role="alert">
@@ -284,127 +305,130 @@ export function RoomShell({
         </p>
       )}
 
-      {room.status === 'lobby' && canChangeGame && (
-        <section className={styles.section} aria-label={t('room.game')}>
-          <h2 className={styles.sectionTitle}>{t('room.game')}</h2>
-          <select
-            className={styles.select}
-            value={room.selectedGameID ?? ''}
-            onChange={(e) => void changeGame(e.target.value)}
-          >
-            <option value="" disabled>
-              {t('room.selectGamePlaceholder')}
-            </option>
-            {gamesCatalog.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.displayName}
+      <RoomDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+        {room.status === 'lobby' && canChangeGame && (
+          <section className={styles.section} aria-label={t('room.game')}>
+            <h2 className={styles.sectionTitle}>{t('room.game')}</h2>
+            <select
+              className={styles.select}
+              value={room.selectedGameID ?? ''}
+              onChange={(e) => void changeGame(e.target.value)}
+            >
+              <option value="" disabled>
+                {t('room.selectGamePlaceholder')}
               </option>
+              {gamesCatalog.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.displayName}
+                </option>
+              ))}
+            </select>
+            {gamesCatalog.length === 0 && (
+              <p className={styles.hint}>{t('room.noGamesAvailable')}</p>
+            )}
+            {canEditSettings && selectedModule?.settingsSchema && (
+              <SettingsForm
+                schema={selectedModule.settingsSchema}
+                value={room.gameSettings}
+                onSubmit={(next) => void updateGameSettings(next)}
+              />
+            )}
+          </section>
+        )}
+
+        <div className={styles.topRow}>
+          <section className={styles.section} aria-label={t('room.players')}>
+          <h2 className={styles.sectionTitle}>{t('room.players')}</h2>
+          <ul className={styles.list}>
+            {room.members.map((m) => (
+              <li className={styles.listItem} key={m.userID}>
+                {m.userID === user.id ? t('room.you') : (memberNames[m.userID] ?? m.userID)} —{' '}
+                {t(`room.role.${m.role}`)}
+                <span className={styles.spacer} />
+                {m.userID === user.id && canLeaveRoom && (
+                  <button
+                    className={styles.buttonDanger}
+                    type="button"
+                    onClick={() => void leaveRoom()}
+                  >
+                    {t('room.leaveRoom')}
+                  </button>
+                )}
+                {canKick && m.userID !== user.id && (
+                  <button
+                    className={styles.buttonDanger}
+                    type="button"
+                    onClick={() => void kickPlayer(m.userID)}
+                  >
+                    {t('room.kick')}
+                  </button>
+                )}
+              </li>
             ))}
-          </select>
-          {gamesCatalog.length === 0 && (
-            <p className={styles.hint}>{t('room.noGamesAvailable')}</p>
+          </ul>
+        </section>
+
+        <section className={styles.section} aria-label={t('room.seats')}>
+          <h2 className={styles.sectionTitle}>{t('room.seats')}</h2>
+          <ul className={styles.list}>
+            {seats.map((seat) => (
+              <li className={styles.listItem} key={seat.playerID}>
+                {t('room.seatOccupied', {
+                  // Seats are 0-indexed internally (boardgame.io's playerID
+                  // convention), but displayed 1-indexed -- "Seat 1" for
+                  // playerID '0' -- so non-technical players don't see a
+                  // seat numbering that starts at 0.
+                  seatNumber: Number(seat.playerID) + 1,
+                  occupant:
+                    seat.userID === user.id
+                      ? t('room.you')
+                      : (memberNames[seat.userID] ?? seat.userID),
+                })}
+                <PresenceBadge status={presence[seat.playerID] ?? 'connected'} />
+                <span className={styles.spacer} />
+                {seat.userID === user.id && canLeaveSeat && (
+                  <button
+                    className={styles.buttonDanger}
+                    type="button"
+                    onClick={() => void leaveSeat(seat.playerID)}
+                  >
+                    {t('room.leaveSeat')}
+                  </button>
+                )}
+                {canManageSeats && room.status === 'in_game' && (
+                  <button
+                    className={styles.buttonDanger}
+                    type="button"
+                    onClick={() => releaseSeat(seat.playerID)}
+                  >
+                    {t('room.release')}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          {canEditSettings && room.status === 'lobby' && (
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={room.allowMultiSeat}
+                onChange={(e) => void setAllowMultiSeat(e.target.checked)}
+              />
+              {t('room.allowMultiSeat')}
+            </label>
           )}
-          {canEditSettings && selectedModule?.settingsSchema && (
-            <SettingsForm
-              schema={selectedModule.settingsSchema}
-              value={room.gameSettings}
-              onSubmit={(next) => void updateGameSettings(next)}
+          {canClaim && room.status === 'lobby' && selectedModule && (
+            <SeatPicker
+              maxPlayers={getEffectiveMaxPlayers(selectedModule, room.gameSettings)}
+              seats={seats}
+              currentUserID={user.id}
+              memberNames={memberNames}
+              onClaim={claimSeat}
             />
           )}
         </section>
-      )}
-
-      <div className={styles.topRow}>
-        <section className={styles.section} aria-label={t('room.players')}>
-        <h2 className={styles.sectionTitle}>{t('room.players')}</h2>
-        <ul className={styles.list}>
-          {room.members.map((m) => (
-            <li className={styles.listItem} key={m.userID}>
-              {m.userID === user.id ? t('room.you') : (memberNames[m.userID] ?? m.userID)} —{' '}
-              {t(`room.role.${m.role}`)}
-              <span className={styles.spacer} />
-              {m.userID === user.id && canLeaveRoom && (
-                <button
-                  className={styles.buttonDanger}
-                  type="button"
-                  onClick={() => void leaveRoom()}
-                >
-                  {t('room.leaveRoom')}
-                </button>
-              )}
-              {canKick && m.userID !== user.id && (
-                <button
-                  className={styles.buttonDanger}
-                  type="button"
-                  onClick={() => void kickPlayer(m.userID)}
-                >
-                  {t('room.kick')}
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className={styles.section} aria-label={t('room.seats')}>
-        <h2 className={styles.sectionTitle}>{t('room.seats')}</h2>
-        <ul className={styles.list}>
-          {seats.map((seat) => (
-            <li className={styles.listItem} key={seat.playerID}>
-              {t('room.seatOccupied', {
-                // Seats are 0-indexed internally (boardgame.io's playerID
-                // convention), but displayed 1-indexed -- "Seat 1" for
-                // playerID '0' -- so non-technical players don't see a
-                // seat numbering that starts at 0.
-                seatNumber: Number(seat.playerID) + 1,
-                occupant:
-                  seat.userID === user.id
-                    ? t('room.you')
-                    : (memberNames[seat.userID] ?? seat.userID),
-              })}
-              <PresenceBadge status={presence[seat.playerID] ?? 'connected'} />
-              <span className={styles.spacer} />
-              {seat.userID === user.id && canLeaveSeat && (
-                <button
-                  className={styles.buttonDanger}
-                  type="button"
-                  onClick={() => void leaveSeat(seat.playerID)}
-                >
-                  {t('room.leaveSeat')}
-                </button>
-              )}
-              {canManageSeats && room.status === 'in_game' && (
-                <button
-                  className={styles.buttonDanger}
-                  type="button"
-                  onClick={() => releaseSeat(seat.playerID)}
-                >
-                  {t('room.release')}
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-        {canEditSettings && room.status === 'lobby' && (
-          <label className={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              checked={room.allowMultiSeat}
-              onChange={(e) => void setAllowMultiSeat(e.target.checked)}
-            />
-            {t('room.allowMultiSeat')}
-          </label>
-        )}
-        {canClaim && room.status === 'lobby' && selectedModule && (
-          <SeatPicker
-            maxPlayers={getEffectiveMaxPlayers(selectedModule, room.gameSettings)}
-            seats={seats}
-            currentUserID={user.id}
-            memberNames={memberNames}
-            onClaim={claimSeat}
-          />
-        )}
-      </section>
+        </div>
+      </RoomDrawer>
 
       <div className={styles.matchControls}>
         {room.status === 'lobby' && canStart && room.selectedGameID && (
@@ -418,7 +442,6 @@ export function RoomShell({
           </button>
         )}
         {seatSwitcher}
-        </div>
       </div>
 
       <div className={styles.boardArea}>{children}</div>

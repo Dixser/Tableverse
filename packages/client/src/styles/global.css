@@ -21,6 +21,15 @@
   /* Shape */
   --radius: 6px;
 
+  /* Stacking order, low to high. Fixed-position UI only -- normal document
+     flow never needs a z-index. --z-toggle sits above the drawer so
+     ThemeToggle/LanguageToggle (always-visible, rendered at the App root)
+     stay clickable while the room drawer's backdrop is open. */
+  --z-fixed-panel: 10;
+  --z-drawer-backdrop: 15;
+  --z-drawer: 20;
+  --z-toggle: 25;
+
   /* Type */
   --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-size-base: 1rem;
