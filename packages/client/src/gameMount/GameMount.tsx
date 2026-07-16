@@ -41,16 +41,14 @@ export function GameMount({ selectedGameID, boardProps, playerNames }: GameMount
         playerID={boardProps.playerID}
         playerNames={playerNames}
       />
-      {!module.ownRoundConfirmUI && (
-        <RoundConfirmBanner
-          roundConfirm={G.roundConfirm}
-          hostPlayerID={G.hostPlayerID}
-          playerID={boardProps.playerID}
-          playerNames={playerNames}
-          onConfirm={() => boardProps.moves.confirmRoundReady?.()}
-          onForceAdvance={() => boardProps.moves.forceAdvanceRound?.()}
-        />
-      )}
+      <RoundConfirmBanner
+        roundConfirm={G.roundConfirm}
+        hostPlayerID={G.hostPlayerID}
+        playerID={boardProps.playerID}
+        playerNames={playerNames}
+        onConfirm={() => boardProps.moves.confirmRoundReady?.()}
+        onForceAdvance={() => boardProps.moves.forceAdvanceRound?.()}
+      />
       <BoardComponent {...boardProps} playerNames={playerNames} />
     </div>
   );

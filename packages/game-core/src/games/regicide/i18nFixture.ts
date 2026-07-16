@@ -7,43 +7,44 @@ import { initReactI18next } from 'react-i18next';
  * has no i18n bootstrap of its own; see their doc comments for the full
  * rationale). Every `regicide.*` string is deliberately TEST_-prefixed so
  * a test failure here can't be masked by accidentally matching production
- * copy. `room.seatLabel` and `roundConfirm.*` are the two exceptions,
- * kept at their real production values on purpose: `room.seatLabel`
- * mirrors Love Letter's own fixture (a shared, simple, already-covered
- * platform string), and `roundConfirm.*` is reused verbatim by
- * EnemyPanel itself (see roundConfirmDisplay.ts's doc comment) rather
- * than reimplemented under a `regicide.*` key, so its test coverage
- * should exercise the same real copy the platform's generic
- * RoundConfirmBanner already uses.
+ * copy. `room.seatLabel` is the one exception, kept at its real
+ * production value on purpose, mirroring Love Letter's own fixture (a
+ * shared, simple, already-covered platform string).
  */
 void i18n.use(initReactI18next).init({
   resources: {
     en: {
       translation: {
         room: { seatLabel: 'Seat {{seatNumber}}' },
-        roundConfirm: {
-          title: 'Round complete',
-          progress: '{{confirmed}} of {{total}} confirmed',
-          confirmButton: 'Ready for next round',
-          forceAdvanceButton: 'Skip waiting (host)',
-        },
         regicide: {
           suits: {
-            S: 'TEST_Spades',
-            H: 'TEST_Hearts',
-            D: 'TEST_Diamonds',
-            C: 'TEST_Clubs',
+            S: 'TEST_S',
+            H: 'TEST_H',
+            D: 'TEST_D',
+            C: 'TEST_C',
+          },
+          suitsRules: {
+            S: 'TEST_suit_rule_S',
+            H: 'TEST_suit_rule_H',
+            D: 'TEST_suit_rule_D',
+            C: 'TEST_suit_rule_C',
           },
           faceRanks: {
-            J: 'TEST_Jack',
-            Q: 'TEST_Queen',
-            K: 'TEST_King',
+            J: 'TEST_J',
+            Q: 'TEST_Q',
+            K: 'TEST_K',
           },
           cardLabel: {
-            number: 'TEST_{{rank}}_of_{{suit}}',
-            companion: 'TEST_Companion_of_{{suit}}',
+            // Matches production's "{{suit}} {{rank}}" order -- suits/
+            // faceRanks above already carry the TEST_ prefix, so this
+            // template stays unprefixed to avoid stacking (e.g. avoiding
+            // a confusing "TEST_TEST_S TEST_4"). A companion card reuses
+            // this same `number` key (rank hardcoded to "A" by CardTile
+            // itself, not translated) -- see CardTile.tsx's own doc
+            // comment on ACE_RANK.
+            number: '{{suit}} {{rank}}',
             jester: 'TEST_Jester',
-            face: 'TEST_{{rank}}_of_{{suit}}',
+            face: '{{suit}} {{rank}}',
           },
           cardStats: 'TEST_atk_{{attack}}_hp_{{health}}',
           cardIllegalReason: 'TEST_card_illegal_reason',
@@ -61,13 +62,17 @@ void i18n.use(initReactI18next).init({
             number: 'TEST_enemy_number {{number}}',
             attack: 'TEST_attack {{value}}',
             health: 'TEST_health {{remaining}}_{{max}}',
-            damageDealt: 'TEST_damage_dealt {{value}}',
             shieldTotal: 'TEST_shield_total {{value}}',
             damageYouWillTake: 'TEST_damage_you_will_take {{value}}',
           },
           decks: {
             tavernCount: 'TEST_tavern_count {{count}}',
             discardCount: 'TEST_discard_count {{count}}',
+            castleCount: 'TEST_castle_count {{count}}',
+          },
+          playedCards: {
+            title: 'TEST_played_cards_title',
+            empty: 'TEST_played_cards_empty',
           },
           handCounts: {
             title: 'TEST_hand_counts',

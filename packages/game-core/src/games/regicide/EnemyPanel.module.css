@@ -26,20 +26,33 @@
 
 .decks {
   display: flex;
-  gap: var(--space-3);
-  color: var(--color-text-muted);
+  flex-wrap: wrap;
 }
 
-.roundConfirm {
-  padding: var(--space-2);
-  border-top: 1px solid var(--color-border);
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-1);
+  font-size: 1.5rem;
 }
 
-.title {
-  font-weight: 600;
-}
-
-.actions {
+.damageColumn {
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.suitsRules {
+  border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2);
+  gap: var(--space-2);
+}
+
+.mainStats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
 }

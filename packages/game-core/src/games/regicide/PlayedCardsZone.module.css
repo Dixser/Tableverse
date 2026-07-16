@@ -1,0 +1,23 @@
+.zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.zone p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-height: 4rem;
+  align-items: center;
+}
+
+.placeholder {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}

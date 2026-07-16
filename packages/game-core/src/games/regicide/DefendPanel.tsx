@@ -52,6 +52,7 @@ export function DefendPanel({ hand, requiredTotal, onDiscard }: DefendPanelProps
       </div>
       <button
         type="button"
+        className={styles.discardButton}
         disabled={!canDiscard}
         onClick={() => {
           onDiscard(selectedCardIDs);

@@ -30,10 +30,6 @@ rules engine:
 - `playerLabel.ts` — copy of Love Letter's/The Mind's per-game helper
   (seat → display name, `room.seatLabel` fallback). Not shared across
   games per this feature's own Non-goals (no shared board-UI kit yet).
-- `roundConfirmDisplay.ts` — pure helper mirroring
-  `packages/client/src/gameMount/RoundConfirmBanner.tsx`'s
-  `resolveRoundConfirmDisplay`, reimplemented locally (see below for why
-  it can't be imported directly).
 - `i18nFixture.ts` — TEST_-prefixed fixture, same convention as Love
   Letter/The Mind.
 
@@ -46,45 +42,40 @@ Registration (mechanical, three files):
 
 ## Resolved design decisions (spec vs. existing architecture)
 
-### 1. AC9a's "N of M confirmed"/Confirm/force-advance inside `RegicideBoard` itself
+### 1. AC9a's "N of M confirmed"/Confirm/force-advance — revised: chrome-owned, not board-owned
 
-Every other game embedding `RoundConfirmG` (Love Letter) relies on
-`GameMount`'s generic `RoundConfirmBanner` for this UI and never renders
-it from the board itself. AC9a explicitly asks for a *component test of
-`RegicideBoard` alone* asserting this exact behavior, because Regicide's
-round-defeat pause needs to show the frozen enemy state *together with*
-the confirm controls in one panel (story 6) — that combination is
-Regicide-specific board content, not generic chrome, so it doesn't fit
-`RoundConfirmBanner`'s "render nothing else" contract.
+AC9a's literal wording ("[RegicideBoard] renders ... a 'N of M
+confirmed' count and a Confirm button ... a force-advance control")
+reads as asking `RegicideBoard` itself to own this UI. An earlier pass
+implemented exactly that inside `EnemyPanel` (a duplicated
+`roundConfirmDisplay.ts` resolver) — but every other game embedding
+`RoundConfirmG` (Love Letter) already gets this UI for free from
+`GameMount`'s generic `RoundConfirmBanner`, which is unconditionally
+rendered above every board (see `GameMount.tsx`). Mounted through the
+real app, both fired at once: two "N of M confirmed" panels, two
+Confirm buttons. Patching that over with a `GameModule.ownRoundConfirmUI`
+opt-out flag would have fixed the symptom but kept two independent
+implementations of the same wait-for-everyone mechanism alive.
 
-Resolution: `EnemyPanel` reimplements the same
-pending/confirmed/host-authorization logic as a local pure function
-(`roundConfirmDisplay.ts`), reusing the *same* i18n keys
-(`roundConfirm.title`, `.progress`, `.confirmButton`,
-`.forceAdvanceButton` — already defined in `en.json`/`es.json`) so the
-copy stays identical without adding new keys. `game-core` cannot import
-`packages/client/src/gameMount/RoundConfirmBanner.tsx` directly (`client`
-depends on `game-core`, never the reverse — confirmed via
-`package.json`), so the ~15-line pure resolver is duplicated rather than
-shared, same category as Love Letter's `eligibleTargets.ts` being its
-own module instead of a cross-game extraction.
+Corrected reading: AC9a's *substance* — the frozen enemy state, and
+Play/Yield disabling — is genuinely Regicide-specific and belongs in
+`EnemyPanel`/`BoardComponent`. The N-of-M/Confirm/force-advance
+controls themselves are not; they're `RoundConfirmBanner`'s job,
+unchanged, same as Love Letter. `EnemyPanel` now takes only
+`roundConfirm: RoundConfirmState | null` (to decide whether to show a
+"Defeated" badge next to the frozen stats) and renders no
+Confirm/force-advance controls of its own —
+`currentEnemy`/`damageDealt`/`spadeShieldTotal` already keep showing
+the finishing numbers for free, since `resolveEnemyDefeat` doesn't
+reset them until the `roundConfirm` phase's `onEnd` runs. No
+`GameModule` capability flag, no duplicated resolver — `GameMount`,
+`RoundConfirmBanner`, and `types.ts` are all back to their
+pre-feature-023 shape.
 
-Mounted through the real `GameMount`, this would otherwise double the
-confirm controls (once generic, once inside the enemy panel). Rather
-than accept that, `GameModule` gained an optional `ownRoundConfirmUI`
-flag (`packages/game-core/src/types.ts`); `regicideModule` sets it, and
-`GameMount` skips rendering its generic `RoundConfirmBanner` whenever
-the selected game's module sets it. This is a capability flag on
-`GameModule` (same pattern as `settingsSchema`), not a per-game string
-check in `GameMount` itself, so every other game's default (unset ⇒
-generic banner renders) is unchanged. Covered by a `GameMount.test.tsx`
-case asserting exactly one "Ready for next round" control renders for
-`regicide-v1`, and verified live in the dev server (defeated an enemy,
-confirmed the panel appears exactly once, and both seats confirming
-correctly reveals the next enemy).
-
-Play/Yield render `disabled` for every seat whenever `G.roundConfirm !==
-null` (AC9a's last sentence).
+Play/Yield still render `disabled` for every seat whenever
+`G.roundConfirm !== null` (AC9a's last sentence) — that part is
+`BoardComponent`'s own responsibility, independent of who renders the
+confirm controls.
 
 ### 2. Jester next-player choice (story 5 / AC8) — no round trip mid-choice
 
@@ -159,7 +150,5 @@ though the board itself doesn't render `log`.
 Component tests per AC, fixture-built `RegicideView`/`Ctx` (no real
 server), following Love Letter's `BoardComponent.test.tsx` conventions
 (`@vitest-environment jsdom`, Testing Library, `i18nFixture.ts` import).
-`isLegalSelection`/pure helpers get their own thin fixture-independent
-tests only where new logic is introduced (`roundConfirmDisplay.ts`);
-`isLegalSelection` itself is already covered by feature 022's
+`isLegalSelection` is already covered by feature 022's
 `legalPlay.test.ts` and reused, not retested.
