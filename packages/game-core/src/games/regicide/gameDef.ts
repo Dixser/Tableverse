@@ -302,15 +302,19 @@ function enterStep4(
 
 /**
  * Only does the part of a defeat that doesn't change what's on screen --
- * moves this round's played cards to the discard pile, and (only for the
- * 12th/final enemy) ends the match outright. For every other enemy,
- * `currentEnemy`/`damageDealt`/`spadeShieldTotal` are deliberately left
- * untouched here: the defeated card keeps showing the numbers that
- * finished it for the whole roundConfirm wait (spec.md's "Round-defeat
- * confirmation"). The rest of the transition -- placing the defeated
- * card, revealing the next one, resetting the per-enemy counters -- is
- * deferred to the roundConfirm phase's own onEnd (see gameDef's phases
- * block below), driven by `pendingEnemyDisposal` set here.
+ * and (only for the 12th/final enemy) ends the match outright. For every
+ * other enemy, `currentEnemy`/`damageDealt`/`spadeShieldTotal`/
+ * `cardsInPlay` are ALL deliberately left untouched here: the defeated
+ * card keeps showing the numbers (and the cards) that finished it for
+ * the whole roundConfirm wait (spec.md's "Round-defeat confirmation" --
+ * feature 023's PlayedCardsZone specifically renders `cardsInPlay`, so
+ * clearing it here would blank that zone the instant the enemy dies,
+ * before anyone had a chance to see what won the round). The rest of the
+ * transition -- placing the defeated card, moving this round's played
+ * cards to the discard pile, revealing the next enemy, resetting the
+ * per-enemy counters -- is deferred to the roundConfirm phase's own
+ * onEnd (see gameDef's phases block below), driven by
+ * `pendingEnemyDisposal` set here.
  */
 function resolveEnemyDefeat(G: RegicideG, defeatingPlayerID: string): void {
   const enemy = G.currentEnemy!;
@@ -319,12 +323,13 @@ function resolveEnemyDefeat(G: RegicideG, defeatingPlayerID: string): void {
     key: 'regicide.log.enemyDefeated',
     params: { actor: defeatingPlayerID, enemy: enemy.id, damage: G.damageDealt },
   });
-  G.discardPile.push(...G.cardsInPlay);
-  G.cardsInPlay = [];
 
   if (G._castleDeck.length === 0) {
-    // This WAS the 12th/final enemy -- the match is over, so where its
-    // own card ends up no longer matters to anyone.
+    // This WAS the 12th/final enemy -- the match ends immediately (no
+    // roundConfirm wait, no next round to defer to), so this round's
+    // played cards go straight to the discard pile here instead.
+    G.discardPile.push(...G.cardsInPlay);
+    G.cardsInPlay = [];
     if (exact) G._tavernDeck.push(enemy); else G.discardPile.push(enemy);
     G.currentEnemy = null;
     G.matchResult = 'won';
@@ -526,6 +531,13 @@ export const regicideGameDef: Game<RegicideG, Record<string, unknown>, RegicideS
           G.discardPile.push(defeated);
         }
         G.pendingEnemyDisposal = null;
+        // The just-finished round's played cards -- deliberately left in
+        // place through the whole roundConfirm wait (see
+        // resolveEnemyDefeat's own doc comment) so PlayedCardsZone keeps
+        // showing what won the round right up until the next one actually
+        // starts, here.
+        G.discardPile.push(...G.cardsInPlay);
+        G.cardsInPlay = [];
         // Always defined -- resolveEnemyDefeat only opens this wait when
         // _castleDeck still has a next enemy to reveal.
         G.currentEnemy = G._castleDeck.pop()!;

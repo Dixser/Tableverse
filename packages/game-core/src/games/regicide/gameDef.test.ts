@@ -477,6 +477,13 @@ describe('regicide gameDef', () => {
       expect(frozen.currentEnemy).toEqual(face('H', 'J'));
       expect(frozen.damageDealt).toBe(20);
       expect(frozen.pendingEnemyDisposal).toBe('tavern');
+      // The cards that just won the round stay visible in cardsInPlay
+      // (NOT yet moved to discardPile) for the whole roundConfirm wait --
+      // see resolveEnemyDefeat's own doc comment; feature 023's board
+      // renders this so the "what defeated it" view doesn't blank out the
+      // instant the enemy dies.
+      expect(frozen.cardsInPlay).toEqual([num('H', 7)]);
+      expect(frozen.discardPile).toEqual([]);
       expect(frozen.roundConfirm).toEqual({ pendingSeatIDs: ['0', '1'], confirmedSeatIDs: [] });
       expect(client.store.getState().ctx.phase).toBe('roundConfirm');
 
@@ -498,6 +505,10 @@ describe('regicide gameDef', () => {
       expect(G.spadeShieldTotal).toBe(0);
       expect(G.enemyImmunityCancelled).toBe(false);
       expect(G._tavernDeck[G._tavernDeck.length - 1]).toEqual(face('H', 'J')); // top = end, under pop()-is-draw
+      // Only now -- at the actual start of the next round -- does the
+      // previous round's played card move out of cardsInPlay.
+      expect(G.cardsInPlay).toEqual([]);
+      expect(G.discardPile).toContainEqual(num('H', 7));
       const state = client.store.getState();
       expect(state.ctx.phase).toBe('combat');
       expect(state.ctx.currentPlayer).toBe('0'); // the defeating player's bonus turn, not '1'
@@ -536,6 +547,10 @@ describe('regicide gameDef', () => {
       expect(G.matchResult).toBe('won');
       expect(G.currentEnemy).toBeNull();
       expect(G.roundConfirm).toBeNull();
+      // No roundConfirm wait to defer to on the match-winning defeat, so
+      // this round's played card resolves to the discard pile immediately.
+      expect(G.cardsInPlay).toEqual([]);
+      expect(G.discardPile).toContainEqual(num('D', 10));
       expect(client.store.getState().ctx.gameover).toEqual({ winner: ['0', '1'] });
     });
   });
