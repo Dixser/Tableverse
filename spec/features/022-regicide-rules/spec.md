@@ -134,20 +134,26 @@ played card is Clubs and not immune) is added to a running total damage
 dealt to the current enemy this round. If that running total is now ≥ the
 enemy's health, the enemy is defeated:
 
-1. If total damage dealt exactly equals the enemy's health, place the
-   enemy card face down on **top of** the Tavern deck (it re-enters play
-   as a drawable card — see "Face cards in hand" below). Otherwise
-   (overkill), place it in the discard pile.
-2. Move every card played against this enemy (by any player, across the
+1. Move every card played against this enemy (by any player, across the
    whole round) to the discard pile.
-3. Reveal the next Castle deck card as the new current enemy, reset the
-   spade-shield counter to 0, and reset the running damage total to 0.
-4. If the defeated enemy was the 4th King (the last Castle deck card),
-   the match ends in a win instead — see "Win/loss conditions." Otherwise,
-   a round-defeat confirmation wait opens (see "Round-defeat confirmation"
-   above); once every seated player has confirmed, the defeating player
-   skips Step 4 and begins a new Step 1 against the newly revealed enemy
-   (see "Turn order" above).
+2. If the defeated enemy was the 4th King (the last Castle deck card),
+   the match ends in a win instead — see "Win/loss conditions." The
+   defeated King card's own final placement (below) doesn't matter at
+   that point and may happen either way.
+3. Otherwise, a round-defeat confirmation wait opens (see "Round-defeat
+   confirmation" above) — the defeated enemy's card **stays in place** as
+   the current enemy for the rest of this step, still showing the damage
+   total that finished it, precisely so every seated player can see that
+   final state before it's replaced. Only once every seated player has
+   confirmed (or the host force-advances) does the rest of this step
+   actually happen: if total damage dealt exactly equalled the enemy's
+   health, the enemy card goes face down on **top of** the Tavern deck (it
+   re-enters play as a drawable card — see "Face cards in hand" below);
+   otherwise (overkill) it goes to the discard pile. The next Castle deck
+   card is then revealed as the new current enemy, the spade-shield
+   counter and running damage total both reset to 0, and the defeating
+   player skips Step 4 and begins a new Step 1 against the newly revealed
+   enemy (see "Turn order" above).
 
 **Step 4 — Suffer damage.** Skipped entirely if the enemy was just
 defeated in Step 3, or if the active player yielded (Step 4 is reached
@@ -402,22 +408,27 @@ feature 001.
    proceeding clockwise, one card at a time, skipping any player already
    at max hand size, stopping (with no error) if the Tavern deck empties
    before the full attack value has been drawn.
-9. `[unit]` Defeating an enemy with damage exactly equal to its health
-   places it face down on top of the Tavern deck; overkill places it in
-   the discard pile; either way, every card played against it this round
-   moves to the discard pile, the next Castle card is revealed, and the
-   spade-shield counter and cumulative-damage counter both reset to 0 —
-   with no cards dealt to anyone and no Tavern deck reshuffle at this
-   transition.
+9. `[unit]` The instant a non-final enemy is defeated, every card played
+   against it this round moves to the discard pile, but the enemy's own
+   card stays as `currentEnemy` unchanged (still reporting the damage
+   total that defeated it), and no next Castle card is revealed yet — see
+   AC9a for what unblocks this. No cards are dealt to anyone and no
+   Tavern deck reshuffle happens at any point in this whole transition.
 9a. `[unit]` Defeating a non-final enemy opens a `roundConfirm` wait
     scoped to every currently seated player; no move besides
     `confirmRoundReadyMove`/`forceAdvanceRoundMove` is legal while it's
     pending (`INVALID_MOVE` for e.g. an attempted `playCards`/`yield` by
-    any seat, including the defeating player); the defeating player's
-    fresh Step 1 turn against the new enemy (skipping Step 4) begins only
-    once every pending seat has confirmed, or once the match's host seat
-    calls `forceAdvanceRoundMove`. Defeating the 4th King does not open
-    this wait (see AC14).
+    any seat, including the defeating player). Only once every pending
+    seat has confirmed (or the match's host seat calls
+    `forceAdvanceRoundMove`) does the rest of the transition happen, all
+    at once: the defeated enemy's card is placed face down on top of the
+    Tavern deck (exact-health defeat) or into the discard pile (overkill),
+    the next Castle card is revealed as the new `currentEnemy`, the
+    spade-shield and cumulative-damage counters both reset to 0, and the
+    defeating player's fresh Step 1 turn against the new enemy (skipping
+    Step 4) begins. Defeating the 4th King does not open this wait at all
+    (see AC14) — its own placement doesn't gate anything since the match
+    is already over.
 10. `[unit]` A face card drawn into a hand (post-defeat re-entry) plays
     as a single-card Step 1 selection at attack value 10/15/20 by rank
     with its own suit's power (subject to the *current* enemy's

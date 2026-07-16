@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { gamesCatalog, getGameModule } from './gamesCatalog.js';
 
 describe('gamesCatalog', () => {
-  it('contains exactly tictactoe-v1, loveletter-v1, and themind-v1 as of feature 016', () => {
+  it('contains exactly tictactoe-v1, loveletter-v1, themind-v1, and regicide-v1 as of feature 022', () => {
     expect(gamesCatalog.map((m) => m.id)).toEqual([
       'tictactoe-v1',
       'loveletter-v1',
       'themind-v1',
+      'regicide-v1',
     ]);
   });
 
@@ -14,6 +15,7 @@ describe('gamesCatalog', () => {
     expect(getGameModule('tictactoe-v1')?.displayName).toBe('Tic-Tac-Toe');
     expect(getGameModule('loveletter-v1')?.displayName).toBe('Love Letter');
     expect(getGameModule('themind-v1')?.displayName).toBe('The Mind');
+    expect(getGameModule('regicide-v1')?.displayName).toBe('Regicide');
     expect(getGameModule('anything')).toBeUndefined();
   });
 });
