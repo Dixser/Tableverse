@@ -225,5 +225,72 @@
       "shurikenCancelled": "El jugador {{actor}} rechazó la propuesta de shuriken.",
       "shurikenUsed": "El equipo usó un shuriken."
     }
+  },
+  "regicide": {
+    "suits": {
+      "S": "Picas",
+      "H": "Corazones",
+      "D": "Diamantes",
+      "C": "Tréboles"
+    },
+    "faceRanks": {
+      "J": "Jota",
+      "Q": "Reina",
+      "K": "Rey"
+    },
+    "cardLabel": {
+      "number": "{{rank}} de {{suit}}",
+      "companion": "Compañero animal de {{suit}}",
+      "jester": "Bufón",
+      "face": "{{rank}} de {{suit}}"
+    },
+    "cardStats": "Ataque {{attack}} / Salud {{health}}",
+    "cardIllegalReason": "No coincide con tu selección actual.",
+    "hand": {
+      "ariaLabel": "Tu mano"
+    },
+    "playButton": "Jugar",
+    "yieldButton": "Ceder",
+    "yieldDisabledReason": "No puedes ceder: todos los demás jugadores cedieron en su último turno.",
+    "discardButton": "Descartar",
+    "defend": {
+      "title": "Defiéndete de {{required}} de daño",
+      "progress": "Seleccionado {{selected}} de {{required}}"
+    },
+    "enemy": {
+      "title": "Enemigo actual",
+      "number": "Enemigo {{number}} de 12",
+      "attack": "Ataque {{value}}",
+      "health": "Salud {{remaining}} / {{max}}",
+      "damageDealt": "Daño infligido: {{value}}",
+      "shieldTotal": "Escudo: {{value}}",
+      "damageYouWillTake": "Daño que recibirás: {{value}}"
+    },
+    "decks": {
+      "tavernCount": "Mazo de la Taberna: {{count}}",
+      "discardCount": "Pila de descarte: {{count}}"
+    },
+    "handCounts": {
+      "title": "Manos",
+      "cardsLeft": "{{count}} cartas"
+    },
+    "jester": {
+      "pickTitle": "Elige quién sigue",
+      "cancel": "Cancelar"
+    },
+    "currentTurn": "Turno actual: {{name}}",
+    "roundConfirm": {
+      "defeatedBadge": "Derrotado"
+    },
+    "log": {
+      "matchLostStuck": "El jugador {{actor}} no tiene jugada legal y nadie puede ceder: la partida se pierde.",
+      "matchLostDefense": "El jugador {{actor}} no puede defenderse de {{required}} de daño: la partida se pierde.",
+      "enemyDefeated": "El jugador {{actor}} derrotó a {{enemy}} (infligió {{damage}} de daño).",
+      "matchWon": "El Castillo ha caído: ¡el reino está a salvo!",
+      "jesterPlayed": "El jugador {{actor}} jugó el Bufón.",
+      "cardsPlayed": "El jugador {{actor}} jugó {{cards}} (ataque total {{total}}).",
+      "yielded": "El jugador {{actor}} cedió.",
+      "suffered": "El jugador {{actor}} descartó cartas por valor de {{total}} para defenderse."
+    }
   }
 }
