@@ -225,5 +225,72 @@
       "shurikenCancelled": "Player {{actor}} declined the shuriken proposal.",
       "shurikenUsed": "The team used a shuriken."
     }
+  },
+  "regicide": {
+    "suits": {
+      "S": "Spades",
+      "H": "Hearts",
+      "D": "Diamonds",
+      "C": "Clubs"
+    },
+    "faceRanks": {
+      "J": "Jack",
+      "Q": "Queen",
+      "K": "King"
+    },
+    "cardLabel": {
+      "number": "{{rank}} of {{suit}}",
+      "companion": "Animal Companion of {{suit}}",
+      "jester": "Jester",
+      "face": "{{rank}} of {{suit}}"
+    },
+    "cardStats": "Attack {{attack}} / Health {{health}}",
+    "cardIllegalReason": "Doesn't match your current selection.",
+    "hand": {
+      "ariaLabel": "Your hand"
+    },
+    "playButton": "Play",
+    "yieldButton": "Yield",
+    "yieldDisabledReason": "You can't yield -- every other player yielded last turn.",
+    "discardButton": "Discard",
+    "defend": {
+      "title": "Defend against {{required}} damage",
+      "progress": "Selected {{selected}} of {{required}}"
+    },
+    "enemy": {
+      "title": "Current enemy",
+      "number": "Enemy {{number}} of 12",
+      "attack": "Attack {{value}}",
+      "health": "Health {{remaining}} / {{max}}",
+      "damageDealt": "Damage dealt: {{value}}",
+      "shieldTotal": "Shield: {{value}}",
+      "damageYouWillTake": "Damage you'll take: {{value}}"
+    },
+    "decks": {
+      "tavernCount": "Tavern deck: {{count}}",
+      "discardCount": "Discard pile: {{count}}"
+    },
+    "handCounts": {
+      "title": "Hands",
+      "cardsLeft": "{{count}} cards"
+    },
+    "jester": {
+      "pickTitle": "Choose who goes next",
+      "cancel": "Cancel"
+    },
+    "currentTurn": "Current turn: {{name}}",
+    "roundConfirm": {
+      "defeatedBadge": "Defeated"
+    },
+    "log": {
+      "matchLostStuck": "Player {{actor}} has no legal move and no one can yield -- the game is lost.",
+      "matchLostDefense": "Player {{actor}} cannot defend against {{required}} damage -- the game is lost.",
+      "enemyDefeated": "Player {{actor}} defeated the {{enemy}} (dealt {{damage}} damage).",
+      "matchWon": "The Castle has fallen -- the kingdom is saved!",
+      "jesterPlayed": "Player {{actor}} played the Jester.",
+      "cardsPlayed": "Player {{actor}} played {{cards}} (total attack {{total}}).",
+      "yielded": "Player {{actor}} yielded.",
+      "suffered": "Player {{actor}} discarded cards worth {{total}} to defend."
+    }
   }
 }

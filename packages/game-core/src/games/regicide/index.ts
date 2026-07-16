@@ -15,6 +15,10 @@ export const regicideModule: GameModule<RegicideG> = {
   // No settingsSchema -- Jester count/max hand size are derived entirely
   // from player count, not a host-chosen room setting (spec.md's
   // "Resolved design decisions").
+  // RegicideBoard's own EnemyPanel renders the roundConfirm UI itself
+  // (feature 023 AC9a) -- GameMount must not also render its generic
+  // RoundConfirmBanner on top of it.
+  ownRoundConfirmUI: true,
 };
 
 export type {
