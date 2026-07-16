@@ -164,6 +164,58 @@ describe('GameMount', () => {
     expect(confirmRoundReady).toHaveBeenCalledTimes(1);
   });
 
+  it('feature 023: skips its own generic round-confirm banner for a game whose GameModule sets ownRoundConfirmUI (regicide-v1), leaving that UI entirely to the board', () => {
+    render(
+      <GameMount
+        selectedGameID="regicide-v1"
+        boardProps={{
+          G: {
+            activeSeatIDs: ['0', '1'],
+            roundConfirm: { pendingSeatIDs: ['0', '1'], confirmedSeatIDs: ['1'] },
+            hostPlayerID: null,
+            currentEnemy: { id: 'SK', kind: 'face', suit: 'S', rank: 'K' },
+            discardPile: [],
+            cardsInPlay: [],
+            damageDealt: 40,
+            spadeShieldTotal: 0,
+            enemyImmunityCancelled: false,
+            lastActionWasYield: { '0': false, '1': false },
+            pendingDefense: null,
+            pendingEnemyDisposal: null,
+            forcedNextSeatID: null,
+            nextTurnStartSeatID: null,
+            log: [],
+            matchResult: null,
+            tavernCount: 20,
+            enemyNumber: 1,
+            handCounts: { '0': 6, '1': 6 },
+            hands: { '0': [] },
+          },
+          ctx: {
+            numPlayers: 2,
+            playOrder: ['0', '1'],
+            playOrderPos: 0,
+            activePlayers: null,
+            currentPlayer: '0',
+            turn: 1,
+            phase: 'roundConfirm',
+          },
+          moves: { confirmRoundReady: () => {}, forceAdvanceRound: () => {} },
+          playerID: '0',
+          isActive: false,
+        }}
+        playerNames={{}}
+      />,
+    );
+    // RegicideBoard's own EnemyPanel reuses the exact same roundConfirm.*
+    // strings/roles as the generic banner (see roundConfirmDisplay.ts's
+    // doc comment) -- so the real regression this guards against is a
+    // literal duplicate control, not merely "a status role exists".
+    expect(screen.getAllByText('Ready for next round')).toHaveLength(1);
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getByTestId('game-mount')).toBeInTheDocument();
+  });
+
   it('renders no round-confirm banner for a game whose G has no roundConfirm field at all', () => {
     render(
       <GameMount

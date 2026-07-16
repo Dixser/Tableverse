@@ -67,11 +67,21 @@ copy stays identical without adding new keys. `game-core` cannot import
 depends on `game-core`, never the reverse — confirmed via
 `package.json`), so the ~15-line pure resolver is duplicated rather than
 shared, same category as Love Letter's `eligibleTargets.ts` being its
-own module instead of a cross-game extraction. Net effect: when mounted
-through the real `GameMount`, the confirm controls appear twice (once
-generic, once inside the enemy panel) — accepted as a direct consequence
-of the spec's explicit AC9a wording; not something to silently
-"fix" by suppressing one side.
+own module instead of a cross-game extraction.
+
+Mounted through the real `GameMount`, this would otherwise double the
+confirm controls (once generic, once inside the enemy panel). Rather
+than accept that, `GameModule` gained an optional `ownRoundConfirmUI`
+flag (`packages/game-core/src/types.ts`); `regicideModule` sets it, and
+`GameMount` skips rendering its generic `RoundConfirmBanner` whenever
+the selected game's module sets it. This is a capability flag on
+`GameModule` (same pattern as `settingsSchema`), not a per-game string
+check in `GameMount` itself, so every other game's default (unset ⇒
+generic banner renders) is unchanged. Covered by a `GameMount.test.tsx`
+case asserting exactly one "Ready for next round" control renders for
+`regicide-v1`, and verified live in the dev server (defeated an enemy,
+confirmed the panel appears exactly once, and both seats confirming
+correctly reveals the next enemy).
 
 Play/Yield render `disabled` for every seat whenever `G.roundConfirm !==
 null` (AC9a's last sentence).

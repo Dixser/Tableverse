@@ -73,7 +73,10 @@ export function resolveRoundConfirmDisplay(
  * shared roundConfirm.ts contract (packages/game-core/src/roundConfirm.ts)
  * gets this UI for free, without reimplementing it -- see
  * spec/021-rematch-round-confirm. Renders nothing while no wait is
- * pending (G.roundConfirm is null).
+ * pending (G.roundConfirm is null). GameMount skips rendering this
+ * entirely for a game whose GameModule sets `ownRoundConfirmUI` (e.g.
+ * Regicide -- spec/023-regicide-board's EnemyPanel embeds the same
+ * controls alongside its own frozen-enemy display instead).
  */
 export function RoundConfirmBanner({
   roundConfirm,
