@@ -5,7 +5,8 @@ import type { RegicideView } from './gameDef.js';
 import { isLegalSelection } from './legalPlay.js';
 import { HandView } from './HandView.js';
 import { EnemyPanel } from './EnemyPanel.js';
-import { HandCountBadges } from './HandCountBadges.js';
+import { PlayedCardsZone } from './PlayedCardsZone.js';
+import { PlayerStatusList } from './PlayerStatusList.js';
 import { DefendPanel } from './DefendPanel.js';
 import { JesterNextPlayerPicker } from './JesterNextPlayerPicker.js';
 import { playerLabel } from './playerLabel.js';
@@ -109,14 +110,16 @@ export const RegicideBoard: React.FC<BoardProps<RegicideView>> = ({
         tavernCount={G.tavernCount}
         discardCount={G.discardPile.length}
         roundConfirm={G.roundConfirm}
-        hostPlayerID={G.hostPlayerID}
-        playerID={playerID}
-        playerNames={playerNames}
-        onConfirm={() => moves.confirmRoundReady?.()}
-        onForceAdvance={() => moves.forceAdvanceRound?.()}
       />
 
-      <HandCountBadges activeSeatIDs={G.activeSeatIDs} handCounts={G.handCounts} playerNames={playerNames} />
+      <PlayedCardsZone cardsInPlay={G.cardsInPlay} />
+
+      <PlayerStatusList
+        activeSeatIDs={G.activeSeatIDs}
+        handCounts={G.handCounts}
+        playerID={playerID}
+        playerNames={playerNames}
+      />
 
       {playerID != null && isDefending && (
         <DefendPanel
@@ -135,10 +138,10 @@ export const RegicideBoard: React.FC<BoardProps<RegicideView>> = ({
             onCardClicked={toggleCard}
           />
           <div className={styles.actions}>
-            <button type="button" disabled={playDisabled} onClick={handlePlay}>
+            <button className={styles.playButton} type="button" disabled={playDisabled} onClick={handlePlay}>
               {t('regicide.playButton')}
             </button>
-            <button type="button" disabled={yieldDisabled} onClick={handleYield}>
+            <button className={styles.passButton} type="button" disabled={yieldDisabled} onClick={handleYield}>
               {t('regicide.yieldButton')}
             </button>
             {canAct && !canYield && <span className={styles.yieldReason}>{t('regicide.yieldDisabledReason')}</span>}

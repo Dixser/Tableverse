@@ -52,17 +52,6 @@ export interface GameModule<G = unknown> {
   maxPlayers: number;
   gameDef: Game<G>;
   settingsSchema?: JSONSchema;
-  /**
-   * True when this game's own BoardComponent already renders the
-   * roundConfirm "N of M confirmed"/Confirm/force-advance UI itself
-   * (embedded alongside its own game-specific context -- e.g. Regicide's
-   * EnemyPanel showing it next to the frozen defeated-enemy state, per
-   * spec/features/023-regicide-board's AC9a). GameMount skips its own
-   * generic RoundConfirmBanner for such a game so the same controls don't
-   * render twice. Every other game embedding RoundConfirmG (Love Letter)
-   * leaves this unset and gets the generic banner for free, unchanged.
-   */
-  ownRoundConfirmUI?: boolean;
 }
 
 /**

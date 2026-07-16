@@ -11,14 +11,18 @@ const jesterCard: Card = { id: 'Jester1', kind: 'jester' };
 const faceCard: Card = { id: 'DK', kind: 'face', suit: 'D', rank: 'K' };
 
 describe('CardTile', () => {
-  it('renders a number card label', () => {
+  it('renders a number card as a separate suit icon and rank, with the combined label as its accessible name', () => {
     render(<CardTile card={numberCard} />);
-    expect(screen.getByText('TEST_7_of_TEST_Spades')).toBeInTheDocument();
+    expect(screen.getByText('TEST_S')).toBeInTheDocument();
+    expect(screen.getByText('7')).toBeInTheDocument();
+    expect(screen.getByRole('button')).toHaveAccessibleName('TEST_S 7');
   });
 
-  it('renders a companion card label', () => {
+  it('renders a companion card as a separate suit icon and a fixed "A" rank (the print-and-play Ace), never translated', () => {
     render(<CardTile card={companionCard} />);
-    expect(screen.getByText('TEST_Companion_of_TEST_Hearts')).toBeInTheDocument();
+    expect(screen.getByText('TEST_H')).toBeInTheDocument();
+    expect(screen.getByText('A')).toBeInTheDocument();
+    expect(screen.getByRole('button')).toHaveAccessibleName('TEST_H A');
   });
 
   it('renders a jester card label with no suit', () => {
@@ -26,9 +30,11 @@ describe('CardTile', () => {
     expect(screen.getByText('TEST_Jester')).toBeInTheDocument();
   });
 
-  it('renders a face card label', () => {
+  it('renders a face card as a separate suit icon and rank, with the combined label as its accessible name', () => {
     render(<CardTile card={faceCard} />);
-    expect(screen.getByText('TEST_TEST_King_of_TEST_Diamonds')).toBeInTheDocument();
+    expect(screen.getByText('TEST_D')).toBeInTheDocument();
+    expect(screen.getByText('TEST_K')).toBeInTheDocument();
+    expect(screen.getByRole('button')).toHaveAccessibleName('TEST_D TEST_K');
   });
 
   it('is inert (disabled) when no onClick is supplied', () => {

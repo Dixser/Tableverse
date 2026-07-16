@@ -228,21 +228,26 @@
   },
   "regicide": {
     "suits": {
-      "S": "Spades",
-      "H": "Hearts",
-      "D": "Diamonds",
-      "C": "Clubs"
+      "S": "♠️",
+      "H": "♥️",
+      "D": "♦️",
+      "C": "♣️"
+    },
+    "suitsRules": {
+      "S": "Grants X shield",
+      "H": "Heal X cards",
+      "D": "Draw X cards",
+      "C": "Duoble damage"
     },
     "faceRanks": {
-      "J": "Jack",
-      "Q": "Queen",
-      "K": "King"
+      "J": "J",
+      "Q": "Q",
+      "K": "K"
     },
     "cardLabel": {
-      "number": "{{rank}} of {{suit}}",
-      "companion": "Animal Companion of {{suit}}",
+      "number": "{{suit}} {{rank}}",
       "jester": "Jester",
-      "face": "{{rank}} of {{suit}}"
+      "face": "{{suit}} {{rank}}"
     },
     "cardStats": "Attack {{attack}} / Health {{health}}",
     "cardIllegalReason": "Doesn't match your current selection.",
@@ -262,13 +267,17 @@
       "number": "Enemy {{number}} of 12",
       "attack": "Attack {{value}}",
       "health": "Health {{remaining}} / {{max}}",
-      "damageDealt": "Damage dealt: {{value}}",
       "shieldTotal": "Shield: {{value}}",
       "damageYouWillTake": "Damage you'll take: {{value}}"
     },
     "decks": {
       "tavernCount": "Tavern deck: {{count}}",
-      "discardCount": "Discard pile: {{count}}"
+      "discardCount": "Discard pile: {{count}}",
+      "castleCount": "Castle deck: {{count}} enemies remaining"
+    },
+    "playedCards": {
+      "title": "Cards played this round",
+      "empty": "No cards played yet."
     },
     "handCounts": {
       "title": "Hands",

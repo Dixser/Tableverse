@@ -228,30 +228,35 @@
   },
   "regicide": {
     "suits": {
-      "S": "Picas",
-      "H": "Corazones",
-      "D": "Diamantes",
-      "C": "Tréboles"
+      "S": "♠️",
+      "H": "♥️",
+      "D": "♦️",
+      "C": "♣️"
+    },
+    "suitsRules": {
+      "S": "Otorga X escudo",
+      "H": "Cura X cartas",
+      "D": "Roba X cartas",
+      "C": "Daño doble"
     },
     "faceRanks": {
-      "J": "Jota",
-      "Q": "Reina",
-      "K": "Rey"
+      "J": "J",
+      "Q": "Q",
+      "K": "K"
     },
     "cardLabel": {
-      "number": "{{rank}} de {{suit}}",
-      "companion": "Compañero animal de {{suit}}",
+      "number": "{{suit}} {{rank}}",
       "jester": "Bufón",
-      "face": "{{rank}} de {{suit}}"
+      "face": "{{suit}} {{rank}}"
     },
-    "cardStats": "Ataque {{attack}} / Salud {{health}}",
+    "cardStats": " {{attack}} / Salud {{health}}",
     "cardIllegalReason": "No coincide con tu selección actual.",
     "hand": {
       "ariaLabel": "Tu mano"
     },
     "playButton": "Jugar",
-    "yieldButton": "Ceder",
-    "yieldDisabledReason": "No puedes ceder: todos los demás jugadores cedieron en su último turno.",
+    "yieldButton": "Pasar",
+    "yieldDisabledReason": "No puedes pasar: todos los demás jugadores pasaron en su último turno.",
     "discardButton": "Descartar",
     "defend": {
       "title": "Defiéndete de {{required}} de daño",
@@ -260,15 +265,19 @@
     "enemy": {
       "title": "Enemigo actual",
       "number": "Enemigo {{number}} de 12",
-      "attack": "Ataque {{value}}",
-      "health": "Salud {{remaining}} / {{max}}",
-      "damageDealt": "Daño infligido: {{value}}",
-      "shieldTotal": "Escudo: {{value}}",
-      "damageYouWillTake": "Daño que recibirás: {{value}}"
+      "attack": "🗡️ {{value}}",
+      "health": "🩸 {{remaining}} / {{max}}",
+      "shieldTotal": "🛡️ {{value}}",
+      "damageYouWillTake": "{{value}}"
     },
     "decks": {
       "tavernCount": "Mazo de la Taberna: {{count}}",
-      "discardCount": "Pila de descarte: {{count}}"
+      "discardCount": "Pila de descarte: {{count}}",
+      "castleCount": "Mazo del Castillo: {{count}} enemigos restantes"
+    },
+    "playedCards": {
+      "title": "Cartas jugadas esta ronda",
+      "empty": "Todavía no se ha jugado ninguna carta."
     },
     "handCounts": {
       "title": "Manos",
@@ -283,13 +292,13 @@
       "defeatedBadge": "Derrotado"
     },
     "log": {
-      "matchLostStuck": "El jugador {{actor}} no tiene jugada legal y nadie puede ceder: la partida se pierde.",
+      "matchLostStuck": "El jugador {{actor}} no tiene jugada legal y nadie puede pasar: la partida se pierde.",
       "matchLostDefense": "El jugador {{actor}} no puede defenderse de {{required}} de daño: la partida se pierde.",
       "enemyDefeated": "El jugador {{actor}} derrotó a {{enemy}} (infligió {{damage}} de daño).",
       "matchWon": "El Castillo ha caído: ¡el reino está a salvo!",
       "jesterPlayed": "El jugador {{actor}} jugó el Bufón.",
       "cardsPlayed": "El jugador {{actor}} jugó {{cards}} (ataque total {{total}}).",
-      "yielded": "El jugador {{actor}} cedió.",
+      "yielded": "El jugador {{actor}} pasó.",
       "suffered": "El jugador {{actor}} descartó cartas por valor de {{total}} para defenderse."
     }
   }

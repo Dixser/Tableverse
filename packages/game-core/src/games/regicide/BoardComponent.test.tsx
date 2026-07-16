@@ -77,10 +77,10 @@ describe('RegicideBoard', () => {
     const playButton = screen.getByText('TEST_Play');
     expect(playButton).toBeDisabled(); // empty selection.
 
-    fireEvent.click(screen.getByText('TEST_4_of_TEST_Spades').closest('button')!);
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_S 4' }));
     expect(playButton).not.toBeDisabled(); // single card always legal.
 
-    fireEvent.click(screen.getByText('TEST_4_of_TEST_Spades').closest('button')!); // deselect.
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_S 4' })); // deselect.
     expect(playButton).toBeDisabled();
   });
 
@@ -95,12 +95,12 @@ describe('RegicideBoard', () => {
         isActive={true}
       />,
     );
-    fireEvent.click(screen.getByText('TEST_4_of_TEST_Spades').closest('button')!);
-    fireEvent.click(screen.getByText('TEST_4_of_TEST_Hearts').closest('button')!); // same rank, sum 8.
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_S 4' }));
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_H 4' })); // same rank, sum 8.
     fireEvent.click(screen.getByText('TEST_Play'));
     expect(playCards).toHaveBeenCalledWith(['S4', 'H4']);
     // Selection cleared -- neither card still marked selected.
-    expect(screen.getByText('TEST_4_of_TEST_Spades').closest('button')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'TEST_S 4' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   describe('AC5: Yield button', () => {
@@ -149,8 +149,8 @@ describe('RegicideBoard', () => {
         isActive={true}
       />,
     );
-    expect(screen.getByText('TEST_4_of_TEST_Spades')).toBeInTheDocument(); // own hand.
-    expect(screen.queryByText(/TEST_Queen_of_TEST_Diamonds/)).toBeNull(); // seat '1' never rendered.
+    expect(screen.getByRole('button', { name: 'TEST_S 4' })).toBeInTheDocument(); // own hand.
+    expect(screen.queryByRole('button', { name: 'TEST_D TEST_Q' })).toBeNull(); // seat '1' never rendered.
   });
 
   describe('AC8: Jester next-player choice', () => {
@@ -166,7 +166,7 @@ describe('RegicideBoard', () => {
           playerNames={{ '0': 'Alice', '1': 'Bob', '2': 'Carol' }}
         />,
       );
-      fireEvent.click(screen.getByText('TEST_Jester').closest('button')!);
+      fireEvent.click(screen.getByRole('button', { name: 'TEST_Jester' }));
       fireEvent.click(screen.getByText('TEST_Play'));
       expect(playCards).not.toHaveBeenCalled(); // not yet -- next player still unchosen.
       const picker = screen.getByRole('group', { name: 'TEST_choose_who_goes_next' });
@@ -217,7 +217,7 @@ describe('RegicideBoard', () => {
           isActive={true}
         />,
       );
-      fireEvent.click(screen.getByText('TEST_4_of_TEST_Spades').closest('button')!);
+      fireEvent.click(screen.getByRole('button', { name: 'TEST_S 4' }));
       expect(screen.getByText('TEST_Play')).not.toBeDisabled();
       expect(screen.getByText('TEST_Yield')).not.toBeDisabled();
     });
@@ -233,9 +233,9 @@ describe('RegicideBoard', () => {
         isActive={false}
       />,
     );
-    expect(screen.getByText('TEST_tavern_count 30')).toBeInTheDocument();
-    expect(screen.getByText('TEST_enemy_number 1')).toBeInTheDocument();
-    expect(screen.getAllByText(/TEST_cards_left 7/)).toHaveLength(2); // both seats' hand counts.
+    expect(screen.getByLabelText('TEST_tavern_count 30')).toBeInTheDocument();
+    expect(screen.getByLabelText('TEST_castle_count 11')).toBeInTheDocument(); // enemyNumber 1 -> 11 hidden behind it.
+    expect(screen.getAllByTitle(/TEST_cards_left 7/)).toHaveLength(2); // both seats' hand-status rows.
     expect(screen.queryByText('TEST_Play')).toBeNull(); // no hand -> no Play/Yield controls at all.
     expect(screen.queryByText('TEST_Yield')).toBeNull();
   });
@@ -269,7 +269,7 @@ describe('RegicideBoard', () => {
     );
     expect(screen.queryByText('TEST_Play')).toBeNull();
     expect(screen.queryByText('TEST_Yield')).toBeNull();
-    fireEvent.click(screen.getByText('TEST_4_of_TEST_Spades').closest('button')!);
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_S 4' }));
     fireEvent.click(screen.getByText('TEST_Discard'));
     expect(discardCards).toHaveBeenCalledWith(['S4']);
   });

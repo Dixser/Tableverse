@@ -15,18 +15,18 @@ describe('DefendPanel', () => {
     const discardButton = screen.getByText('TEST_Discard');
     expect(discardButton).toBeDisabled();
 
-    fireEvent.click(screen.getByText('TEST_4_of_TEST_Spades').closest('button')!);
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_S 4' }));
     expect(discardButton).toBeDisabled(); // 4 < 10.
 
-    fireEvent.click(screen.getByText('TEST_6_of_TEST_Hearts').closest('button')!);
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_H 6' }));
     expect(discardButton).not.toBeDisabled(); // 4 + 6 = 10.
   });
 
   it('calls onDiscard with exactly the selected card ids and clears the selection', () => {
     const onDiscard = vi.fn();
     render(<DefendPanel hand={[s4, h6, d3]} requiredTotal={7} onDiscard={onDiscard} />);
-    fireEvent.click(screen.getByText('TEST_4_of_TEST_Spades').closest('button')!);
-    fireEvent.click(screen.getByText('TEST_3_of_TEST_Diamonds').closest('button')!); // 4 + 3 = 7.
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_S 4' }));
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_D 3' })); // 4 + 3 = 7.
     fireEvent.click(screen.getByText('TEST_Discard'));
     expect(onDiscard).toHaveBeenCalledWith(['S4', 'D3']);
 
@@ -36,8 +36,8 @@ describe('DefendPanel', () => {
 
   it('deselecting a card lowers the running total', () => {
     render(<DefendPanel hand={[s4, h6]} requiredTotal={10} onDiscard={vi.fn()} />);
-    const s4Button = screen.getByText('TEST_4_of_TEST_Spades').closest('button')!;
-    const h6Button = screen.getByText('TEST_6_of_TEST_Hearts').closest('button')!;
+    const s4Button = screen.getByRole('button', { name: 'TEST_S 4' });
+    const h6Button = screen.getByRole('button', { name: 'TEST_H 6' });
     fireEvent.click(s4Button);
     fireEvent.click(h6Button);
     expect(screen.getByText('TEST_Discard')).not.toBeDisabled();
