@@ -531,4 +531,30 @@ describe('room routes: permission enforcement', () => {
     );
     expect(res.status).toBe(403);
   });
+
+  it('rejects a mutating action on a closed room with 410', async () => {
+    const { harness, server } = await setup();
+    const host = await createSessionedUser(harness, 'HostClosed');
+
+    const createRes = await fetch(`${server.baseUrl}/api/rooms`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    const { room } = (await createRes.json()) as { room: { roomID: string } };
+
+    await harness.db.models.Room.update(
+      { closedAt: new Date() },
+      { where: { roomId: room.roomID } },
+    );
+
+    const res = await fetch(`${server.baseUrl}/api/rooms/${room.roomID}/game`, {
+      method: 'POST',
+      headers: {
+        [SESSION_TOKEN_HEADER]: host.sessionToken,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ gameID: dummyGameModule.id }),
+    });
+    expect(res.status).toBe(410);
+  });
 });

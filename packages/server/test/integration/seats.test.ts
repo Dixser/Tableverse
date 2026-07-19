@@ -21,6 +21,7 @@ async function createRoom(
     allowMultiSeat: false,
     gameSettings: {},
     members: [{ userID: 'host-1', role: 'host' }],
+    closedAt: null,
     ...overrides,
   };
   await repo.create(room);

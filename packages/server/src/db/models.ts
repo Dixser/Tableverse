@@ -34,6 +34,7 @@ export class RoomModel extends Model<
   // to not need one. This is unlike seat *assignments* below, which get
   // their own table because they're written far more frequently.
   declare members: string;
+  declare closedAt: Date | null;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
@@ -113,6 +114,7 @@ export function defineModels(sequelize: Sequelize): Models {
         allowNull: false,
         defaultValue: '[]',
       },
+      closedAt: { type: DataTypes.DATE, allowNull: true },
       createdAt: DataTypes.DATE,
       updatedAt: DataTypes.DATE,
     },

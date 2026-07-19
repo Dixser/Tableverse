@@ -15,6 +15,7 @@ function makeRoom(overrides: Partial<Room> = {}, inviteCode: string): Room {
     allowMultiSeat: false,
     gameSettings: {},
     members: [{ userID: 'host-1', role: 'host' }],
+    closedAt: null,
     ...overrides,
   };
 }

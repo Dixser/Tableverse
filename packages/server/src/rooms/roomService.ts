@@ -45,6 +45,7 @@ export class RoomService {
       allowMultiSeat: false,
       gameSettings: {},
       members: [{ userID: hostUserID, role: 'host' }],
+      closedAt: null,
     };
     await this.rooms.create(room);
     return room;
@@ -54,6 +55,9 @@ export class RoomService {
     const room = await this.rooms.getByInviteCode(inviteCode);
     if (!room) {
       throw new RoomServiceError(`No room found for invite code ${inviteCode}`);
+    }
+    if (room.closedAt) {
+      throw new RoomServiceError(`Room ${room.roomID} is closed`);
     }
     if (room.members.some((m) => m.userID === userID)) {
       return room; // already a member -- idempotent

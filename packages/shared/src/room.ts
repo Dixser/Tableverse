@@ -17,4 +17,5 @@ export interface Room {
   allowMultiSeat: boolean;
   gameSettings: Record<string, unknown>;
   members: RoomMember[];
+  closedAt: string | null;
 }

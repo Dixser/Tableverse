@@ -52,6 +52,11 @@ async function authorize(
     ctx.body = { error: 'room not found' };
     return null;
   }
+  if (room.closedAt) {
+    ctx.status = 410;
+    ctx.body = { error: 'room is closed' };
+    return null;
+  }
   const role = getRoleInRoom(room, ctx.state.user!.id);
   if (!role || !canPerform(role, action)) {
     ctx.status = 403;

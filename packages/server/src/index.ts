@@ -16,10 +16,21 @@ import { createPresenceSystem } from './presence/presenceChannel.js';
 import { createChatSystem } from './chat/chatChannel.js';
 import { createRoomEventsSystem } from './roomEvents/roomEventsChannel.js';
 import type { RoomEventsBroadcaster } from './rooms/roomRoutes.js';
+import {
+  DEFAULT_CLEANUP_INTERVAL_MS,
+  DEFAULT_PURGE_AFTER_MS,
+  DEFAULT_STALE_LOBBY_MS,
+  startRoomCleanupJob,
+} from './rooms/roomCleanup.js';
 
 const PORT = Number(process.env.PORT ?? 8000);
 const DB_STORAGE = process.env.DB_STORAGE ?? './tableverse.sqlite3';
 const CLIENT_ORIGINS = (process.env.CLIENT_ORIGINS ?? 'http://localhost:5173').split(',');
+const ROOM_STALE_LOBBY_MS = Number(process.env.ROOM_STALE_LOBBY_MS ?? DEFAULT_STALE_LOBBY_MS);
+const ROOM_PURGE_AFTER_MS = Number(process.env.ROOM_PURGE_AFTER_MS ?? DEFAULT_PURGE_AFTER_MS);
+const ROOM_CLEANUP_INTERVAL_MS = Number(
+  process.env.ROOM_CLEANUP_INTERVAL_MS ?? DEFAULT_CLEANUP_INTERVAL_MS,
+);
 
 function createIdentityRouter(users: UserRepository): Router {
   const router = new Router({ prefix: '/api' });
@@ -55,6 +66,11 @@ async function main(): Promise<void> {
   const roomService = new RoomService(rooms, seats, users, storage, (id) =>
     gamesCatalog.find((m) => m.id === id),
   );
+  startRoomCleanupJob(rooms, seats, {
+    intervalMs: ROOM_CLEANUP_INTERVAL_MS,
+    staleMs: ROOM_STALE_LOBBY_MS,
+    purgeAfterMs: ROOM_PURGE_AFTER_MS,
+  });
 
   const identityRouter = createIdentityRouter(users);
   // roomEvents' real broadcaster can't exist until the HTTP server below
