@@ -74,6 +74,10 @@ void i18n.use(initReactI18next).init({
             title: 'TEST_played_cards_title',
             empty: 'TEST_played_cards_empty',
           },
+          discardedCards: {
+            title: 'TEST_discarded_cards_title',
+            empty: 'TEST_discarded_cards_empty',
+          },
           handCounts: {
             title: 'TEST_hand_counts',
             cardsLeft: 'TEST_cards_left {{count}}',

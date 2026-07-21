@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import type { RoundConfirmState } from '../../roundConfirm.js';
-import { enemyAttack, enemyHealth, type FaceCard } from './deck.js';
+import { enemyAttack, enemyHealth, type Card, type FaceCard } from './deck.js';
+import { isSuitImmune } from './gameDef.js';
 import { CardTile } from './CardTile.js';
 import { DeckStack } from './DeckStack.js';
+import { DiscardPileZone } from './DiscardPileZone.js';
 import styles from './EnemyPanel.module.css';
 
 export interface EnemyPanelProps {
@@ -15,13 +17,24 @@ export interface EnemyPanelProps {
   enemyNumber: number;
   damageDealt: number;
   /** Raw, immunity-unaware cumulative total -- shown as its own indicator
-   * (spec.md AC6), and also what "damage you'll take" is derived from
-   * (attack - shield, floored at 0), matching AC6's own literal formula
-   * rather than a second, immunity-aware number the board can't derive
-   * without duplicating enterStep4's own isImmune check. */
+   * (spec.md AC6). "Damage you'll take" below is NOT derived from this
+   * directly -- see effectiveSpadeShieldTotal -- since a Spades enemy's
+   * immunity zeroes its effect on the required discard without ever
+   * touching this raw number. */
   spadeShieldTotal: number;
+  /** Whether a Jester has cancelled currentEnemy's suit immunity this
+   * round -- needed alongside spadeShieldTotal/currentEnemy to compute the
+   * EFFECTIVE shield for "damage you'll take" (see that value's own
+   * comment below); this raw total accumulates even while immune, same as
+   * enterStep4's own G.spadeShieldTotal (gameDef.ts). */
+  enemyImmunityCancelled: boolean;
   tavernCount: number;
-  discardCount: number;
+  /** `G.discardPile` -- full contents, not just a size (spec.md's original
+   * "discard pile only ever shows a count" decision is superseded here:
+   * players asked to see what's actually cycled out, e.g. to reason about
+   * what's left in the Tavern deck). The DeckStack count next to it is
+   * still shown -- see DiscardPileZone -- this doesn't replace it. */
+  discardPile: Card[];
   /** Only used to decide whether to show the "Defeated" badge -- the
    * actual N-of-M/Confirm/force-advance controls are GameMount's generic
    * RoundConfirmBanner's job, same as every other game embedding
@@ -45,8 +58,9 @@ export function EnemyPanel({
   enemyNumber,
   damageDealt,
   spadeShieldTotal,
+  enemyImmunityCancelled,
   tavernCount,
-  discardCount,
+  discardPile,
   roundConfirm,
 }: EnemyPanelProps) {
   const { t } = useTranslation();
@@ -54,7 +68,14 @@ export function EnemyPanel({
   const attack = currentEnemy ? enemyAttack(currentEnemy) : 0;
   const health = currentEnemy ? enemyHealth(currentEnemy) : 0;
   const remaining = Math.max(0, health - damageDealt);
-  const damageYouWillTake = Math.max(0, attack - spadeShieldTotal);
+  // Bug fix: this used to subtract the RAW spadeShieldTotal unconditionally,
+  // so a Spades enemy showed a lower "damage you'll take" than what Step 4
+  // (enterStep4, gameDef.ts) actually charges once the accumulated shield
+  // is zeroed out by suit immunity. isSuitImmune is the exact same check
+  // enterStep4 itself uses, so this can't drift out of sync with it again.
+  const effectiveSpadeShieldTotal =
+    currentEnemy && !isSuitImmune(currentEnemy, 'S', enemyImmunityCancelled) ? spadeShieldTotal : 0;
+  const damageYouWillTake = Math.max(0, attack - effectiveSpadeShieldTotal);
   // _castleDeck.length is never exposed directly (playerView only surfaces
   // the derived enemyNumber) -- currentEnemy has already been popped off
   // it, so this is exactly how many still-hidden enemies remain behind it.
@@ -69,6 +90,7 @@ export function EnemyPanel({
             <DeckStack
               count={castleRemaining}
               ariaLabel={t('regicide.decks.castleCount', { count: castleRemaining })}
+              variant="castle"
             />
             <div>
               <CardTile card={currentEnemy} />
@@ -92,8 +114,19 @@ export function EnemyPanel({
       )}
 
       <div className={styles.decks}>
-        <DeckStack count={tavernCount} ariaLabel={t('regicide.decks.tavernCount', { count: tavernCount })} />
-        <DeckStack count={discardCount} ariaLabel={t('regicide.decks.discardCount', { count: discardCount })} />
+        <DeckStack
+          count={tavernCount}
+          ariaLabel={t('regicide.decks.tavernCount', { count: tavernCount })}
+          variant="tavern"
+        />
+        <div className={styles.discardGroup}>
+          <DeckStack
+            count={discardPile.length}
+            ariaLabel={t('regicide.decks.discardCount', { count: discardPile.length })}
+            variant="discard"
+          />
+          <DiscardPileZone discardPile={discardPile} />
+        </div>
       </div>
     </div>
   );

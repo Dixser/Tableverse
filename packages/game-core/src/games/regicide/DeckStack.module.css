@@ -1,10 +1,36 @@
 .stack {
+  /* Plain "card back" tone for this pile -- a deliberate, saturated color
+     rather than the neutral --color-surface every other panel uses, so a
+     deck reads as a deck at a glance. The background layers behind the
+     top card are darker variants of this SAME tone (color-mix with
+     black, increasing per layer), not the old opacity-over-surface trick
+     -- a solid front card wants solid depth behind it, not translucency
+     letting whatever's underneath show through. */
+  --deck-color: #00320e;
   position: relative;
   width: 4.5rem;
   height: 5.5rem;
   /* Reserves room for the deepest background layer's offset so it
      doesn't visually collide with the next element in the row. */
   margin: 0 0.75rem 0.75rem 0;
+}
+
+/* Per-deck overrides -- DeckStack.tsx's optional `variant` prop applies
+   one of these alongside .stack, so the Tavern deck, Castle deck, and
+   discard pile can each be tuned to their own tone independently instead
+   of all three sharing .stack's single default --deck-color above. Add
+   more variants here (and to DeckStack.tsx's DeckStackVariant type) as
+   needed -- each only needs to redeclare --deck-color. */
+.tavern {
+  --deck-color: #2f5a6d;
+}
+
+.castle {
+  --deck-color: #5a1e1e;
+}
+
+.discard {
+  --deck-color: #5d5d5d;
 }
 
 .top {
@@ -14,13 +40,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-surface);
+  background: var(--deck-color);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
 }
 
-/* A pile of 0 -- an empty slot, not a card with "0" printed on it. */
+/* A pile of 0 -- an empty slot, not a card with "0" printed on it. Falls
+   back to the neutral surface tone instead of the plain deck color -- an
+   empty pile shouldn't look like a solid-colored card that happens to say
+   "0". */
 .empty {
+  background: var(--color-surface);
   border-style: dashed;
   border-color: var(--color-text-muted);
   opacity: 0.6;
@@ -30,6 +60,7 @@
   font-size: 2rem;
   font-weight: 700;
   line-height: 1;
+  color: var(--color-accent-text);
 }
 
 .layer1,
@@ -38,24 +69,23 @@
   position: absolute;
   inset: 0;
   border-radius: var(--radius);
-  background: var(--color-surface);
   border: 1px solid var(--color-border);
 }
 
 .layer1 {
+  background: color-mix(in srgb, var(--deck-color) 85%, black);
   transform: translate(4px, 4px);
   z-index: 2;
-  opacity: 0.8;
 }
 
 .layer2 {
+  background: color-mix(in srgb, var(--deck-color) 70%, black);
   transform: translate(8px, 8px);
   z-index: 1;
-  opacity: 0.65;
 }
 
 .layer3 {
+  background: color-mix(in srgb, var(--deck-color) 55%, black);
   transform: translate(12px, 12px);
   z-index: 0;
-  opacity: 0.5;
 }

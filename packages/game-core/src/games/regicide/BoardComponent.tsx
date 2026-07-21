@@ -107,8 +107,9 @@ export const RegicideBoard: React.FC<BoardProps<RegicideView>> = ({
         enemyNumber={G.enemyNumber}
         damageDealt={G.damageDealt}
         spadeShieldTotal={G.spadeShieldTotal}
+        enemyImmunityCancelled={G.enemyImmunityCancelled}
         tavernCount={G.tavernCount}
-        discardCount={G.discardPile.length}
+        discardPile={G.discardPile}
         roundConfirm={G.roundConfirm}
       />
 
@@ -119,6 +120,7 @@ export const RegicideBoard: React.FC<BoardProps<RegicideView>> = ({
         handCounts={G.handCounts}
         playerID={playerID}
         playerNames={playerNames}
+        currentPlayerID={ctx.currentPlayer}
       />
 
       {playerID != null && isDefending && (

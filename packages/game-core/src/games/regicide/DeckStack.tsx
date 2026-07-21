@@ -15,28 +15,47 @@ function stackLayers(count: number): number {
   return 3;
 }
 
+/** One entry per `--deck-color` override in DeckStack.module.css. */
+export type DeckStackVariant = 'tavern' | 'castle' | 'discard';
+
+const VARIANT_CLASS: Record<DeckStackVariant, string> = {
+  tavern: styles.tavern!,
+  castle: styles.castle!,
+  discard: styles.discard!,
+};
+
 export interface DeckStackProps {
   count: number;
   /** Full accessible text (e.g. "Tavern deck: 26") -- the count is also
    * shown visually on the stack's front card, so this doubles as the
    * aria-label and a hover title. */
   ariaLabel: string;
+  /** Selects this pile's own --deck-color override (DeckStack.module.css)
+   * so each deck can be customized independently rather than every
+   * DeckStack instance sharing one color. Omit for .stack's own default
+   * tone -- useful for a one-off stack that doesn't need its own variant. */
+  variant?: DeckStackVariant;
 }
 
 /**
  * A pile rendered as a card stack: the front card always shows the exact
  * count, and 0-3 dimmed background layers behind it (see stackLayers)
  * give an at-a-glance sense of "thin" vs. "thick" without requiring the
- * viewer to read the number. Used for the Tavern deck and discard pile,
- * both of which only ever expose a count, never contents (spec.md
- * Non-goals).
+ * viewer to read the number. Used for the Tavern deck (genuinely hidden
+ * contents -- its remaining draw order is real hidden information) and,
+ * alongside `DiscardPileZone`'s own per-card rendering, the discard pile's
+ * count (public contents too, since spec.md story 8 -- nothing in this
+ * game ever reshuffles the discard pile back into play, so there was no
+ * hidden-information reason to keep it opaque; this component itself
+ * still only ever renders a bare count either way, never the cards).
  */
-export function DeckStack({ count, ariaLabel }: DeckStackProps) {
+export function DeckStack({ count, ariaLabel, variant }: DeckStackProps) {
   const layers = stackLayers(count);
   const layerClasses = [styles.layer1, styles.layer2, styles.layer3].slice(0, layers);
+  const stackClassName = variant ? `${styles.stack} ${VARIANT_CLASS[variant]}` : styles.stack;
 
   return (
-    <div className={styles.stack} aria-label={ariaLabel} title={ariaLabel}>
+    <div className={stackClassName} aria-label={ariaLabel} title={ariaLabel}>
       {layerClasses.map((layerClass, index) => (
         <div key={index} className={layerClass} aria-hidden="true" />
       ))}

@@ -18,8 +18,14 @@ rules engine:
   using `legalPlay.ts`'s `isLegalSelection` to compute per-card
   disablement (AC1-3).
 - `EnemyPanel.tsx` / `.module.css` / `.test.tsx` — enemy rank/attack/
-  health/damage/shield/"damage you'll take" (AC6), Tavern/discard/Castle
-  counts (AC9), and the round-defeat confirmation UI (AC9a — see below).
+  health/damage/shield/"damage you'll take" (AC6), Tavern/Castle counts
+  (AC9), the discard pile's count (AC9b, via `DiscardPileZone` below), and
+  the round-defeat confirmation UI (AC9a — see below).
+- `DiscardPileZone.tsx` / `.module.css` / `.test.tsx` — every discarded
+  card, individually (story 8 / AC9b — see decision #4 below). Mirrors
+  `PlayedCardsZone`'s own "title + wrapping row of compact `CardTile`s"
+  shape; rendered by `EnemyPanel` next to the discard `DeckStack`, not a
+  standalone top-level board section.
 - `HandCountBadges.tsx` / `.module.css` / `.test.tsx` — every seated
   player's hand count, mirrors The Mind's `PlayerStatusList` (AC7).
 - `DefendPanel.tsx` / `.module.css` / `.test.tsx` — the `defend`-stage
@@ -114,6 +120,34 @@ submit once the total reaches `G.pendingDefense.requiredTotal`) — same
 toggle-then-submit shape as the Play flow, reusing `HandView`/`CardTile`.
 Flagging this explicitly since it's implementation necessity rather than
 a numbered acceptance criterion.
+
+### 4. Discard pile contents (story 8 / AC9b) — revised: public, not count-only
+
+This feature originally exposed the discard pile the same way as the
+Tavern deck: `DeckStack`'s doc comment stated "Tavern/discard contents are
+never shown, only their size," and `EnemyPanel`/`BoardComponent` only ever
+threaded a `discardCount: number` (derived from `G.discardPile.length`)
+through to a single `DeckStack`. That symmetry didn't hold up: the Tavern
+deck's contents are genuinely hidden information (its shuffled order is
+part of the game's randomness), but nothing in `regicideGameDef` ever
+reshuffles the discard pile back into the Tavern deck or anywhere else
+players draw from — it is, and stays, purely a public history of what's
+already been played/discarded. Keeping it opaque had no hidden-information
+justification and only cost players the ability to reason about what's
+left in the Tavern deck (e.g. "all four Kings are already in the discard
+pile").
+
+Resolution: `EnemyPanel` now takes `discardPile: Card[]` instead of
+`discardCount: number` (one source of truth — the count is `.length`,
+never a second, independently-passed number that could drift from it),
+and renders the new `DiscardPileZone` next to the discard `DeckStack`
+(`.discardGroup` in `EnemyPanel.module.css`) — the count stays exactly
+where it was (spec.md story 8 is explicit that this supersedes the
+original decision without removing the count). `DeckStack`'s own doc
+comment is updated to scope the "count-only, contents hidden" claim to the
+Tavern deck alone; the discard pile is no longer an example of it. The
+Tavern deck itself is unaffected — still count-only, still genuinely
+hidden, since its remaining draw order is real hidden information.
 
 ## Card rendering
 

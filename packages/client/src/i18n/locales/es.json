@@ -279,6 +279,10 @@
       "title": "Cartas jugadas esta ronda",
       "empty": "Todavía no se ha jugado ninguna carta."
     },
+    "discardedCards": {
+      "title": "Pila de descarte",
+      "empty": "Todavía no se ha descartado ninguna carta."
+    },
     "handCounts": {
       "title": "Manos",
       "cardsLeft": "{{count}} cartas"

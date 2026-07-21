@@ -17,6 +17,10 @@
   font-weight: 600;
 }
 
+.active .name {
+  color: var(--color-accent);
+}
+
 .name {
   min-width: 6rem;
 }

@@ -44,4 +44,19 @@ describe('DeckStack', () => {
       previous = current;
     }
   });
+
+  it('applies no variant class by default, falling back to .stack\'s own --deck-color', () => {
+    const { container } = render(<DeckStack count={5} ariaLabel="x" />);
+    const stack = container.firstChild as HTMLElement;
+    expect(stack.className).not.toMatch(/tavern|castle|discard/);
+  });
+
+  it.each(['tavern', 'castle', 'discard'] as const)(
+    'applies the %s variant class, each independently overriding --deck-color',
+    (variant) => {
+      const { container } = render(<DeckStack count={5} ariaLabel="x" variant={variant} />);
+      const stack = container.firstChild as HTMLElement;
+      expect(stack.className).toContain(variant);
+    },
+  );
 });

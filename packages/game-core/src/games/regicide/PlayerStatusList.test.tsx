@@ -52,4 +52,29 @@ describe('PlayerStatusList', () => {
     expect(rows[0]!.className).toBe('');
     expect(rows[1]!.className).not.toBe('');
   });
+
+  it('marks the seat matching currentPlayerID as active, independent of the viewer\'s own seat', () => {
+    const { container } = render(
+      <PlayerStatusList
+        activeSeatIDs={['0', '1']}
+        handCounts={{ '0': 1, '1': 1 }}
+        playerID="1"
+        currentPlayerID="0"
+      />,
+    );
+    const rows = container.querySelectorAll('li');
+    expect(rows[0]!.className).toContain('active'); // current player, not the viewer
+    expect(rows[0]!.className).not.toContain('self');
+    expect(rows[1]!.className).toContain('self'); // the viewer, not the current player
+    expect(rows[1]!.className).not.toContain('active');
+  });
+
+  it('applies no active class when currentPlayerID is absent', () => {
+    const { container } = render(
+      <PlayerStatusList activeSeatIDs={['0', '1']} handCounts={{ '0': 1, '1': 1 }} playerID={null} />,
+    );
+    const rows = container.querySelectorAll('li');
+    expect(rows[0]!.className).toBe('');
+    expect(rows[1]!.className).toBe('');
+  });
 });

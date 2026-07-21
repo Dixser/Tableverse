@@ -459,13 +459,12 @@ describe('regicide gameDef', () => {
         // Hearts suit -- the enemy (Jack of Hearts) is immune to it, so this
         // card contributes damage only, no heal side effect to account for.
         hands: { '0': [num('H', overkill ? 10 : 7)], '1': [] },
-        // playCards' defeat branch still calls events.endTurn() before the
-        // phase transition (mirrors Love Letter's own playCard), so
-        // ctx.currentPlayer has already advanced to '1' (normal clockwise
-        // order among activeSeatIDs) by the time roundConfirm begins --
-        // NOT '0', the player who actually defeated the enemy. That
-        // player's own resumption is tracked separately via
-        // G.nextTurnStartSeatID, consumed once combat resumes.
+        // playCards' defeat branch does NOT call events.endTurn() -- the
+        // phase transition into roundConfirm ends the turn on its own, and
+        // roundConfirm's own turn.order (regicideTurnOrder, reused) resolves
+        // ctx.currentPlayer straight to G.nextTurnStartSeatID. So
+        // ctx.currentPlayer stays '0' -- the player who defeated the enemy
+        // -- for the entire roundConfirm wait, never visibly passing to '1'.
         hostPlayerID: '1',
       };
     }
@@ -486,6 +485,9 @@ describe('regicide gameDef', () => {
       expect(frozen.discardPile).toEqual([]);
       expect(frozen.roundConfirm).toEqual({ pendingSeatIDs: ['0', '1'], confirmedSeatIDs: [] });
       expect(client.store.getState().ctx.phase).toBe('roundConfirm');
+      // The defeating player keeps the turn immediately -- no visible pass
+      // to '1' followed by a later correction (the bug this test guards).
+      expect(client.store.getState().ctx.currentPlayer).toBe('0');
 
       // No combat move is legal while pending -- state is untouched by the attempt.
       client.moves.playCards!(['anything']);
@@ -496,6 +498,12 @@ describe('regicide gameDef', () => {
     it('exact-health defeat places the card on top of the Tavern deck once confirmed; the defeating player resumes', () => {
       const client = clientWithFixture(2, () => defeatFixture(false), { hostPlayerID: '1' });
       client.moves.playCards!(['H7']);
+      // forceAdvanceRound is host-authorized (G.hostPlayerID), not tied to
+      // ctx.currentPlayer -- '1' is the host here, and ctx.currentPlayer is
+      // now correctly '0' (the defeating player), so this must be
+      // dispatched explicitly rather than relying on the local client's
+      // default-to-currentPlayer move dispatch.
+      client.updatePlayerID('1');
       client.moves.forceAdvanceRound!();
       const G = client.store.getState().G;
       expect(G.roundConfirm).toBeNull();
@@ -517,6 +525,7 @@ describe('regicide gameDef', () => {
     it('overkill places the defeated card in the discard pile instead', () => {
       const client = clientWithFixture(2, () => defeatFixture(true), { hostPlayerID: '1' });
       client.moves.playCards!(['H10']);
+      client.updatePlayerID('1'); // host-authorized, see previous test's comment
       client.moves.forceAdvanceRound!();
       const G = client.store.getState().G;
       expect(G.discardPile).toContainEqual(face('H', 'J'));
@@ -526,7 +535,12 @@ describe('regicide gameDef', () => {
     it('a single confirmRoundReady from one seat does not, by itself, complete a 2-seat wait', () => {
       const client = clientWithFixture(2, () => defeatFixture(false), { hostPlayerID: '1' });
       client.moves.playCards!(['H7']);
-      client.moves.confirmRoundReady!(); // acts as ctx.currentPlayer, i.e. '1'
+      // ctx.currentPlayer is '0' (the defeating player) throughout
+      // roundConfirm now, so '1' must be dispatched explicitly here rather
+      // than relying on the local client's default-to-currentPlayer move
+      // dispatch (assumedPlayerID in boardgame.io/client).
+      client.updatePlayerID('1');
+      client.moves.confirmRoundReady!();
       const G = client.store.getState().G;
       expect(G.roundConfirm).toEqual({ pendingSeatIDs: ['0', '1'], confirmedSeatIDs: ['1'] });
       expect(client.store.getState().ctx.phase).toBe('roundConfirm'); // still waiting on '0'

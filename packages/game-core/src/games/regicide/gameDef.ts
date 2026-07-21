@@ -128,8 +128,28 @@ function removeFromHand(hand: Card[], cardID: string): Card | undefined {
   return hand.splice(index, 1)[0];
 }
 
+/**
+ * Whether currentEnemy is immune to suit -- same suit, and not yet
+ * cancelled by a Jester. Exported (unlike the rest of this file's
+ * internals) so EnemyPanel's "damage you'll take" display can apply the
+ * exact same immunity check enterStep4 uses below, rather than a second,
+ * independently-written copy of it that could silently drift out of sync
+ * -- see EnemyPanel.tsx's own doc comment on effectiveSpadeShieldTotal for
+ * the bug this fixes (Spades enemy + a Spades card played against it
+ * accumulates spadeShieldTotal same as any other enemy, but that raw
+ * total has zero effect on the required discard once immune, which the
+ * displayed number must also reflect).
+ */
+export function isSuitImmune(
+  currentEnemy: FaceCard,
+  suit: Suit,
+  enemyImmunityCancelled: boolean,
+): boolean {
+  return currentEnemy.suit === suit && !enemyImmunityCancelled;
+}
+
 function isImmune(G: RegicideG, suit: Suit): boolean {
-  return G.currentEnemy!.suit === suit && !G.enemyImmunityCancelled;
+  return isSuitImmune(G.currentEnemy!, suit, G.enemyImmunityCancelled);
 }
 
 function yieldAllowed(G: RegicideG, playerID: string): boolean {
@@ -417,8 +437,21 @@ function playCards(
   G.damageDealt += damage;
 
   if (G.damageDealt >= enemyHealth(G.currentEnemy!)) {
+    // No events.endTurn() here, deliberately -- unlike every other branch in
+    // this file, a defeat must NOT hand the turn to the next seat in order.
+    // resolveEnemyDefeat already set G.roundConfirm (non-final enemy) or
+    // G.matchResult (final enemy), which trips combat.endIf/the top-level
+    // endIf on their own once this move returns; boardgame.io ends the
+    // current turn as part of that phase/game transition without ever
+    // calling turn.order.next. Calling endTurn() here would advance
+    // ctx.currentPlayer to the next active seat AND run combat.turn.onBegin
+    // (checkStuckLoss) for that phantom seat before the transition even
+    // happens -- a real player who never got a turn could be judged stuck
+    // and lose the match on their behalf. The defeating player's actual
+    // resumption is handled separately by G.nextTurnStartSeatID, consumed
+    // by regicideTurnOrder.first (also reused by the roundConfirm phase's
+    // own turn.order, below) once combat resumes.
     resolveEnemyDefeat(G, playerID);
-    events.endTurn();
     return;
   }
 
@@ -518,7 +551,16 @@ export const regicideGameDef: Game<RegicideG, Record<string, unknown>, RegicideS
     // roundConfirm phase for the same "setActivePlayers can't be layered
     // onto an existing phase's turn via a stage" reason.
     roundConfirm: {
-      turn: { activePlayers: ActivePlayers.ALL },
+      // Reuses combat's own turn order (not boardgame.io's phase-default
+      // TurnOrder.DEFAULT) so that entering this phase resolves
+      // ctx.currentPlayer via regicideTurnOrder.first -- i.e. G.
+      // nextTurnStartSeatID, the defeating player -- instead of DEFAULT's
+      // "whoever's one seat after wherever playOrderPos was left" guess.
+      // Without this, the board's "current turn" display would show the
+      // wrong player for the whole roundConfirm wait even though nothing
+      // here actually depends on ctx.currentPlayer for move authorization
+      // (activePlayers: ALL already lets every seat confirm).
+      turn: { order: regicideTurnOrder, activePlayers: ActivePlayers.ALL },
       endIf: ({ G }) => isRoundConfirmComplete(G.roundConfirm),
       // The deferred half of resolveEnemyDefeat (see its own doc comment)
       // -- runs once every seat has confirmed (or the host force-advanced).

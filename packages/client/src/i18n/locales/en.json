@@ -279,6 +279,10 @@
       "title": "Cards played this round",
       "empty": "No cards played yet."
     },
+    "discardedCards": {
+      "title": "Discarded cards",
+      "empty": "No cards discarded yet."
+    },
     "handCounts": {
       "title": "Hands",
       "cardsLeft": "{{count}} cards"

@@ -100,12 +100,26 @@ existing `GameoverBanner` (feature 009) instead.
 
 As a spectator (no seat claimed), I see the enemy's state, every seated
 player's hand count, the Tavern/Castle deck's remaining counts, and the
-discard pile size identically to a seated player — but no seated player's
-actual hand contents, matching feature 022's `playerView` guarantee for
+discard pile — its count *and* its actual contents, one card at a time
+(story 8) — identically to a seated player, but no seated player's actual
+hand contents, matching feature 022's `playerView` guarantee for
 `playerID: undefined`. (A fuller spectator experience — seeing every
 seated player's actual hand, not just counts — was considered but
 deferred; see Non-goals. It would require a `playerView` change in
 feature 022, and spectator mode isn't a current priority for this game.)
+
+### 8. The discard pile's actual contents are public, not just its size
+
+As any player (seated or spectator), next to the discard pile's count I
+see every discarded card rendered individually (rank + suit, same
+placeholder style as everywhere else), not just how many there are. This
+supersedes this feature's original decision to expose the discard pile as
+a count only (mirroring the Tavern deck, whose contents stay hidden
+throughout — nothing in this game ever reshuffles the discard pile back
+into play, so there's no hidden-information reason to keep it opaque, and
+being able to see what's already cycled out helps a player reason about
+what's left in the Tavern deck). The Tavern deck's own count-only
+rendering is unaffected by this change.
 
 ## Acceptance criteria
 
@@ -155,10 +169,9 @@ server. `[manual]` denotes verification via the real dev server.
    only currently seated players) for that seat's own view, and a
    waiting indicator (no picker) for every other seat's view.
 9. `[component]` `RegicideBoard` renders the Tavern deck's remaining count
-   and the discard pile's count (not contents) and the Castle deck's
-   remaining-enemy count (e.g. "enemy 3 of 12"), sourced from
-   `playerView`'s public fields, identically for every seated player and
-   for a spectator fixture.
+   (contents never shown) and the Castle deck's remaining-enemy count
+   (e.g. "enemy 3 of 12"), sourced from `playerView`'s public fields,
+   identically for every seated player and for a spectator fixture.
 9a. `[component]` A fixture with a non-null `G.roundConfirm` renders the
     defeated enemy's final state (not yet replaced by the next enemy) plus
     a "N of M confirmed" count and a **Confirm** button that calls
@@ -169,10 +182,16 @@ server. `[manual]` denotes verification via the real dev server.
     non-host seat renders; the Play/Yield controls render disabled for
     every seat while `G.roundConfirm` is non-null, re-enabling once a
     fixture snapshot shows it null again with the new enemy in place.
+9b. `[component]` `RegicideBoard` renders the discard pile's count *and*
+    every discarded card individually (story 8), from `playerView`'s
+    public `discardPile` field, identically for every seated player and
+    for a spectator fixture; an empty discard pile renders a placeholder
+    in place of any card, not an empty/absent zone.
 10. `[component]` A spectator-shaped fixture (`playerID: undefined`)
-    renders the enemy panel, hand-count badges, and deck/discard counts
-    identically to a seated fixture with the same public `G`, and renders
-    no hand for any seat — confirms story 7.
+    renders the enemy panel, hand-count badges, deck counts, and the
+    discard pile (count and contents) identically to a seated fixture with
+    the same public `G`, and renders no hand for any seat — confirms
+    story 7.
 11. `[component]` `RegicideBoard` renders no player list, seat controls,
     presence badges, or chat — confirms the chrome/board split holds for
     this game too (mirrors Tic-Tac-Toe's AC8 in feature 002 and Love
@@ -183,7 +202,9 @@ server. `[manual]` denotes verification via the real dev server.
     Animal Companion pairing, and a Jester (including choosing the next
     player), yielding when forbidden and confirming the disabled reason,
     watching the enemy panel's health/shield/damage-you'll-take numbers
-    update live, defeating at least one non-final enemy and observing the
+    update live, watching a defended-against discard land in the discard
+    pile immediately (count and card both), defeating at least one
+    non-final enemy and observing the
     round-defeat confirmation pause (both sessions must press Confirm
     before the next enemy appears and either session's hand becomes
     active again), and confirming feature 012's chat shows the

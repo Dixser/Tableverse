@@ -12,6 +12,8 @@ export interface PlayerStatusListProps {
   handCounts: Record<string, number>;
   playerID: string | null;
   playerNames?: Record<string, string>;
+  /** ctx.currentPlayer -- whose seat gets the active-turn highlight. */
+  currentPlayerID?: string | null;
 }
 
 /**
@@ -24,7 +26,13 @@ export interface PlayerStatusListProps {
  * dimmed placeholder slot -- e.g. a seat holding 5 of a 7-card max shows
  * 5 filled slots + 2 dimmed ones, not just "5".
  */
-export function PlayerStatusList({ activeSeatIDs, handCounts, playerID, playerNames }: PlayerStatusListProps) {
+export function PlayerStatusList({
+  activeSeatIDs,
+  handCounts,
+  playerID,
+  playerNames,
+  currentPlayerID,
+}: PlayerStatusListProps) {
   const { t } = useTranslation();
   const maxHandSize = MAX_HAND_SIZE[activeSeatIDs.length] ?? 0;
   return (
@@ -32,8 +40,12 @@ export function PlayerStatusList({ activeSeatIDs, handCounts, playerID, playerNa
       {activeSeatIDs.map((seatID) => {
         const count = handCounts[seatID] ?? 0;
         const empty = Math.max(0, maxHandSize - count);
+        const isActive = seatID === currentPlayerID;
+        const className = [seatID === playerID ? styles.self : null, isActive ? styles.active : null]
+          .filter(Boolean)
+          .join(' ');
         return (
-          <li key={seatID} className={seatID === playerID ? styles.self : undefined}>
+          <li key={seatID} className={className || undefined}>
             <span className={styles.name}>{playerLabel(seatID, playerNames, t)}</span>
             <span
               className={styles.cards}
