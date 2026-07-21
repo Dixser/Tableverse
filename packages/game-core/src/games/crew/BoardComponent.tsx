@@ -141,7 +141,7 @@ export const CrewBoard: React.FC<BoardProps<CrewView>> = ({ G, ctx, moves, playe
         />
       )}
 
-      {!isDraftPhase && playerID != null && (
+      {playerID != null && (
         <>
           <HandView
             hand={ownHand}
