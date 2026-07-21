@@ -99,6 +99,20 @@ describe('roomApi', () => {
     const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
     expect(url).toContain('/api/rooms/r1/rematch');
     expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({});
+  });
+
+  it('rematch with a gameSettings override sends it in the request body', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ room: { roomID: 'r1' }, credentialsByUserID: {} }),
+    });
+
+    await roomApi.rematch('tok-1', 'r1', { level: 2 });
+
+    const [, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(JSON.parse(init.body as string)).toEqual({ gameSettings: { level: 2 } });
   });
 
   it('RoomApiError instances carry the HTTP status', async () => {

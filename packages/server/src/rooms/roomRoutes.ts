@@ -285,8 +285,13 @@ export function createRoomRouter(deps: RoomRoutesDeps): Router {
   router.post('/:roomID/rematch', async (ctx) => {
     const room = await authorize(ctx, deps, param(ctx, 'roomID'), 'rematch');
     if (!room) return;
+    // Optional -- present when a caller (e.g. a generic "next level" action
+    // on the client) wants this rematch to also start with different
+    // gameSettings, not just replay the current ones. See
+    // RoomService.rematch's own doc comment.
+    const { gameSettings } = getBody<{ gameSettings?: Record<string, unknown> }>(ctx);
     try {
-      const result = await deps.roomService.rematch(room.roomID);
+      const result = await deps.roomService.rematch(room.roomID, gameSettings);
       deps.roomEvents.roomChanged(room.roomID);
       ctx.body = {
         room: result.room,

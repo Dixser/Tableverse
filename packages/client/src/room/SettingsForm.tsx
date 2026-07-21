@@ -97,7 +97,11 @@ function renderControl(
         className={styles.select}
         value={String(currentValue ?? '')}
         disabled={disabled}
-        onChange={(e) => setField(key, e.target.value)}
+        // A <select>'s value is always a string, but validateGameSettings
+        // requires typeof v === 'number' whenever propSchema.type is
+        // 'number' -- coerce back so a numeric enum (e.g. a level picker)
+        // doesn't fail validation on every submit.
+        onChange={(e) => setField(key, propSchema.type === 'number' ? Number(e.target.value) : e.target.value)}
       >
         {propSchema.enum.map((option) => (
           <option key={String(option)} value={String(option)}>

@@ -1,5 +1,11 @@
 import type { ComponentType } from 'react';
-import { TicTacToeBoard, LoveLetterBoard, TheMindBoard, RegicideBoard } from '@tableverse/game-core/src/boards.js';
+import {
+  TicTacToeBoard,
+  LoveLetterBoard,
+  TheMindBoard,
+  RegicideBoard,
+  CrewBoard,
+} from '@tableverse/game-core/src/boards.js';
 import type { BoardProps } from '@tableverse/game-core';
 
 /**
@@ -13,4 +19,5 @@ export const boardComponents: Record<string, ComponentType<BoardProps<any>>> = {
   'loveletter-v1': LoveLetterBoard,
   'themind-v1': TheMindBoard,
   'regicide-v1': RegicideBoard,
+  'crew-v1': CrewBoard,
 };

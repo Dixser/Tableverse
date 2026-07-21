@@ -7,7 +7,7 @@ import {
   type SeatCredential,
   type User,
 } from '@tableverse/shared';
-import { gamesCatalog, getEffectiveMaxPlayers, getGameModule } from '@tableverse/game-core';
+import { gamesCatalog, getEffectiveMaxPlayers, getGameModule, getNextLevelGameSettings } from '@tableverse/game-core';
 import { roomApi } from '../api/roomApi.js';
 import { usePresence } from '../presence/usePresence.js';
 import { useRoomEvents } from '../roomEvents/useRoomEvents.js';
@@ -74,6 +74,23 @@ export interface RoomShellProps {
    * stacked above the board itself.
    */
   seatSwitcher?: React.ReactNode;
+}
+
+/**
+ * Whether ctx.gameover (unknown shape -- see the `gameover` prop's own doc
+ * comment) represents an actual WIN, as opposed to a loss/draw/no-result.
+ * Reuses the same `GameoverResult`-shaped read GameoverBanner's own
+ * resolveGameoverMessage does, rather than a second, differently-shaped
+ * check -- a `{}` (loss, no winner) or `{ draw: true }` result is
+ * correctly NOT a win here. Exported for the Next Level button's own
+ * gating below and for direct testing.
+ */
+export function isWinGameover(gameover: unknown): boolean {
+  if (!gameover || typeof gameover !== 'object') return false;
+  const g = gameover as { winner?: string | string[]; draw?: boolean };
+  if (g.draw === true) return false;
+  if (Array.isArray(g.winner)) return g.winner.length > 0;
+  return g.winner !== undefined;
 }
 
 /**
@@ -226,15 +243,18 @@ export function RoomShell({
     }
   }, [sessionToken, roomID, refresh]);
 
-  const rematch = useCallback(async () => {
-    setActionError(null);
-    try {
-      await roomApi.rematch(sessionToken, roomID);
-      await refresh();
-    } catch (err) {
-      setActionError((err as Error).message);
-    }
-  }, [sessionToken, roomID, refresh]);
+  const rematch = useCallback(
+    async (gameSettings?: Record<string, unknown>) => {
+      setActionError(null);
+      try {
+        await roomApi.rematch(sessionToken, roomID, gameSettings);
+        await refresh();
+      } catch (err) {
+        setActionError((err as Error).message);
+      }
+    },
+    [sessionToken, roomID, refresh],
+  );
 
   const leaveRoom = useCallback(async () => {
     setActionError(null);
@@ -303,6 +323,14 @@ export function RoomShell({
   const canLeaveRoom = role != null && canPerform(role, 'leaveRoom');
   const canKick = role != null && canPerform(role, 'kickPlayer');
   const selectedModule = room.selectedGameID ? getGameModule(room.selectedGameID) : undefined;
+  // Generic across any game whose settingsSchema exposes a numbered
+  // progression (a bounded numeric `level` enum) -- not specific to Crew.
+  // Null whenever there's no such field, or the room's current gameSettings
+  // are already at that schema's maximum.
+  const nextLevelGameSettings =
+    isWinGameover(gameover) && selectedModule
+      ? getNextLevelGameSettings(selectedModule.settingsSchema, room.gameSettings)
+      : null;
 
   return (
     <div className={styles.container}>
@@ -463,6 +491,15 @@ export function RoomShell({
         {room.status === 'in_game' && canRematch && gameover != null && (
           <button className={styles.buttonStart} type="button" onClick={() => void rematch()}>
             {t('room.rematch')}
+          </button>
+        )}
+        {room.status === 'in_game' && canRematch && nextLevelGameSettings && (
+          <button
+            className={styles.buttonStart}
+            type="button"
+            onClick={() => void rematch(nextLevelGameSettings)}
+          >
+            {t('room.nextLevel')}
           </button>
         )}
         {seatSwitcher}

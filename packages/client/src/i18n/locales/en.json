@@ -32,6 +32,7 @@
     "startMatch": "Start match",
     "endMatch": "End match",
     "rematch": "Rematch",
+    "nextLevel": "Next level",
     "seatLabel": "Seat {{seatNumber}}",
     "seatOccupied": "Seat {{seatNumber}}: {{occupant}}",
     "drawerToggle": "Room menu",
@@ -304,6 +305,82 @@
       "cardsPlayed": "Player {{actor}} played {{cards}} (total attack {{total}}).",
       "yielded": "Player {{actor}} yielded.",
       "suffered": "Player {{actor}} discarded cards worth {{total}} to defend."
+    }
+  },
+  "crew": {
+    "suits": {
+      "pink": "🔴​",
+      "blue": "🔵",
+      "green": "🟢",
+      "yellow": "🟡",
+      "rocket": "🚀"
+    },
+    "cardLabel": "{{suit}} {{rank}}",
+    "cardIllegalReason": "Doesn't follow the led suit.",
+    "hand": {
+      "ariaLabel": "Your hand"
+    },
+    "commander": "Commander: {{name}}",
+    "trickProgress": "Trick {{current}} of {{total}}",
+    "trick": {
+      "empty": "No cards played yet.",
+      "inProgressTitle": "Current trick",
+      "resolvedTitle": "Trick result",
+      "winner": "Won by {{name}}"
+    },
+    "tasks": {
+      "title": "Tasks",
+      "none": "No tasks this mission.",
+      "fulfilled": "Fulfilled",
+      "pending": "Pending"
+    },
+    "draft": {
+      "title": "{{name}} is choosing a task"
+    },
+    "communicatedCards": {
+      "title": "Communicated cards",
+      "deadZoneHidden": "Unclear (Dead Zone)"
+    },
+    "sickSeat": {
+      "status": "{{name}} is sick this mission -- must not win any trick.",
+      "choosePrompt": "Choose which crewmate is sick this mission:",
+      "waiting": "{{name}} (commander) is choosing who's sick this mission."
+    },
+    "mutedSeat": {
+      "status": "{{name}} can't communicate this mission.",
+      "choosePrompt": "Choose which crewmate can't communicate this mission:",
+      "waiting": "{{name}} (commander) is choosing who's muted this mission."
+    },
+    "taskRecipient": {
+      "status": "{{name}} received this mission's tasks, sight unseen.",
+      "choosePrompt": "Choose which crewmate receives this mission's tasks, sight unseen:",
+      "waiting": "{{name}} (commander) is choosing who receives this mission's tasks."
+    },
+    "distribution": {
+      "title_one": "Commander's distribution ({{count}} task left to assign)",
+      "title_other": "Commander's distribution ({{count}} tasks left to assign)",
+      "waiting": "Waiting for the commander to assign this task."
+    },
+    "handover": {
+      "title": "Hand over a task",
+      "giveTo": "Give to {{name}}"
+    },
+    "communication": {
+      "title": "Radio communication",
+      "none": "No card in your hand can be truthfully communicated right now.",
+      "used": "You've already used your radio token this mission.",
+      "disrupted": "Communication is disrupted until after trick {{trick}}.",
+      "deadZoneNote": "Dead Zone: your crewmates will see the card, but not which claim you're making.",
+      "position": {
+        "highest": "Highest",
+        "only": "Only",
+        "lowest": "Lowest"
+      }
+    },
+    "log": {
+      "trickWon": "Player {{actor}} won the trick with {{card}} (trick {{trickNumber}}).",
+      "matchWon": "Mission complete!",
+      "matchLost": "Mission failed."
     }
   }
 }

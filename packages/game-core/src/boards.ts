@@ -9,3 +9,4 @@ export { TicTacToeBoard } from './games/tictactoe/BoardComponent.js';
 export { LoveLetterBoard } from './games/loveletter/BoardComponent.js';
 export { TheMindBoard } from './games/themind/BoardComponent.js';
 export { RegicideBoard } from './games/regicide/BoardComponent.js';
+export { CrewBoard } from './games/crew/BoardComponent.js';

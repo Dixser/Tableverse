@@ -154,6 +154,43 @@ describe('RoomService', () => {
     expect(rematched.currentMatchID).toBeTruthy();
   });
 
+  it('rematch with a gameSettings override persists the new settings before starting the fresh match -- the "next level, same seats" path', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const room = await harness.roomService.createRoom('user-host');
+    await harness.roomService.changeGame(room.roomID, dummyGameModule.id);
+    await harness.roomService.setGameSettings(room.roomID, { variant: 'a' });
+    await harness.seats.claimSeat(room.roomID, '0', 'user-host');
+    const { room: started } = await harness.roomService.startMatch(room.roomID);
+
+    const { room: rematched } = await harness.roomService.rematch(started.roomID, { variant: 'b' });
+
+    expect(rematched.gameSettings).toEqual({ variant: 'b' });
+    expect(rematched.status).toBe('in_game');
+    const seatsAfter = await harness.seats.getSeatsForRoom(room.roomID);
+    expect(seatsAfter).toHaveLength(1); // same seats carried through, per the plain-retry path.
+  });
+
+  it('rematch rejects an invalid gameSettings override without starting a new match', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const room = await harness.roomService.createRoom('user-host');
+    await harness.roomService.changeGame(room.roomID, dummyGameModule.id);
+    await harness.seats.claimSeat(room.roomID, '0', 'user-host');
+    const { room: started } = await harness.roomService.startMatch(room.roomID);
+    const firstMatchID = started.currentMatchID;
+
+    await expect(
+      harness.roomService.rematch(started.roomID, { variant: 'not-a-valid-option' }),
+    ).rejects.toThrow();
+
+    // The room was already ended (rematch's own endMatch runs before the
+    // settings validation) but no new match was started -- left in lobby,
+    // not silently re-started with the bad/ignored settings.
+    const roomAfter = await harness.rooms.getById(room.roomID);
+    expect(roomAfter?.status).toBe('lobby');
+    expect(roomAfter?.currentMatchID).toBeNull();
+    void firstMatchID;
+  });
+
   it('AC6: claiming a seat while lobby creates a room-level reservation only (no credentials); claiming an open seat while in_game immediately issues credentials', async () => {
     harness = await createTestHarness([dummyGameModule]);
     await harness.users.createUser('Alice');

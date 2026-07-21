@@ -28,6 +28,10 @@ const SETTINGS_FIXTURE_GAME_ID = 'settings-fixture-v1';
 // so the seat-picker-shrinks-with-settings behavior can be exercised
 // without depending on the real loveletter-v1 module's exact numbers.
 const EDITION_CAP_GAME_ID = 'edition-cap-fixture-v1';
+// A numbered-progression fixture (mirrors Crew's real `level` field) --
+// exercises the generic Next Level button, which is keyed off this
+// settingsSchema shape rather than any specific game's id.
+const LEVEL_FIXTURE_GAME_ID = 'level-fixture-v1';
 
 vi.mock('@tableverse/game-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tableverse/game-core')>();
@@ -67,6 +71,20 @@ vi.mock('@tableverse/game-core', async (importOriginal) => {
             properties: {
               edition: { type: 'string', enum: ['normal', 'classic'], default: 'normal' },
             },
+          },
+        };
+      }
+      if (id === LEVEL_FIXTURE_GAME_ID) {
+        return {
+          id: LEVEL_FIXTURE_GAME_ID,
+          displayName: 'Level Fixture',
+          minPlayers: 2,
+          maxPlayers: 2,
+          gameDef: {},
+          settingsSchema: {
+            type: 'object',
+            properties: { level: { type: 'number', enum: [1, 2, 3], default: 1 } },
+            required: ['level'],
           },
         };
       }
@@ -1052,7 +1070,9 @@ describe('RoomShell', () => {
       await waitFor(() => screen.getByText('Room ABC123'));
       fireEvent.click(screen.getByText('Rematch'));
 
-      await waitFor(() => expect(rematch).toHaveBeenCalledWith('tok', 'room-1'));
+      // Plain Rematch passes no settings override -- undefined, explicitly
+      // (see RoomShell's rematch callback), not omitted.
+      await waitFor(() => expect(rematch).toHaveBeenCalledWith('tok', 'room-1', undefined));
     });
 
     it('surfaces a failed rematch call via actionError without discarding the room chrome', async () => {
@@ -1079,6 +1099,154 @@ describe('RoomShell', () => {
       await waitFor(() => screen.getByRole('alert'));
       expect(screen.getByRole('alert')).toHaveTextContent('not in lobby');
       expect(screen.getByText('Room ABC123')).toBeInTheDocument();
+    });
+  });
+
+  describe('next level', () => {
+    it('shows Next Level for the host on a win when the selected game exposes a numbered-progression level field below its max', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'in_game', selectedGameID: LEVEL_FIXTURE_GAME_ID, gameSettings: { level: 1 } }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+          gameover={{ winner: '0' }}
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      expect(screen.getByText('Next level')).toBeInTheDocument();
+    });
+
+    it('does not show Next Level on a loss (gameover with no winner)', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'in_game', selectedGameID: LEVEL_FIXTURE_GAME_ID, gameSettings: { level: 1 } }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+          gameover={{}}
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      expect(screen.queryByText('Next level')).not.toBeInTheDocument();
+      // Rematch (same-settings retry) is still available either way.
+      expect(screen.getByText('Rematch')).toBeInTheDocument();
+    });
+
+    it('does not show Next Level once already at the schema\'s maximum level', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'in_game', selectedGameID: LEVEL_FIXTURE_GAME_ID, gameSettings: { level: 3 } }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+          gameover={{ winner: '0' }}
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      expect(screen.queryByText('Next level')).not.toBeInTheDocument();
+    });
+
+    it('does not show Next Level for a game with no numbered-progression field at all (e.g. a plain edition enum)', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({ status: 'in_game', selectedGameID: SETTINGS_FIXTURE_GAME_ID, gameSettings: { edition: 'normal' } }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+          gameover={{ winner: '0' }}
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      expect(screen.queryByText('Next level')).not.toBeInTheDocument();
+    });
+
+    it('clicking Next Level calls roomApi.rematch with the advanced level, preserving other settings', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({
+          status: 'in_game',
+          selectedGameID: LEVEL_FIXTURE_GAME_ID,
+          gameSettings: { level: 1 },
+        }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'host-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+      const rematch = vi.spyOn(roomApi, 'rematch').mockResolvedValue({
+        room: makeRoom({ status: 'in_game' }),
+        credentialsByUserID: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'host-1', displayName: 'Host', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+          gameover={{ winner: '0' }}
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      fireEvent.click(screen.getByText('Next level'));
+
+      await waitFor(() => expect(rematch).toHaveBeenCalledWith('tok', 'room-1', { level: 2 }));
+    });
+
+    it('does not show Next Level to a non-host member, even on a win', async () => {
+      vi.spyOn(roomApi, 'getRoom').mockResolvedValue({
+        room: makeRoom({
+          status: 'in_game',
+          selectedGameID: LEVEL_FIXTURE_GAME_ID,
+          gameSettings: { level: 1 },
+          members: [
+            { userID: 'host-1', role: 'host' },
+            { userID: 'guest-1', role: 'member' },
+          ],
+        }),
+        seats: [{ roomID: 'room-1', playerID: '0', userID: 'guest-1', claimedAt: '' }],
+        myCredentials: [],
+        memberNames: {},
+      });
+
+      render(
+        <RoomShell
+          user={{ id: 'guest-1', displayName: 'Guest', createdAt: '' }}
+          sessionToken="tok"
+          roomID="room-1"
+          gameover={{ winner: '0' }}
+        />,
+      );
+
+      await waitFor(() => screen.getByText('Room ABC123'));
+      expect(screen.queryByText('Next level')).not.toBeInTheDocument();
     });
   });
 });

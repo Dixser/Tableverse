@@ -58,6 +58,21 @@ describe('SettingsForm', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it('coerces a numeric enum (e.g. a level picker) back to a number on change, not a select\'s native string', () => {
+    const onSubmit = vi.fn();
+    const levelSchema: JSONSchema = {
+      type: 'object',
+      properties: { level: { type: 'number', enum: [1, 2, 3], default: 1 } },
+      required: ['level'],
+    };
+    render(<SettingsForm schema={levelSchema} value={{ level: 1 }} onSubmit={onSubmit} />);
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(onSubmit).toHaveBeenCalledWith({ level: 3 });
+  });
+
   it('uses a boolean property\'s current value on a checkbox control', () => {
     const boolSchema: JSONSchema = {
       type: 'object',

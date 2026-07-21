@@ -95,8 +95,27 @@ select {
   color: inherit;
 }
 
+/* Generic fallback so a plain <button> with no dedicated CSS module class
+   (e.g. a game board's ad hoc controls) never renders as an unstyled
+   native button. Anything with its own module class (RoomShell's
+   .button/.buttonStart, CardTile's .card, etc.) already overrides these
+   via the cascade -- this is a baseline, not a component style. */
 button {
   cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--color-accent);
 }
 
 a {

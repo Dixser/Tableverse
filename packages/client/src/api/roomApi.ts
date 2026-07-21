@@ -140,10 +140,22 @@ export const roomApi = {
     return request(`/api/rooms/${roomID}/end`, sessionToken, { method: 'POST' });
   },
 
+  /**
+   * `gameSettings`, when passed, is validated and persisted (same as
+   * setGameSettings) before the new match starts -- this is what a
+   * generic "next level" action (any game whose settingsSchema exposes a
+   * numbered-progression field) uses to advance and start in one call,
+   * rather than a same-settings retry. See RoomService.rematch's own doc
+   * comment.
+   */
   rematch(
     sessionToken: string,
     roomID: string,
+    gameSettings?: Record<string, unknown>,
   ): Promise<{ room: Room; credentialsByUserID: Record<string, SeatCredential[]> }> {
-    return request(`/api/rooms/${roomID}/rematch`, sessionToken, { method: 'POST' });
+    return request(`/api/rooms/${roomID}/rematch`, sessionToken, {
+      method: 'POST',
+      body: JSON.stringify(gameSettings !== undefined ? { gameSettings } : {}),
+    });
   },
 };

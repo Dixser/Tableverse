@@ -511,6 +511,47 @@ describe('room routes: permission enforcement', () => {
     expect(rematched.selectedGameID).toBe(dummyGameModule.id);
   });
 
+  it('POST /:roomID/rematch with a gameSettings body persists it before starting the new match', async () => {
+    harness = await createTestHarness([dummyGameModule]);
+    const { roomEvents } = stubRoomEvents();
+    const router = createRoomRouter({
+      users: harness.users,
+      rooms: harness.rooms,
+      seats: harness.seats,
+      roomService: harness.roomService,
+      roomEvents,
+    });
+    server = await startTestServer(router);
+    const host = await createSessionedUser(harness, 'HostNextLevel');
+
+    const createRes = await fetch(`${server.baseUrl}/api/rooms`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    const { room } = (await createRes.json()) as { room: { roomID: string } };
+    await harness.roomService.changeGame(room.roomID, dummyGameModule.id);
+    await fetch(`${server.baseUrl}/api/rooms/${room.roomID}/seats/0/claim`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+    await fetch(`${server.baseUrl}/api/rooms/${room.roomID}/start`, {
+      method: 'POST',
+      headers: { [SESSION_TOKEN_HEADER]: host.sessionToken },
+    });
+
+    const rematchRes = await fetch(`${server.baseUrl}/api/rooms/${room.roomID}/rematch`, {
+      method: 'POST',
+      headers: {
+        [SESSION_TOKEN_HEADER]: host.sessionToken,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ gameSettings: { variant: 'b' } }),
+    });
+    expect(rematchRes.status).toBe(200);
+    const { room: rematched } = (await rematchRes.json()) as { room: { gameSettings: Record<string, unknown> } };
+    expect(rematched.gameSettings).toEqual({ variant: 'b' });
+  });
+
   it('rejects a non-member acting on a room they have not joined with 403', async () => {
     const { harness, server } = await setup();
     const host = await createSessionedUser(harness, 'Host');

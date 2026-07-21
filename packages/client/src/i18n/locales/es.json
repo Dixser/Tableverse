@@ -32,6 +32,7 @@
     "startMatch": "Iniciar partida",
     "endMatch": "Terminar partida",
     "rematch": "Revancha",
+    "nextLevel": "Siguiente nivel",
     "seatLabel": "Asiento {{seatNumber}}",
     "seatOccupied": "Asiento {{seatNumber}}: {{occupant}}",
     "drawerToggle": "Menú de sala",
@@ -304,6 +305,82 @@
       "cardsPlayed": "El jugador {{actor}} jugó {{cards}} (ataque total {{total}}).",
       "yielded": "El jugador {{actor}} pasó.",
       "suffered": "El jugador {{actor}} descartó cartas por valor de {{total}} para defenderse."
+    }
+  },
+  "crew": {
+    "suits": {
+      "pink": "🔴​",
+      "blue": "🔵",
+      "green": "🟢",
+      "yellow": "🟡",
+      "rocket": "🚀"
+    },
+    "cardLabel": "{{suit}} {{rank}}",
+    "cardIllegalReason": "No sigue el palo de salida.",
+    "hand": {
+      "ariaLabel": "Tu mano"
+    },
+    "commander": "Comandante: {{name}}",
+    "trickProgress": "Baza {{current}} de {{total}}",
+    "trick": {
+      "empty": "Aún no se han jugado cartas.",
+      "inProgressTitle": "Baza actual",
+      "resolvedTitle": "Resultado de la baza",
+      "winner": "Ganada por {{name}}"
+    },
+    "tasks": {
+      "title": "Misiones",
+      "none": "Sin misiones en esta partida.",
+      "fulfilled": "Cumplida",
+      "pending": "Pendiente"
+    },
+    "draft": {
+      "title": "{{name}} está eligiendo una misión"
+    },
+    "communicatedCards": {
+      "title": "Cartas comunicadas",
+      "deadZoneHidden": "Sin aclarar (Zona muerta)"
+    },
+    "sickSeat": {
+      "status": "{{name}} está enfermo/a esta misión -- no puede ganar ninguna baza.",
+      "choosePrompt": "Elige qué tripulante está enfermo/a esta misión:",
+      "waiting": "{{name}} (comandante) está eligiendo quién está enfermo/a esta misión."
+    },
+    "mutedSeat": {
+      "status": "{{name}} no puede comunicarse esta misión.",
+      "choosePrompt": "Elige qué tripulante no puede comunicarse esta misión:",
+      "waiting": "{{name}} (comandante) está eligiendo quién no puede comunicarse esta misión."
+    },
+    "taskRecipient": {
+      "status": "{{name}} recibió las misiones de esta partida, a ciegas.",
+      "choosePrompt": "Elige qué tripulante recibe las misiones de esta partida, a ciegas:",
+      "waiting": "{{name}} (comandante) está eligiendo quién recibe las misiones de esta partida."
+    },
+    "distribution": {
+      "title_one": "Distribución del comandante ({{count}} misión por asignar)",
+      "title_other": "Distribución del comandante ({{count}} misiones por asignar)",
+      "waiting": "Esperando a que el comandante asigne esta misión."
+    },
+    "handover": {
+      "title": "Entregar una misión",
+      "giveTo": "Entregar a {{name}}"
+    },
+    "communication": {
+      "title": "Comunicación por radio",
+      "none": "Ninguna carta de tu mano se puede comunicar de forma verídica ahora mismo.",
+      "used": "Ya has usado tu ficha de radio en esta misión.",
+      "disrupted": "La comunicación está interrumpida hasta después de la baza {{trick}}.",
+      "deadZoneNote": "Zona muerta: tus compañeros verán la carta, pero no sabrán qué estás afirmando.",
+      "position": {
+        "highest": "La más alta",
+        "only": "La única",
+        "lowest": "La más baja"
+      }
+    },
+    "log": {
+      "trickWon": "El jugador {{actor}} ganó la baza con {{card}} (baza {{trickNumber}}).",
+      "matchWon": "¡Misión completada!",
+      "matchLost": "Misión fallida."
     }
   }
 }

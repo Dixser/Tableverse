@@ -102,23 +102,17 @@ export class RoomService {
   }
 
   /**
-   * Persists validated game settings, per feature 013's spec.md story 1.
-   * Lobby-only, mirroring changeGame's guard: settings that shaped the
-   * current match can't be changed out from under it mid-match (story 3).
-   * A GameModule with no settingsSchema validates against `{ type:
-   * 'object' }` (no declared properties/required), so any submitted key is
-   * rejected as unknown -- a game with no schema accepts no settings.
+   * Validates `gameSettings` against the room's selected game's
+   * settingsSchema and persists them -- shared by setGameSettings (lobby
+   * only) and rematch's optional settings override (called once endMatch
+   * has already returned the room to lobby, so the same validation
+   * applies unchanged). Not itself lobby-gated; callers enforce that.
    */
-  async setGameSettings(
+  private async validateAndPersistGameSettings(
     roomID: string,
     gameSettings: Record<string, unknown>,
   ): Promise<Room> {
     const room = await this.mustGetRoom(roomID);
-    if (room.status !== 'lobby') {
-      throw new RoomServiceError(
-        `Cannot edit game settings while room ${roomID} is ${room.status}`,
-      );
-    }
     if (!room.selectedGameID) {
       throw new RoomServiceError(`Room ${roomID} has no selected game`);
     }
@@ -139,6 +133,27 @@ export class RoomService {
     }
     await this.rooms.update(roomID, { gameSettings });
     return { ...room, gameSettings };
+  }
+
+  /**
+   * Persists validated game settings, per feature 013's spec.md story 1.
+   * Lobby-only, mirroring changeGame's guard: settings that shaped the
+   * current match can't be changed out from under it mid-match (story 3).
+   * A GameModule with no settingsSchema validates against `{ type:
+   * 'object' }` (no declared properties/required), so any submitted key is
+   * rejected as unknown -- a game with no schema accepts no settings.
+   */
+  async setGameSettings(
+    roomID: string,
+    gameSettings: Record<string, unknown>,
+  ): Promise<Room> {
+    const room = await this.mustGetRoom(roomID);
+    if (room.status !== 'lobby') {
+      throw new RoomServiceError(
+        `Cannot edit game settings while room ${roomID} is ${room.status}`,
+      );
+    }
+    return this.validateAndPersistGameSettings(roomID, gameSettings);
   }
 
   /**
@@ -392,23 +407,39 @@ export class RoomService {
   }
 
   /**
-   * Starts a fresh match with the room's unchanged configuration (same
-   * selectedGameID/gameSettings/seats -- endMatch never touches any of
-   * these, see its own doc comment). Exists because ctx.gameover (the
-   * game engine's own match-over signal) is completely independent of
-   * room.status: nothing calls endMatch automatically when a game's win
-   * condition fires, so the host would otherwise have to click "End
-   * match" before a plain startMatch() call would even be legal. This
-   * collapses that into one action -- reuses endMatch/startMatch as-is,
-   * no new persistence.
+   * Starts a fresh match with the room's same seats. With no
+   * `gameSettings` override, the rest of the room's configuration
+   * (selectedGameID/gameSettings -- endMatch never touches either, see its
+   * own doc comment) is also unchanged: a same-level retry after a loss.
+   * Exists because ctx.gameover (the game engine's own match-over signal)
+   * is completely independent of room.status: nothing calls endMatch
+   * automatically when a game's win condition fires, so the host would
+   * otherwise have to click "End match" before a plain startMatch() call
+   * would even be legal. This collapses that into one action.
+   *
+   * Passing `gameSettings` additionally persists them (validated exactly
+   * like setGameSettings) before starting the new match -- this is what
+   * lets a generic "start the next level, same seats" action (any game
+   * whose settingsSchema exposes a numbered-progression field, e.g.
+   * Crew's `level`) reuse this same endpoint after a win, rather than
+   * requiring its own game-specific room action. The platform itself
+   * never inspects what's inside `gameSettings`; it's just validated
+   * against whatever schema the selected game declares, same as
+   * setGameSettings.
    */
-  async rematch(roomID: string): Promise<{
+  async rematch(
+    roomID: string,
+    gameSettings?: Record<string, unknown>,
+  ): Promise<{
     room: Room;
     credentialsByUserID: Map<string, SeatCredential[]>;
   }> {
     const room = await this.mustGetRoom(roomID);
     if (room.status === 'in_game') {
       await this.endMatch(roomID);
+    }
+    if (gameSettings !== undefined) {
+      await this.validateAndPersistGameSettings(roomID, gameSettings);
     }
     return this.startMatch(roomID);
   }
