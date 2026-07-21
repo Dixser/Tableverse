@@ -26,20 +26,16 @@ export function CardTile({ card, onClick, disabled, disabledReason, compact, sel
   const classNames = [base, selected ? styles.selected : null, faded ? styles.faded : null]
     .filter(Boolean)
     .join(' ');
-
   return (
     <button
       type="button"
-      className={classNames}
+      className={`${classNames} ${styles[card.suit]}`}
       onClick={onClick}
       disabled={disabled || !onClick}
       title={disabledReason}
       aria-pressed={selected}
       aria-label={label}
     >
-      <span className={styles.suit} aria-hidden="true">
-        {t(`crew.suits.${card.suit}`)}
-      </span>
       <span className={styles.rank} aria-hidden="true">
         {card.rank}
       </span>

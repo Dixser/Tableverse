@@ -35,7 +35,7 @@
 }
 
 .rank {
-  font-size: 1.8rem;
+  font-size: 2.2rem;
   line-height: 1;
   font-weight: 700;
 }
@@ -54,4 +54,24 @@
 
 .cardCompact .rank {
   font-size: 1.2rem;
+}
+
+.yellow {
+  background-color: rgb(150, 150, 0);
+}
+
+.blue {
+  background-color: rgb(39, 39, 173);
+}
+
+.pink {
+  background-color: rgb(173, 39, 70);
+}
+
+.green {
+  background-color: rgb(17, 121, 42);
+}
+
+.rocket {
+  background-color: rgb(20, 20, 20);
 }
