@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { taskTargetCardId, parseCardId, type TaskCard } from './deck.js';
+import { findTaskOrderRule } from './constraints.js';
+import type { LevelConstraint } from './levels.js';
 import { CardTile } from './CardTile.js';
+import { TaskOrderToken } from './TaskOrderToken.js';
 import { playerLabel } from './playerLabel.js';
 import styles from './TaskDraftPanel.module.css';
 
@@ -11,6 +14,8 @@ export interface TaskDraftPanelProps {
   currentPlayerID: string;
   playerNames?: Record<string, string>;
   onPick: (taskCardId: string) => void;
+  /** This mission's constraints -- only `taskOrder` ones are read, to render each tokened task's order token above its card. */
+  constraints?: LevelConstraint[];
 }
 
 /**
@@ -26,22 +31,34 @@ export function TaskDraftPanel({
   currentPlayerID,
   playerNames,
   onPick,
+  constraints = [],
 }: TaskDraftPanelProps) {
   const { t } = useTranslation();
-  const unclaimed = taskLayout.filter((t) => unclaimedTaskCardIds.includes(t.id));
+  // `taskIndex` is the task's fixed position in `taskLayout` (see
+  // gameDef.ts's own doc comment on that field) -- must be captured here,
+  // before filtering down to the still-unclaimed subset, or a constraint
+  // referencing a later, already-claimed task would silently mismatch.
+  const unclaimed = taskLayout
+    .map((task, taskIndex) => ({ task, taskIndex }))
+    .filter(({ task }) => unclaimedTaskCardIds.includes(task.id));
   return (
     <div className={styles.panel}>
       <h3 className={styles.title}>
         {t('crew.draft.title', { name: playerLabel(currentPlayerID, playerNames, t) })}
       </h3>
       <div className={styles.pool}>
-        {unclaimed.map((task) => (
-          <CardTile
-            key={task.id}
-            card={parseCardId(taskTargetCardId(task))}
-            onClick={isActive ? () => onPick(task.id) : undefined}
-          />
-        ))}
+        {unclaimed.map(({ task, taskIndex }) => {
+          const orderRule = findTaskOrderRule(constraints, taskIndex);
+          return (
+            <div key={task.id} className={styles.card}>
+              {orderRule && <TaskOrderToken rule={orderRule} />}
+              <CardTile
+                card={parseCardId(taskTargetCardId(task))}
+                onClick={isActive ? () => onPick(task.id) : undefined}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

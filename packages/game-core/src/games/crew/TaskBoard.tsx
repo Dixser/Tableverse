@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import type { Task } from './constraints.js';
+import { findTaskOrderRule, type Task } from './constraints.js';
+import type { LevelConstraint } from './levels.js';
 import { parseCardId } from './deck.js';
 import { CardTile } from './CardTile.js';
+import { TaskOrderToken } from './TaskOrderToken.js';
 import { playerLabel } from './playerLabel.js';
 import styles from './TaskBoard.module.css';
 
@@ -9,6 +11,8 @@ export interface TaskBoardProps {
   tasks: Task[];
   activeSeatIDs: string[];
   playerNames?: Record<string, string>;
+  /** This mission's constraints -- only `taskOrder` ones are read, to render each tokened task's order token above its card. */
+  constraints?: LevelConstraint[];
 }
 
 /**
@@ -17,7 +21,7 @@ export interface TaskBoardProps {
  * assigned). Renders nothing extra for a 0-task, constraint-only mission
  * beyond the empty-state message.
  */
-export function TaskBoard({ tasks, activeSeatIDs, playerNames }: TaskBoardProps) {
+export function TaskBoard({ tasks, activeSeatIDs, playerNames, constraints = [] }: TaskBoardProps) {
   const { t } = useTranslation();
   if (tasks.length === 0) {
     return <div className={styles.board}>{t('crew.tasks.none')}</div>;
@@ -33,15 +37,20 @@ export function TaskBoard({ tasks, activeSeatIDs, playerNames }: TaskBoardProps)
             <li key={seatID} className={styles.row}>
               <span className={styles.name}>{playerLabel(seatID, playerNames, t)}</span>
               <span className={styles.chips}>
-                {owned.map((task) => (
-                  <span
-                    key={task.taskCardId}
-                    className={task.fulfilled ? styles.chipFulfilled : styles.chipPending}
-                    title={task.fulfilled ? t('crew.tasks.fulfilled') : t('crew.tasks.pending')}
-                  >
-                    <CardTile card={parseCardId(task.targetCardId)} compact />
-                  </span>
-                ))}
+                {owned.map((task) => {
+                  const orderRule = findTaskOrderRule(constraints, task.draftIndex);
+                  return (
+                    <span key={task.taskCardId} className={styles.chip}>
+                      {orderRule && <TaskOrderToken rule={orderRule} />}
+                      <span
+                        className={task.fulfilled ? styles.chipFulfilled : styles.chipPending}
+                        title={task.fulfilled ? t('crew.tasks.fulfilled') : t('crew.tasks.pending')}
+                      >
+                        <CardTile card={parseCardId(task.targetCardId)} compact />
+                      </span>
+                    </span>
+                  );
+                })}
               </span>
             </li>
           ))}

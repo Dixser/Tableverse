@@ -1,5 +1,5 @@
 import { COLOR_SUITS, type Card } from './deck.js';
-import type { LevelConstraint } from './levels.js';
+import type { LevelConstraint, TaskOrderRule } from './levels.js';
 import type { TrickPlay } from './trickResolution.js';
 
 export interface Task {
@@ -44,6 +44,19 @@ export function applyTaskFulfillment(
     fulfilledDraftIndexes.push(task.draftIndex);
   }
   return { violated: false, fulfilledDraftIndexes };
+}
+
+/**
+ * The `taskOrder` rule for one task (by its fixed `taskIndex`/`draftIndex`),
+ * if the mission tokens it at all -- used by the UI to render the
+ * rulebook's order token above that task's card (see TaskOrderToken.tsx).
+ * Most tasks have no rule (untokened), hence the `undefined` return.
+ */
+export function findTaskOrderRule(constraints: LevelConstraint[], taskIndex: number): TaskOrderRule | undefined {
+  const found = constraints.find(
+    (c): c is Extract<LevelConstraint, { kind: 'taskOrder' }> => c.kind === 'taskOrder' && c.taskIndex === taskIndex,
+  );
+  return found?.order;
 }
 
 function batchIndexOf(taskIndex: number, batches: number[][]): number | null {

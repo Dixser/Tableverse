@@ -56,7 +56,7 @@ export const CrewBoard: React.FC<BoardProps<CrewView>> = ({ G, ctx, moves, playe
         <span>{t('crew.trickProgress', { current: G.trickNumber, total: G.totalTricks })}</span>
       </div>
 
-      <TaskBoard tasks={G.tasks} activeSeatIDs={G.activeSeatIDs} playerNames={playerNames} />
+      <TaskBoard tasks={G.tasks} activeSeatIDs={G.activeSeatIDs} playerNames={playerNames} constraints={constraints} />
 
       <CommunicatedCards
         activeSeatIDs={G.activeSeatIDs}
@@ -129,15 +129,19 @@ export const CrewBoard: React.FC<BoardProps<CrewView>> = ({ G, ctx, moves, playe
           currentPlayerID={ctx.currentPlayer}
           playerNames={playerNames}
           onPick={(taskCardId) => moves.pickTask?.(taskCardId)}
+          constraints={constraints}
         />
       )}
 
       {!isDraftPhase && displayedTrick && (
         <TrickZone
+          activeSeatIDs={G.activeSeatIDs}
           plays={displayedTrick.plays}
           winnerSeatID={'winnerSeatID' in displayedTrick ? displayedTrick.winnerSeatID : undefined}
           winningCard={'winningCard' in displayedTrick ? displayedTrick.winningCard : undefined}
           playerNames={playerNames}
+          playerID={playerID}
+          currentPlayerID={ctx.currentPlayer}
         />
       )}
 

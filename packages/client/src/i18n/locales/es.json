@@ -323,7 +323,6 @@
     "commander": "Comandante: {{name}}",
     "trickProgress": "Baza {{current}} de {{total}}",
     "trick": {
-      "empty": "Aún no se han jugado cartas.",
       "inProgressTitle": "Baza actual",
       "resolvedTitle": "Resultado de la baza",
       "winner": "Ganada por {{name}}"
@@ -336,6 +335,19 @@
     },
     "draft": {
       "title": "{{name}} está eligiendo una misión"
+    },
+    "taskOrder": {
+      "position": {
+        "1": "1.º",
+        "2": "2.º",
+        "3": "3.º",
+        "4": "4.º",
+        "5": "5.º"
+      },
+      "positionLabel": "Debe cumplirse en {{position}} lugar",
+      "beforeLabel": "Debe cumplirse antes que la tarea {{index}}",
+      "afterLabel": "Debe cumplirse después que la tarea {{index}}",
+      "lastLabel": "Debe cumplirse en último lugar, después de todas las demás"
     },
     "communicatedCards": {
       "title": "Cartas comunicadas",

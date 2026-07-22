@@ -323,7 +323,6 @@
     "commander": "Commander: {{name}}",
     "trickProgress": "Trick {{current}} of {{total}}",
     "trick": {
-      "empty": "No cards played yet.",
       "inProgressTitle": "Current trick",
       "resolvedTitle": "Trick result",
       "winner": "Won by {{name}}"
@@ -336,6 +335,19 @@
     },
     "draft": {
       "title": "{{name}} is choosing a task"
+    },
+    "taskOrder": {
+      "position": {
+        "1": "1st",
+        "2": "2nd",
+        "3": "3rd",
+        "4": "4th",
+        "5": "5th"
+      },
+      "positionLabel": "Must be fulfilled {{position}}",
+      "beforeLabel": "Must be fulfilled before task {{index}}",
+      "afterLabel": "Must be fulfilled after task {{index}}",
+      "lastLabel": "Must be fulfilled last, after every other task"
     },
     "communicatedCards": {
       "title": "Communicated cards",

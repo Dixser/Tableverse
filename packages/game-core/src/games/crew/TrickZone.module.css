@@ -1,7 +1,6 @@
 .zone {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: var(--space-2);
   padding: var(--space-2);
   border: 1px solid var(--color-border);
@@ -13,28 +12,52 @@
   margin: 0;
   font-size: 0.9rem;
   color: var(--color-text-muted);
+  text-align: center;
 }
 
 .plays {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.play {
+.plays > li {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
+}
+
+.self .playerName {
+  font-weight: 600;
+}
+
+.active .playerName {
+  color: var(--color-accent);
 }
 
 .playerName {
+  min-width: 6rem;
   font-size: 0.75rem;
   color: var(--color-text-muted);
+}
+
+/* Not-yet-played slot for this trick, same footprint as CardTile's compact
+   variant so the row doesn't jump once the seat plays -- dashed so it
+   reads as "waiting", not as a held card (mirrors regicide's cardEmpty). */
+.cardEmpty {
+  width: 3rem;
+  height: 3.75rem;
+  border-radius: var(--radius);
+  background: transparent;
+  border: 1px dashed var(--color-text-muted);
+  opacity: 0.4;
 }
 
 .winner {
   margin: 0;
   font-weight: 600;
+  text-align: center;
 }

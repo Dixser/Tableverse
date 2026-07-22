@@ -38,6 +38,13 @@
   gap: var(--space-1);
 }
 
+.chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
 .chipPending {
   opacity: 1;
 }
