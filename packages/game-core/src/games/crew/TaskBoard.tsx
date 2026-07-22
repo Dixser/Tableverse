@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { findTaskOrderRule, type Task } from './constraints.js';
+import { findTaskOrderRule, taskOrderChevronRank, type Task } from './constraints.js';
 import type { LevelConstraint } from './levels.js';
 import { parseCardId } from './deck.js';
 import { CardTile } from './CardTile.js';
@@ -39,9 +39,13 @@ export function TaskBoard({ tasks, activeSeatIDs, playerNames, constraints = [] 
               <span className={styles.chips}>
                 {owned.map((task) => {
                   const orderRule = findTaskOrderRule(constraints, task.draftIndex);
+                  const chevronRank =
+                    orderRule?.type === 'before' || orderRule?.type === 'after'
+                      ? taskOrderChevronRank(constraints, task.draftIndex)
+                      : undefined;
                   return (
                     <span key={task.taskCardId} className={styles.chip}>
-                      {orderRule && <TaskOrderToken rule={orderRule} />}
+                      {orderRule && <TaskOrderToken rule={orderRule} chevronRank={chevronRank} />}
                       <span
                         className={task.fulfilled ? styles.chipFulfilled : styles.chipPending}
                         title={task.fulfilled ? t('crew.tasks.fulfilled') : t('crew.tasks.pending')}

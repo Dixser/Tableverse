@@ -59,6 +59,38 @@ export function findTaskOrderRule(constraints: LevelConstraint[], taskIndex: num
   return found?.order;
 }
 
+/**
+ * The chevron count for a `before`/`after`-tokened task's order token: this
+ * task's own 1-indexed rank within the mission's before/after chain (the
+ * first task that must be won gets 1 chevron, the one after it 2, and so
+ * on) -- NOT a literal count derived from `relativeToTaskIndex` (that's the
+ * OTHER task's unrelated draft-order index, and using it directly was the
+ * bug: a two-task "0 before 1" chain rendered task 0 with 2 chevrons
+ * instead of 1). `position`/`last` tokens render their own fixed symbol and
+ * never call this.
+ */
+export function taskOrderChevronRank(constraints: LevelConstraint[], taskIndex: number): number {
+  const predecessorsOf = new Map<number, number[]>();
+  const addPredecessor = (of: number, predecessor: number) => {
+    predecessorsOf.set(of, [...(predecessorsOf.get(of) ?? []), predecessor]);
+  };
+  for (const c of constraints) {
+    if (c.kind !== 'taskOrder') continue;
+    if (c.order.type === 'before') addPredecessor(c.order.relativeToTaskIndex, c.taskIndex);
+    else if (c.order.type === 'after') addPredecessor(c.taskIndex, c.order.relativeToTaskIndex);
+  }
+  const ranks = new Map<number, number>();
+  const rankOf = (index: number): number => {
+    const cached = ranks.get(index);
+    if (cached !== undefined) return cached;
+    const predecessors = predecessorsOf.get(index) ?? [];
+    const rank = predecessors.length === 0 ? 1 : 1 + Math.max(...predecessors.map(rankOf));
+    ranks.set(index, rank);
+    return rank;
+  };
+  return rankOf(taskIndex);
+}
+
 function batchIndexOf(taskIndex: number, batches: number[][]): number | null {
   for (let i = 0; i < batches.length; i++) {
     if (batches[i]!.includes(taskIndex)) return i;

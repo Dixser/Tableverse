@@ -5,22 +5,24 @@ import styles from './TaskOrderToken.module.css';
 
 export interface TaskOrderTokenProps {
   rule: TaskOrderRule;
+  /** This task's rank within its before/after chain (see constraints.ts's `taskOrderChevronRank`) -- unused for `position`/`last` tokens, which have their own fixed symbol. */
+  chevronRank?: number;
 }
 
-function tokenContent(rule: TaskOrderRule, t: TFunction): { symbol: string; label: string } {
+function tokenContent(rule: TaskOrderRule, chevronRank: number | undefined, t: TFunction): { symbol: string; label: string } {
   if (rule.type === 'position') {
     const symbol = t(`crew.taskOrder.position.${rule.position}`);
     return { symbol, label: t('crew.taskOrder.positionLabel', { position: symbol }) };
   }
   if (rule.type === 'before') {
     return {
-      symbol: '>'.repeat(rule.relativeToTaskIndex + 1),
+      symbol: '>'.repeat(chevronRank ?? 1),
       label: t('crew.taskOrder.beforeLabel', { index: rule.relativeToTaskIndex + 1 }),
     };
   }
   if (rule.type === 'after') {
     return {
-      symbol: '<'.repeat(rule.relativeToTaskIndex + 1),
+      symbol: '>'.repeat(chevronRank ?? 1),
       label: t('crew.taskOrder.afterLabel', { index: rule.relativeToTaskIndex + 1 }),
     };
   }
@@ -30,15 +32,17 @@ function tokenContent(rule: TaskOrderRule, t: TFunction): { symbol: string; labe
 /**
  * The rulebook's task order token (levels.ts's TaskOrderRule doc comment
  * has the full semantics), rendered above a task's card so its sequencing
- * requirement is visible at a glance. Chevron count for before/after
- * mirrors the physical logbook's own arrow tokens: it's the 1-indexed
- * draft position of the OTHER task this one is relative to (">>" ==
- * "before the 2nd task drafted"), not a count of anything about this
- * task itself. `last` is the logbook's Omega token.
+ * requirement is visible at a glance. Chevron count for before/after is
+ * always this task's OWN rank in the chain (`chevronRank`, e.g. the first
+ * task that must be won shows a single ">"), never a count derived from
+ * the other task's draft-order index -- and always the ">" chevron
+ * regardless of before/after, matching the physical logbook's tokens
+ * (there's no distinct "<" token in the real game). `last` is the
+ * logbook's Omega token.
  */
-export function TaskOrderToken({ rule }: TaskOrderTokenProps) {
+export function TaskOrderToken({ rule, chevronRank }: TaskOrderTokenProps) {
   const { t } = useTranslation();
-  const { symbol, label } = tokenContent(rule, t);
+  const { symbol, label } = tokenContent(rule, chevronRank, t);
   return (
     <span className={styles.token} title={label} aria-label={label}>
       {symbol}

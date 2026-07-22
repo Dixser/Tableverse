@@ -168,7 +168,10 @@ export const LEVELS: LevelDefinition[] = [
   {
     level: 6,
     taskCount: 3,
-    constraints: [{ kind: 'taskOrder', taskIndex: 0, order: { type: 'before', relativeToTaskIndex: 1 } }],
+    constraints: [
+      { kind: 'taskOrder', taskIndex: 0, order: { type: 'before', relativeToTaskIndex: 1 } },
+      { kind: 'taskOrder', taskIndex: 1, order: { type: 'after', relativeToTaskIndex: 0 } },
+    ],
     deadZone: true,
   },
   // Omega token: the first-drafted task must be fulfilled last of all 3 tasks in this mission.

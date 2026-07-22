@@ -335,7 +335,7 @@ export function RoomShell({
   return (
     <div className={styles.container}>
       <div className={styles.headerRow}>
-        <h1 className={styles.heading}>{t('room.title', { inviteCode: room.inviteCode })}</h1>
+        {/* <h1 className={styles.heading}>{t('room.title', { inviteCode: room.inviteCode })}</h1> */}
         <button
           type="button"
           className={styles.drawerToggle}
@@ -385,95 +385,95 @@ export function RoomShell({
 
         <div className={styles.topRow}>
           <section className={styles.section} aria-label={t('room.players')}>
-          <h2 className={styles.sectionTitle}>{t('room.players')}</h2>
-          <ul className={styles.list}>
-            {room.members.map((m) => (
-              <li className={styles.listItem} key={m.userID}>
-                {m.userID === user.id ? t('room.you') : (memberNames[m.userID] ?? m.userID)} —{' '}
-                {t(`room.role.${m.role}`)}
-                <span className={styles.spacer} />
-                {m.userID === user.id && canLeaveRoom && (
-                  <button
-                    className={styles.buttonDanger}
-                    type="button"
-                    onClick={() => void leaveRoom()}
-                  >
-                    {t('room.leaveRoom')}
-                  </button>
-                )}
-                {canKick && m.userID !== user.id && (
-                  <button
-                    className={styles.buttonDanger}
-                    type="button"
-                    onClick={() => void kickPlayer(m.userID)}
-                  >
-                    {t('room.kick')}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
+            <h2 className={styles.sectionTitle}>{t('room.players')}</h2>
+            <ul className={styles.list}>
+              {room.members.map((m) => (
+                <li className={styles.listItem} key={m.userID}>
+                  {m.userID === user.id ? t('room.you') : (memberNames[m.userID] ?? m.userID)} —{' '}
+                  {t(`room.role.${m.role}`)}
+                  <span className={styles.spacer} />
+                  {m.userID === user.id && canLeaveRoom && (
+                    <button
+                      className={styles.buttonDanger}
+                      type="button"
+                      onClick={() => void leaveRoom()}
+                    >
+                      {t('room.leaveRoom')}
+                    </button>
+                  )}
+                  {canKick && m.userID !== user.id && (
+                    <button
+                      className={styles.buttonDanger}
+                      type="button"
+                      onClick={() => void kickPlayer(m.userID)}
+                    >
+                      {t('room.kick')}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
 
-        <section className={styles.section} aria-label={t('room.seats')}>
-          <h2 className={styles.sectionTitle}>{t('room.seats')}</h2>
-          <ul className={styles.list}>
-            {seats.map((seat) => (
-              <li className={styles.listItem} key={seat.playerID}>
-                {t('room.seatOccupied', {
-                  // Seats are 0-indexed internally (boardgame.io's playerID
-                  // convention), but displayed 1-indexed -- "Seat 1" for
-                  // playerID '0' -- so non-technical players don't see a
-                  // seat numbering that starts at 0.
-                  seatNumber: Number(seat.playerID) + 1,
-                  occupant:
-                    seat.userID === user.id
-                      ? t('room.you')
-                      : (memberNames[seat.userID] ?? seat.userID),
-                })}
-                <PresenceBadge status={presence[seat.playerID] ?? 'connected'} />
-                <span className={styles.spacer} />
-                {seat.userID === user.id && canLeaveSeat && (
-                  <button
-                    className={styles.buttonDanger}
-                    type="button"
-                    onClick={() => void leaveSeat(seat.playerID)}
-                  >
-                    {t('room.leaveSeat')}
-                  </button>
-                )}
-                {canManageSeats && room.status === 'in_game' && (
-                  <button
-                    className={styles.buttonDanger}
-                    type="button"
-                    onClick={() => releaseSeat(seat.playerID)}
-                  >
-                    {t('room.release')}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-          {canEditSettings && room.status === 'lobby' && (
-            <label className={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                checked={room.allowMultiSeat}
-                onChange={(e) => void setAllowMultiSeat(e.target.checked)}
+          <section className={styles.section} aria-label={t('room.seats')}>
+            <h2 className={styles.sectionTitle}>{t('room.seats')}</h2>
+            <ul className={styles.list}>
+              {seats.map((seat) => (
+                <li className={styles.listItem} key={seat.playerID}>
+                  {t('room.seatOccupied', {
+                    // Seats are 0-indexed internally (boardgame.io's playerID
+                    // convention), but displayed 1-indexed -- "Seat 1" for
+                    // playerID '0' -- so non-technical players don't see a
+                    // seat numbering that starts at 0.
+                    seatNumber: Number(seat.playerID) + 1,
+                    occupant:
+                      seat.userID === user.id
+                        ? t('room.you')
+                        : (memberNames[seat.userID] ?? seat.userID),
+                  })}
+                  <PresenceBadge status={presence[seat.playerID] ?? 'connected'} />
+                  <span className={styles.spacer} />
+                  {seat.userID === user.id && canLeaveSeat && (
+                    <button
+                      className={styles.buttonDanger}
+                      type="button"
+                      onClick={() => void leaveSeat(seat.playerID)}
+                    >
+                      {t('room.leaveSeat')}
+                    </button>
+                  )}
+                  {canManageSeats && room.status === 'in_game' && (
+                    <button
+                      className={styles.buttonDanger}
+                      type="button"
+                      onClick={() => releaseSeat(seat.playerID)}
+                    >
+                      {t('room.release')}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {canEditSettings && room.status === 'lobby' && (
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={room.allowMultiSeat}
+                  onChange={(e) => void setAllowMultiSeat(e.target.checked)}
+                />
+                {t('room.allowMultiSeat')}
+              </label>
+            )}
+            {canClaim && room.status === 'lobby' && selectedModule && (
+              <SeatPicker
+                maxPlayers={getEffectiveMaxPlayers(selectedModule, room.gameSettings)}
+                seats={seats}
+                currentUserID={user.id}
+                memberNames={memberNames}
+                onClaim={claimSeat}
               />
-              {t('room.allowMultiSeat')}
-            </label>
-          )}
-          {canClaim && room.status === 'lobby' && selectedModule && (
-            <SeatPicker
-              maxPlayers={getEffectiveMaxPlayers(selectedModule, room.gameSettings)}
-              seats={seats}
-              currentUserID={user.id}
-              memberNames={memberNames}
-              onClaim={claimSeat}
-            />
-          )}
-        </section>
+            )}
+          </section>
         </div>
       </RoomDrawer>
 
@@ -553,10 +553,9 @@ function SeatPicker({
           >
             {t('room.seatLabel', { seatNumber: Number(playerID) + 1 })}
             {occupant &&
-              ` — ${
-                occupant.userID === currentUserID
-                  ? t('room.you')
-                  : (memberNames[occupant.userID] ?? occupant.userID)
+              ` — ${occupant.userID === currentUserID
+                ? t('room.you')
+                : (memberNames[occupant.userID] ?? occupant.userID)
               }`}
           </button>
         );

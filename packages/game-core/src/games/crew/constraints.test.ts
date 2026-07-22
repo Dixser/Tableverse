@@ -8,6 +8,7 @@ import {
   checkTrickOutcomeViolations,
   hasAchievementConstraint,
   isSeatMuted,
+  taskOrderChevronRank,
   type Task,
 } from './constraints.js';
 import type { Card } from './deck.js';
@@ -109,6 +110,28 @@ describe('checkTaskOrderViolations', () => {
 
   it('unfulfilled tokened tasks are simply not checked yet', () => {
     expect(checkTaskOrderViolations(positionConstraints, [])).toBe(false);
+  });
+});
+
+describe('taskOrderChevronRank', () => {
+  it('ranks a two-task before/after chain 1, 2 -- not a repeat of the other task\'s draft index', () => {
+    const constraints = [
+      { kind: 'taskOrder' as const, taskIndex: 0, order: { type: 'before' as const, relativeToTaskIndex: 1 } },
+      { kind: 'taskOrder' as const, taskIndex: 1, order: { type: 'after' as const, relativeToTaskIndex: 0 } },
+    ];
+    expect(taskOrderChevronRank(constraints, 0)).toBe(1);
+    expect(taskOrderChevronRank(constraints, 1)).toBe(2);
+  });
+
+  it('ranks a three-task chain 1, 2, 3 (mission 14\'s shape)', () => {
+    const constraints = [
+      { kind: 'taskOrder' as const, taskIndex: 0, order: { type: 'before' as const, relativeToTaskIndex: 1 } },
+      { kind: 'taskOrder' as const, taskIndex: 1, order: { type: 'after' as const, relativeToTaskIndex: 0 } },
+      { kind: 'taskOrder' as const, taskIndex: 2, order: { type: 'after' as const, relativeToTaskIndex: 1 } },
+    ];
+    expect(taskOrderChevronRank(constraints, 0)).toBe(1);
+    expect(taskOrderChevronRank(constraints, 1)).toBe(2);
+    expect(taskOrderChevronRank(constraints, 2)).toBe(3);
   });
 });
 
