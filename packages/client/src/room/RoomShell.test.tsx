@@ -136,7 +136,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     expect(screen.getByText(/You — Host/)).toBeInTheDocument();
     expect(screen.getByText(/guest-1 — Member/)).toBeInTheDocument();
   });
@@ -157,7 +157,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     expect(getRoom).toHaveBeenCalledTimes(1);
 
     capturedRoomEventsOnChanged?.();
@@ -187,7 +187,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     // A member has claimSeat/leaveSeat but not manageSeats -- no Release button.
     expect(screen.queryByText('Release')).not.toBeInTheDocument();
   });
@@ -208,7 +208,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     expect(screen.getByText('Release')).toBeInTheDocument();
   });
 
@@ -237,7 +237,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     const leaveButtons = screen.getAllByText('Leave seat');
     // Only guest-1's own seat (0) gets the button, not host-1's seat (1).
     expect(leaveButtons).toHaveLength(1);
@@ -261,7 +261,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     fireEvent.click(screen.getByText('Leave seat'));
 
     await waitFor(() =>
@@ -286,12 +286,12 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     fireEvent.click(screen.getByText('Leave seat'));
 
     const alert = await waitFor(() => screen.getByRole('alert'));
     expect(alert).toHaveTextContent('network error');
-    expect(screen.getByText('Room ABC123')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Room menu' })).toBeInTheDocument();
   });
 
   it('lets a host toggle allowMultiSeat from the lobby', async () => {
@@ -313,7 +313,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     const checkbox = screen.getByRole('checkbox', {
       name: /allow multiple seats/i,
     });
@@ -350,14 +350,14 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     fireEvent.click(screen.getByText('Seat 1'));
 
     const alert = await waitFor(() => screen.getByRole('alert'));
     expect(alert).toHaveTextContent('already claimed');
     // The room chrome (heading, player list) must still be present -- a
     // failed action must not be treated like a failed load.
-    expect(screen.getByText('Room ABC123')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Room menu' })).toBeInTheDocument();
   });
 
   it('calls onSeatClaimed with the credential a mid-match claim returns', async () => {
@@ -383,7 +383,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     fireEvent.click(screen.getByText('Seat 1'));
 
     await waitFor(() => expect(onSeatClaimed).toHaveBeenCalledWith(credential));
@@ -405,7 +405,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     // tictactoe-v1 has maxPlayers: 2 -- exactly playerIDs '0' and '1',
     // displayed 1-indexed as "Seat 1"/"Seat 2".
     expect(screen.getByText('Seat 1')).toBeInTheDocument();
@@ -432,7 +432,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     // classic edition caps this fixture at 4 players, even though its
     // static maxPlayers is 6.
     expect(screen.getByText('Seat 4')).toBeInTheDocument();
@@ -458,7 +458,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     expect(screen.getByText('Seat 6')).toBeInTheDocument();
   });
 
@@ -481,7 +481,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     const gameSection = screen.getByRole('region', { name: 'Game' });
     const seatsSection = screen.getByRole('region', { name: 'Seats' });
     // DOCUMENT_POSITION_FOLLOWING means gameSection comes before seatsSection.
@@ -513,7 +513,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     const buttons = screen.getAllByRole('button');
     const takenButton = buttons.find((b) => /Seat 1/.test(b.textContent ?? ''))!;
     expect(takenButton).toHaveTextContent('guest-1');
@@ -538,7 +538,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     expect(screen.queryByText('Seat 1')).not.toBeInTheDocument();
   });
 
@@ -563,7 +563,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     const leaveRoomButtons = screen.getAllByText('Leave room');
     expect(leaveRoomButtons).toHaveLength(1);
     expect(leaveRoomButtons[0]!.closest('li')).toHaveTextContent('You');
@@ -590,7 +590,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     expect(screen.queryByText('Leave room')).not.toBeInTheDocument();
   });
 
@@ -615,7 +615,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     const kickButtons = screen.getAllByText('Kick');
     expect(kickButtons).toHaveLength(1);
     expect(kickButtons[0]!.closest('li')).toHaveTextContent('guest-1');
@@ -643,7 +643,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     expect(screen.queryByText('Kick')).not.toBeInTheDocument();
   });
 
@@ -673,7 +673,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     fireEvent.click(screen.getByText('Leave room'));
 
     await waitFor(() => expect(leaveRoom).toHaveBeenCalledWith('tok', 'room-1'));
@@ -704,7 +704,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     fireEvent.click(screen.getByText('Kick'));
 
     await waitFor(() =>
@@ -734,12 +734,12 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     fireEvent.click(screen.getByText('Kick'));
 
     const alert = await waitFor(() => screen.getByRole('alert'));
     expect(alert).toHaveTextContent('cannot kick themself');
-    expect(screen.getByText('Room ABC123')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Room menu' })).toBeInTheDocument();
   });
 
   it('surfaces a load error instead of throwing', async () => {
@@ -773,7 +773,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     expect(screen.queryByText('Game settings')).not.toBeInTheDocument();
   });
 
@@ -796,7 +796,7 @@ describe('RoomShell', () => {
       />,
     );
 
-    await waitFor(() => screen.getByText('Room ABC123'));
+    await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
     expect(screen.getByText('Game settings')).toBeInTheDocument();
 
     fireEvent.change(screen.getByRole('combobox', { name: 'edition' }), {
@@ -826,7 +826,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       expect(screen.getByRole('button', { name: 'Room menu' })).toHaveAttribute(
         'aria-expanded',
         'true',
@@ -849,7 +849,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       expect(screen.getByRole('button', { name: 'Room menu' })).toHaveAttribute(
         'aria-expanded',
         'false',
@@ -872,7 +872,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       const toggle = screen.getByRole('button', { name: 'Room menu' });
       expect(toggle).toHaveAttribute('aria-expanded', 'false');
 
@@ -899,7 +899,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       const toggle = screen.getByRole('button', { name: 'Room menu' });
       expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
@@ -932,7 +932,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       const toggle = screen.getByRole('button', { name: 'Room menu' });
       expect(toggle).toHaveAttribute('aria-expanded', 'false');
 
@@ -965,7 +965,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       const toggle = screen.getByRole('button', { name: 'Room menu' });
       expect(toggle).toHaveAttribute('aria-expanded', 'false');
 
@@ -995,7 +995,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       expect(screen.getByText('Rematch')).toBeInTheDocument();
     });
 
@@ -1015,7 +1015,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       expect(screen.queryByText('Rematch')).not.toBeInTheDocument();
     });
 
@@ -1042,7 +1042,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       expect(screen.queryByText('Rematch')).not.toBeInTheDocument();
     });
 
@@ -1067,7 +1067,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       fireEvent.click(screen.getByText('Rematch'));
 
       // Plain Rematch passes no settings override -- undefined, explicitly
@@ -1093,12 +1093,12 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       fireEvent.click(screen.getByText('Rematch'));
 
       await waitFor(() => screen.getByRole('alert'));
       expect(screen.getByRole('alert')).toHaveTextContent('not in lobby');
-      expect(screen.getByText('Room ABC123')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Room menu' })).toBeInTheDocument();
     });
   });
 
@@ -1120,7 +1120,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       expect(screen.getByText('Next level')).toBeInTheDocument();
     });
 
@@ -1141,7 +1141,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       expect(screen.queryByText('Next level')).not.toBeInTheDocument();
       // Rematch (same-settings retry) is still available either way.
       expect(screen.getByText('Rematch')).toBeInTheDocument();
@@ -1164,7 +1164,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       expect(screen.queryByText('Next level')).not.toBeInTheDocument();
     });
 
@@ -1185,7 +1185,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       expect(screen.queryByText('Next level')).not.toBeInTheDocument();
     });
 
@@ -1214,7 +1214,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       fireEvent.click(screen.getByText('Next level'));
 
       await waitFor(() => expect(rematch).toHaveBeenCalledWith('tok', 'room-1', { level: 2 }));
@@ -1245,7 +1245,7 @@ describe('RoomShell', () => {
         />,
       );
 
-      await waitFor(() => screen.getByText('Room ABC123'));
+      await waitFor(() => screen.getByRole('button', { name: 'Room menu' }));
       expect(screen.queryByText('Next level')).not.toBeInTheDocument();
     });
   });

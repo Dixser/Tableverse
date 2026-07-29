@@ -1,4 +1,8 @@
 .toggle {
+  position: fixed;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: var(--z-toggle);
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
   color: var(--color-text);

@@ -16,7 +16,6 @@
     "joiningRoom": "Joining room…"
   },
   "room": {
-    "title": "Room {{inviteCode}}",
     "loadingRoom": "Loading room…",
     "players": "Players",
     "you": "You",
@@ -48,6 +47,13 @@
   },
   "languageToggle": {
     "ariaLabel": "Language"
+  },
+  "menu": {
+    "toggle": "Settings",
+    "title": "Settings"
+  },
+  "settingsSection": {
+    "title": "Settings"
   },
   "seatSwitcher": {
     "ariaLabel": "Your seats"

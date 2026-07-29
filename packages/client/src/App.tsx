@@ -10,8 +10,7 @@ import { SeatSwitcher } from './room/SeatSwitcher.js';
 import { GameMount } from './gameMount/GameMount.js';
 import { useSeatClients } from './seats/useSeatClients.js';
 import { getInviteCodeFromLocation, setHomeUrl, setRoomUrl } from './routing.js';
-import { ThemeToggle } from './theme/ThemeToggle.js';
-import { LanguageToggle } from './i18n/LanguageToggle.js';
+import { AppMenu } from './menu/AppMenu.js';
 import styles from './App.module.css';
 
 const FALLBACK_GAME: Game = {};
@@ -279,15 +278,17 @@ export function App() {
     );
   }
 
-  // ThemeToggle/LanguageToggle rendered once, always visible regardless of
-  // which screen is showing -- per plan.md's placement decision, a
-  // first-time visitor should be able to fix an uncomfortable theme or
-  // language before picking a nickname.
+  // AppMenu (Settings: language/theme) rendered only while no room is
+  // active -- once a room is active, RoomShell's own drawer carries the
+  // same Settings section (see RoomShell.tsx), so there's exactly one
+  // menu on screen at a time rather than two competing toggle buttons.
+  // Still reachable pre-room (nickname entry, join/create room) so a
+  // first-time visitor can fix an uncomfortable theme or language before
+  // picking a nickname.
   return (
     <>
       {renderScreen()}
-      <ThemeToggle />
-      <LanguageToggle />
+      {!roomID && <AppMenu />}
     </>
   );
 }

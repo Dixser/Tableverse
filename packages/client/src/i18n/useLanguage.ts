@@ -16,7 +16,15 @@ function detectInitialLanguage(): SupportedLanguage {
 
 function applyLanguage(lang: SupportedLanguage) {
   document.documentElement.lang = lang;
-  void i18n.changeLanguage(lang);
+  // Skip when already applied -- LanguageToggle now mounts at more than
+  // one place across a session (AppMenu pre-room, RoomShell in-room), so
+  // this initializer re-runs on every remount, not just once per app
+  // load. Without this guard, a same-value changeLanguage() still fires
+  // i18next's languageChanged event, which triggers other useTranslation
+  // consumers (e.g. RoomShell) to update while LanguageToggle itself is
+  // still rendering -- React's "Cannot update a component while
+  // rendering a different component" warning.
+  if (i18n.language !== lang) void i18n.changeLanguage(lang);
 }
 
 export interface LanguageState {

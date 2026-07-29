@@ -16,6 +16,7 @@ import { ChatPanel } from '../chat/ChatPanel.js';
 import { PresenceBadge } from './PresenceBadge.js';
 import { RoomDrawer } from './RoomDrawer.js';
 import { SettingsForm } from './SettingsForm.js';
+import { SettingsSection } from '../menu/SettingsSection.js';
 import styles from './RoomShell.module.css';
 
 export interface RoomShellProps {
@@ -334,17 +335,14 @@ export function RoomShell({
 
   return (
     <div className={styles.container}>
-      <div className={styles.headerRow}>
-        {/* <h1 className={styles.heading}>{t('room.title', { inviteCode: room.inviteCode })}</h1> */}
-        <button
-          type="button"
-          className={styles.drawerToggle}
-          aria-expanded={drawerOpen}
-          onClick={() => setDrawerOpen((v) => !v)}
-        >
-          {t('room.drawerToggle')}
-        </button>
-      </div>
+      <button
+        type="button"
+        className={styles.drawerToggle}
+        aria-expanded={drawerOpen}
+        onClick={() => setDrawerOpen((v) => !v)}
+      >
+        {t('room.drawerToggle')}
+      </button>
 
       {actionError && (
         <p className={styles.error} role="alert">
@@ -352,7 +350,13 @@ export function RoomShell({
         </p>
       )}
 
-      <RoomDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+      <RoomDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        ariaLabel={t('room.drawerTitle')}
+      >
+        <SettingsSection />
+
         {room.status === 'lobby' && canChangeGame && (
           <section className={styles.section} aria-label={t('room.game')}>
             <h2 className={styles.sectionTitle}>{t('room.game')}</h2>

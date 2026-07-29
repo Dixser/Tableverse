@@ -16,7 +16,6 @@
     "joiningRoom": "Uniéndose a la sala…"
   },
   "room": {
-    "title": "Sala {{inviteCode}}",
     "loadingRoom": "Cargando sala…",
     "players": "Jugadores",
     "you": "Tú",
@@ -48,6 +47,13 @@
   },
   "languageToggle": {
     "ariaLabel": "Idioma"
+  },
+  "menu": {
+    "toggle": "Ajustes",
+    "title": "Ajustes"
+  },
+  "settingsSection": {
+    "title": "Ajustes"
   },
   "seatSwitcher": {
     "ariaLabel": "Tus asientos"

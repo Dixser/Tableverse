@@ -37,26 +37,22 @@
   z-index: var(--z-toggle);
 }
 
-.headerRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.heading {
-  font-size: var(--font-size-xl);
-}
-
+/* Fixed to the viewport's own far left edge, not inside `.container`
+   (which is centered with its own max-width) -- same fixed-corner tier as
+   AppMenu's toggle (top-right) and RoomDrawer's own left edge, so the
+   button stays reachable at a constant spot regardless of container width
+   or drawer state. */
 .drawerToggle {
+  position: fixed;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 1;
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
   color: var(--color-text);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   font-size: 0.85rem;
-  flex: 0 0 auto;
 }
 
 .section {

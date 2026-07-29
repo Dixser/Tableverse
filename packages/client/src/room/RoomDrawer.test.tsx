@@ -10,14 +10,14 @@ describe('RoomDrawer', () => {
 
   it('renders its children regardless of open/closed state (CSS-hidden, not unmounted)', () => {
     const { rerender } = render(
-      <RoomDrawer open={false} onClose={vi.fn()}>
+      <RoomDrawer open={false} onClose={vi.fn()} ariaLabel="Room">
         <p>drawer content</p>
       </RoomDrawer>,
     );
     expect(screen.getByText('drawer content')).toBeInTheDocument();
 
     rerender(
-      <RoomDrawer open={true} onClose={vi.fn()}>
+      <RoomDrawer open={true} onClose={vi.fn()} ariaLabel="Room">
         <p>drawer content</p>
       </RoomDrawer>,
     );
@@ -26,7 +26,7 @@ describe('RoomDrawer', () => {
 
   it('reflects open state via data-open, and marks itself inert only while closed', () => {
     const { rerender } = render(
-      <RoomDrawer open={false} onClose={vi.fn()}>
+      <RoomDrawer open={false} onClose={vi.fn()} ariaLabel="Room">
         <p>content</p>
       </RoomDrawer>,
     );
@@ -35,7 +35,7 @@ describe('RoomDrawer', () => {
     expect(drawer.hasAttribute('inert')).toBe(true);
 
     rerender(
-      <RoomDrawer open={true} onClose={vi.fn()}>
+      <RoomDrawer open={true} onClose={vi.fn()} ariaLabel="Room">
         <p>content</p>
       </RoomDrawer>,
     );
@@ -46,14 +46,14 @@ describe('RoomDrawer', () => {
   it('renders a backdrop only while open, and clicking it calls onClose', () => {
     const onClose = vi.fn();
     const { rerender, container } = render(
-      <RoomDrawer open={false} onClose={onClose}>
+      <RoomDrawer open={false} onClose={onClose} ariaLabel="Room">
         <p>content</p>
       </RoomDrawer>,
     );
     expect(container.querySelector('[aria-hidden="true"]')).not.toBeInTheDocument();
 
     rerender(
-      <RoomDrawer open={true} onClose={onClose}>
+      <RoomDrawer open={true} onClose={onClose} ariaLabel="Room">
         <p>content</p>
       </RoomDrawer>,
     );
@@ -67,7 +67,7 @@ describe('RoomDrawer', () => {
   it('calls onClose on Escape while open, and does nothing on Escape while closed', () => {
     const onClose = vi.fn();
     const { rerender } = render(
-      <RoomDrawer open={false} onClose={onClose}>
+      <RoomDrawer open={false} onClose={onClose} ariaLabel="Room">
         <p>content</p>
       </RoomDrawer>,
     );
@@ -75,7 +75,7 @@ describe('RoomDrawer', () => {
     expect(onClose).not.toHaveBeenCalled();
 
     rerender(
-      <RoomDrawer open={true} onClose={onClose}>
+      <RoomDrawer open={true} onClose={onClose} ariaLabel="Room">
         <p>content</p>
       </RoomDrawer>,
     );

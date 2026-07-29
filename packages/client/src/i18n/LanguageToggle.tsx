@@ -12,9 +12,9 @@ const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
 };
 
 /**
- * Always-visible chrome control (rendered once at the App level, never
- * inside a BoardComponent), structurally mirroring ThemeToggle/useTheme --
- * see plan.md's placement decision in spec/features/010-i18n-support.
+ * Rendered inside the Settings menu (see SettingsSection), reachable from
+ * both AppMenu (pre-room) and RoomShell's own drawer (in-room) --
+ * structurally mirrors ThemeToggle/useTheme.
  */
 export function LanguageToggle() {
   const { t } = useTranslation();
