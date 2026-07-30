@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import type { GameLogEntry } from '@tableverse/game-core';
 import { useChat, type ChatMessage } from './useChat.js';
@@ -31,6 +31,55 @@ export interface ChatPanelProps {
  */
 const PLAYER_ID_PARAM_KEYS = new Set(['actor', 'target', 'opponent', 'player', 'winners']);
 
+/**
+ * A log entry's well-known `color`/`colorA`/`colorB` params (see e.g.
+ * cahoots' cardPlayed and goalCompleted log entries) are never printed as
+ * their raw value -- each names which of a fixed palette the matching
+ * `<color>`/`<colorA>`/`<colorB>` tag in the translation string should
+ * render in, bold. Same "platform knows the param's semantic role, not
+ * which game sent it" convention as PLAYER_ID_PARAM_KEYS above; any future
+ * game can reuse this by naming a param `color`/`colorA`/`colorB` with one
+ * of these values.
+ */
+const KNOWN_LOG_COLORS: Record<string, string | undefined> = {
+  blue: styles.colorBlue,
+  yellow: styles.colorYellow,
+  red: styles.colorRed,
+  green: styles.colorGreen,
+};
+
+const COLOR_VALUE_PARAM_KEYS = ['color', 'colorA', 'colorB'] as const;
+
+/** Fixed color-name tags -- unlike `color`/`colorA`/`colorB`, these name the color directly in the tag itself (e.g. cahoots' `<green>green</green>`), with no param backing the choice, only the styling. */
+const FIXED_COLOR_TAGS: Record<string, string | undefined> = {
+  blue: styles.colorBlue,
+  yellow: styles.colorYellow,
+  red: styles.colorRed,
+  green: styles.colorGreen,
+};
+
+/**
+ * Builds every `<color>`/`<colorA>`/`<colorB>`/`<blue>`/`<yellow>`/`<red>`/
+ * `<green>` tag component a translation string might use -- a superset,
+ * since `Trans` simply ignores whichever of these a given string's tags
+ * don't reference. Shared by both a log entry's own message and (via
+ * `descriptionKey`, see the component below) a nested goal description, so
+ * a goal needing e.g. both `colorA` and `colorB` at once still resolves
+ * correctly from the very same params bag.
+ */
+function colorTagComponents(params: Record<string, string | number> | undefined): Record<string, React.ReactElement> {
+  const components: Record<string, React.ReactElement> = {};
+  for (const [tag, cls] of Object.entries(FIXED_COLOR_TAGS)) {
+    if (cls) components[tag] = <strong className={cls} />;
+  }
+  for (const key of COLOR_VALUE_PARAM_KEYS) {
+    const raw = params?.[key];
+    const cls = typeof raw === 'string' ? KNOWN_LOG_COLORS[raw] : undefined;
+    if (cls) components[key] = <strong className={cls} />;
+  }
+  return components;
+}
+
 function seatLabel(id: string, playerNames: Record<string, string> | undefined, t: TFunction): string {
   const seatFallback = t('room.seatLabel', { seatNumber: Number(id) + 1 });
   const name = playerNames?.[id];
@@ -47,12 +96,18 @@ function resolveLogParams(
   if (!params) return params;
   const resolved: Record<string, string | number> = { ...params };
   for (const key of Object.keys(params)) {
-    if (!PLAYER_ID_PARAM_KEYS.has(key)) continue;
-    const value = String(params[key]);
-    resolved[key] = value
-      .split(',')
-      .map((id) => seatLabel(id, playerNames, t))
-      .join(', ');
+    if (PLAYER_ID_PARAM_KEYS.has(key)) {
+      const value = String(params[key]);
+      resolved[key] = value
+        .split(',')
+        .map((id) => seatLabel(id, playerNames, t))
+        .join(', ');
+    } else if ((COLOR_VALUE_PARAM_KEYS as readonly string[]).includes(key)) {
+      // The tag's styling is looked up separately (colorTagComponents,
+      // from the RAW value) -- this only turns the value itself into the
+      // translated word that ends up as the tag's visible text.
+      resolved[key] = t(`cahoots.colors.${params[key]}`);
+    }
   }
   return resolved;
 }
@@ -270,7 +325,21 @@ export function ChatPanel({ roomID, sessionToken, gameLog, playerNames }: ChatPa
                     : styles.logRow
                 }
               >
-                {t(item.entry.key, resolveLogParams(item.entry.params, playerNames, t))}
+                <Trans
+                  i18nKey={item.entry.key}
+                  values={resolveLogParams(item.entry.params, playerNames, t)}
+                  components={colorTagComponents(item.entry.params)}
+                />
+                {typeof item.entry.params?.descriptionKey === 'string' && (
+                  <>
+                    {' '}
+                    <Trans
+                      i18nKey={item.entry.params.descriptionKey}
+                      values={resolveLogParams(item.entry.params, playerNames, t)}
+                      components={colorTagComponents(item.entry.params)}
+                    />
+                  </>
+                )}
               </li>
             ),
           )}

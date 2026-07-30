@@ -5,6 +5,7 @@ import {
   TheMindBoard,
   RegicideBoard,
   CrewBoard,
+  CahootsBoard,
 } from '@tableverse/game-core/src/boards.js';
 import type { BoardProps } from '@tableverse/game-core';
 
@@ -20,4 +21,5 @@ export const boardComponents: Record<string, ComponentType<BoardProps<any>>> = {
   'themind-v1': TheMindBoard,
   'regicide-v1': RegicideBoard,
   'crew-v1': CrewBoard,
+  'cahoots-v1': CahootsBoard,
 };

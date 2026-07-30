@@ -1,0 +1,84 @@
+.stack {
+  /* Deliberate, saturated tones distinct from the 4 playing-card colors
+     (blue/yellow/red/green) so neither deck reads as a 5th card color --
+     .goal/.draw below each override this default. The background layers
+     behind the top card are darker variants of this same tone (color-mix
+     with black, increasing per layer), matching Regicide's own DeckStack
+     model. */
+  --deck-color: #3a2a5c;
+  position: relative;
+  width: 4.5rem;
+  height: 5.5rem;
+  /* Reserves room for the deepest background layer's offset so it
+     doesn't visually collide with the next element in the row. */
+  margin: 0 0.75rem 0.75rem 0;
+}
+
+/* Per-deck overrides -- DeckStack.tsx's `variant` prop applies one of
+   these alongside .stack, so the goal deck and draw pile read as visually
+   distinct even sitting near each other (same reasoning as Regicide's own
+   tavern/castle/discard variants). */
+.goal {
+  --deck-color: #3a2a5c;
+}
+
+.draw {
+  --deck-color: #5c3a1e;
+}
+
+.top {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--deck-color);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* A deck of 0 -- an empty slot, not a card with "0" printed on it. Falls
+   back to the neutral surface tone instead of the plain deck color -- an
+   empty deck shouldn't look like a solid-colored card that happens to say
+   "0". */
+.empty {
+  background: var(--color-surface);
+  border-style: dashed;
+  border-color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.count {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-accent-text);
+}
+
+.layer1,
+.layer2,
+.layer3 {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+}
+
+.layer1 {
+  background: color-mix(in srgb, var(--deck-color) 85%, black);
+  transform: translate(4px, 4px);
+  z-index: 2;
+}
+
+.layer2 {
+  background: color-mix(in srgb, var(--deck-color) 70%, black);
+  transform: translate(8px, 8px);
+  z-index: 1;
+}
+
+.layer3 {
+  background: color-mix(in srgb, var(--deck-color) 55%, black);
+  transform: translate(12px, 12px);
+  z-index: 0;
+}

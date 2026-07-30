@@ -4,6 +4,7 @@ import { loveletterModule } from './games/loveletter/index.js';
 import { themindModule } from './games/themind/index.js';
 import { regicideModule } from './games/regicide/index.js';
 import { crewModule } from './games/crew/index.js';
+import { cahootsModule } from './games/cahoots/index.js';
 
 // GameModule<G>'s move functions take G as a parameter (a contravariant
 // position), so GameModule<Specific> can never be a structural subtype of
@@ -24,6 +25,7 @@ export const gamesCatalog: AnyGameModule[] = [
   themindModule,
   regicideModule,
   crewModule,
+  cahootsModule,
 ];
 
 export function getGameModule(id: string): AnyGameModule | undefined {

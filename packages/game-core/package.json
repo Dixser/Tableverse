@@ -14,7 +14,8 @@
   },
   "peerDependencies": {
     "react": "^18.3.1",
-    "react-i18next": "^17.0.9"
+    "react-i18next": "^17.0.9",
+    "@dnd-kit/core": "^6.3.1"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -22,9 +23,13 @@
     },
     "react-i18next": {
       "optional": true
+    },
+    "@dnd-kit/core": {
+      "optional": true
     }
   },
   "devDependencies": {
+    "@dnd-kit/core": "^6.3.1",
     "@testing-library/jest-dom": "^6.6.2",
     "@testing-library/react": "^16.0.1",
     "@types/react": "^18.3.12",

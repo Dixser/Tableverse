@@ -400,5 +400,62 @@
       "matchWon": "Mission complete!",
       "matchLost": "Mission failed."
     }
+  },
+  "cahoots": {
+    "colors": {
+      "blue": "Blue",
+      "yellow": "Yellow",
+      "red": "Red",
+      "green": "Green"
+    },
+    "cardLabel": "{{color}} {{number}}",
+    "hand": {
+      "ariaLabel": "Your hand"
+    },
+    "playerStatus": {
+      "title": "Players",
+      "cardsLeft": "{{count}} cards"
+    },
+    "pile": {
+      "label": "Pile {{index}}",
+      "expand": "Show all {{cardsCount}} cards",
+      "collapse": "Hide",
+      "historyAriaLabel": "Card {{index}} history"
+    },
+    "goalBoard": {
+      "ariaLabel": "Goals"
+    },
+    "goalDeck": {
+      "ariaLabel": "Goal deck: {{count}} remaining"
+    },
+    "drawPile": {
+      "ariaLabel": "Draw pile: {{count}} remaining"
+    },
+    "goal": {
+      "noRepeatedValues": "No number repeats.",
+      "noRepeatedColors": "No color repeats.",
+      "noRepeatedValuesAndColors": "No number or color repeats.",
+      "aboveFour": "All cards are greater than 4.",
+      "belowFour": "All cards are less than 4.",
+      "allOdd": "All cards are odd.",
+      "allEven": "All cards are even.",
+      "splitParity": "The 1st and 3rd cards share parity (odd/even), and the 2nd and 4th share the other.",
+      "straightOfFourAnyOrder": "All the cards form a straight, in any order.",
+      "straightOfThreeInOrder": "3 cards form a straight in ascending order.",
+      "sumAll": "All cards sum to {{sumTarget}}.",
+      "sumColor": "All <color>{{color}}</color> cards sum to {{sumTarget}}.",
+      "exactlyThreeColor": "There are 3 <color>{{color}}</color> cards.",
+      "twoAdjacentColor": "There are 2 adjacent <color>{{color}}</color> cards.",
+      "twoNotAdjacentColor": "There are 2 <color>{{color}}</color> cards, not next to each other.",
+      "twoAlternatedColor": "There are 2 alternating <color>{{color}}</color> cards.",
+      "colorPairOnly": "All cards are <colorA>{{colorA}}</colorA> and/or <colorB>{{colorB}}</colorB>.",
+      "colorSumEquals": "The <colorA>{{colorA}}</colorA> and <colorB>{{colorB}}</colorB> cards sum to the same total.",
+      "colorSumDoubles": "The <colorA>{{colorA}}</colorA> cards' total is double the <colorB>{{colorB}}</colorB> cards' total."
+    },
+    "log": {
+      "cardPlayed": "Player {{actor}} played a <color>{{number}}</color> onto card {{pile}}.",
+      "goalCompleted": "Goal completed! ({{completed}} of {{totalGoals}}):",
+      "missionCompleted": "Mission accomplished! All {{totalGoals}} goals have been completed."
+    }
   }
 }

@@ -1,0 +1,54 @@
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 5rem;
+  flex: 0 0 auto;
+  padding: var(--space-2);
+  text-align: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+}
+
+.faded {
+  opacity: 0.55;
+}
+
+.number {
+  font-size: 2.2rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.cardCompact {
+  composes: card;
+  width: 2.75rem;
+  height: 3.5rem;
+  padding: var(--space-1);
+}
+
+.cardCompact .number {
+  font-size: 1.3rem;
+}
+
+.blue {
+  background-color: rgb(41, 98, 189);
+  color: #fff;
+}
+
+.yellow {
+  background-color: rgb(212, 175, 32);
+}
+
+.red {
+  background-color: rgb(178, 34, 34);
+  color: #fff;
+}
+
+.green {
+  background-color: rgb(33, 140, 64);
+  color: #fff;
+}

@@ -400,5 +400,62 @@
       "matchWon": "¡Misión completada!",
       "matchLost": "Misión fallida."
     }
+  },
+  "cahoots": {
+    "colors": {
+      "blue": "Azules",
+      "yellow": "Amarillas",
+      "red": "Rojas",
+      "green": "Verdes"
+    },
+    "cardLabel": "{{color}} {{number}}",
+    "hand": {
+      "ariaLabel": "Tu mano"
+    },
+    "playerStatus": {
+      "title": "Jugadores",
+      "cardsLeft": "{{count}} cartas"
+    },
+    "pile": {
+      "label": "Pila {{index}}",
+      "expand": "Mostrar las {{cardsCount}} cartas",
+      "collapse": "Ocultar",
+      "historyAriaLabel": "Historial de la carta {{index}}"
+    },
+    "goalBoard": {
+      "ariaLabel": "Objetivos"
+    },
+    "goalDeck": {
+      "ariaLabel": "Mazo de objetivos: {{count}} restantes"
+    },
+    "drawPile": {
+      "ariaLabel": "Mazo de robo: {{count}} restantes"
+    },
+    "goal": {
+      "noRepeatedValues": "No se repite ningún número.",
+      "noRepeatedColors": "No se repite ningún color.",
+      "noRepeatedValuesAndColors": "No se repite ningún número ni color.",
+      "aboveFour": "Todas las cartas son mayores de 4.",
+      "belowFour": "Todas las cartas son menores de 4.",
+      "allOdd": "Todas las cartas son impares.",
+      "allEven": "Todas las cartas son pares.",
+      "splitParity": "La 1ª y la 3ª carta comparten paridad (par/impar), y la 2ª y la 4ª comparten la otra.",
+      "straightOfFourAnyOrder": "Todas las cartas forman una escalera, en cualquier orden.",
+      "straightOfThreeInOrder": "3 cartas formas una escalera en orden ascendente.",
+      "sumAll": "Todas las cartas suman {{sumTarget}}.",
+      "sumColor": "Todas las cartas <color>{{color}}</color> suman {{sumTarget}}.",
+      "exactlyThreeColor": "Hay 3 cartas <color>{{color}}</color>.",
+      "twoAdjacentColor": "Hay 2 cartas <color>{{color}}</color> adyacentes.",
+      "twoNotAdjacentColor": "Hay 2 cartas <color>{{color}}</color>, no una junto a la otra.",
+      "twoAlternatedColor": "Hay 2 cartas <color>{{color}}</color> alternas.",
+      "colorPairOnly": "Todas las cartas son <colorA>{{colorA}}</colorA> y/o <colorB>{{colorB}}</colorB>.",
+      "colorSumEquals": "Las cartas <colorA>{{colorA}}</colorA> y las cartas <colorB>{{colorB}}</colorB> suman el mismo total.",
+      "colorSumDoubles": "El total de las cartas <colorA>{{colorA}}</colorA> es el doble del total de las cartas <colorB>{{colorB}}</colorB>."
+    },
+    "log": {
+      "cardPlayed": "El jugador {{actor}} jugó un <color>{{number}}</color> en la carta {{pile}}.",
+      "goalCompleted": "¡Objetivo completado! ({{completed}} de {{totalGoals}}):",
+      "missionCompleted": "¡Misión cumplida! Se han completado los {{totalGoals}} objetivos."
+    }
   }
 }

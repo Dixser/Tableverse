@@ -210,6 +210,76 @@ describe('ChatPanel', () => {
     expect(screen.getByText('played rank 4')).toBeInTheDocument();
   });
 
+  it('renders a `color` param\'s own tagged interpolation as the translated color word, bold', () => {
+    i18n.addResource('en', 'translation', 'test.log.pileColor', 'the pile is <color>{{color}}</color>');
+    i18n.addResource('en', 'translation', 'cahoots.colors.blue', 'Blue');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[{ key: 'test.log.pileColor', params: { color: 'blue' } }]}
+      />,
+    );
+
+    const strong = screen.getByText('Blue');
+    expect(strong.tagName).toBe('STRONG');
+    expect(strong.className).toContain(styles.colorBlue);
+  });
+
+  it('renders a `color` param\'s tag wrapping a DIFFERENT interpolation (e.g. cardPlayed\'s number), styled but not translated as a word', () => {
+    i18n.addResource('en', 'translation', 'test.log.cardPlayed', 'played a <color>{{number}}</color>');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[{ key: 'test.log.cardPlayed', params: { color: 'blue', number: 6 } }]}
+      />,
+    );
+
+    const strong = screen.getByText('6');
+    expect(strong.tagName).toBe('STRONG');
+    expect(strong.className).toContain(styles.colorBlue);
+  });
+
+  it('renders a `descriptionKey` param as a second, nested translation appended after the main message', () => {
+    i18n.addResource('en', 'translation', 'test.log.goalCompleted', 'Goal completed! ({{completed}} of {{totalGoals}}):');
+    i18n.addResource('en', 'translation', 'test.goal.exactlyThreeColor', 'Exactly 3 piles are <color>{{color}}</color>.');
+    i18n.addResource('en', 'translation', 'cahoots.colors.blue', 'Blue');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[
+          {
+            key: 'test.log.goalCompleted',
+            params: { completed: 1, totalGoals: 15, descriptionKey: 'test.goal.exactlyThreeColor', color: 'blue' },
+          },
+        ]}
+      />,
+    );
+
+    const row = screen.getByText(/Goal completed!/).closest('li')!;
+    expect(row.textContent).toBe('Goal completed! (1 of 15): Exactly 3 piles are Blue.');
+    const strong = screen.getByText('Blue');
+    expect(strong.tagName).toBe('STRONG');
+    expect(strong.className).toContain(styles.colorBlue);
+  });
+
+  it('does not render a nested description when no descriptionKey param is present', () => {
+    i18n.addResource('en', 'translation', 'test.log.plain', 'Just a message.');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(<ChatPanel roomID="room-1" sessionToken="tok" gameLog={[{ key: 'test.log.plain' }]} />);
+
+    expect(screen.getByText('Just a message.')).toBeInTheDocument();
+  });
+
   it('scrolls the feed to the bottom on mount and when new entries arrive', () => {
     mockUseChat.mockReturnValue({
       messages: [makeMessage({ id: 'msg-1', body: 'first' })],
