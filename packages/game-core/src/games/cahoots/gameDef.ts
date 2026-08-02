@@ -247,8 +247,20 @@ function matchGameoverResult(G: CahootsG, ctx: Ctx): GameoverResult | undefined 
   // seat that's simply run out of cards early (hasLegalMove on an empty
   // hand is vacuously false), so this subsumes the "individual seat
   // stuck" case without a separate branch.
+  //
+  // `endIf` fires after every event, including the active seat's own
+  // `playCard` move (before `maxMoves: 1` ends their turn) -- so without
+  // the `numMoves === 0` guard this would check the mover's own
+  // just-played hand and could end the match on their move even though
+  // the *next* seat (whose turn hasn't started yet) still has a legal
+  // play. `ctx.numMoves` resets to 0 exactly at turn start, before the
+  // active seat has moved, which is the only point this check should run.
   const current = ctx.currentPlayer;
-  if (G.activeSeatIDs.includes(current) && !hasLegalMove(G.hands[current] ?? [], G.piles)) {
+  if (
+    (ctx.numMoves ?? 0) === 0 &&
+    G.activeSeatIDs.includes(current) &&
+    !hasLegalMove(G.hands[current] ?? [], G.piles)
+  ) {
     return {};
   }
 

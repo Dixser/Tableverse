@@ -263,6 +263,32 @@ describe('cahoots gameDef', () => {
       }));
       expect(client.store.getState().ctx.gameover).toBeUndefined();
     });
+
+    it('does not end the match off the mover\'s own post-play hand -- only checks the next seat, at the start of their turn', () => {
+      // Regression: endIf fires after every move, including the active
+      // seat's own playCard (before maxMoves:1 ends their turn). Seat 0
+      // plays its only legal card and is left stuck (green6 matches
+      // neither color nor number of any pile top) -- but seat 1, who is
+      // about to actually take a turn, still has a legal play. The match
+      // must not end on seat 0's own move.
+      const client = clientWithFixture(2, () => ({
+        activeSeatIDs: ['0', '1'],
+        firstSeatID: '0',
+        targetGoalCount: 99,
+        activeGoals: [],
+        goalDeck: [],
+        completedGoals: [],
+        piles: [[card('blue', 1)], [card('blue', 2)], [card('red', 3)], [card('red', 4)]],
+        hands: { '0': [card('blue', 5), card('green', 6)], '1': [card('blue', 2)] },
+        drawPile: [],
+      }));
+
+      actAs(client, '0').playCard!(0, 'blue5');
+
+      const state = client.store.getState();
+      expect(state.ctx.gameover).toBeUndefined();
+      expect(state.ctx.currentPlayer).toBe('1');
+    });
   });
 
   describe('playerView', () => {
