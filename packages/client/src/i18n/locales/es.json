@@ -55,6 +55,10 @@
   "settingsSection": {
     "title": "Ajustes"
   },
+  "sound": {
+    "label": "Sonido",
+    "volume": "Volumen"
+  },
   "seatSwitcher": {
     "ariaLabel": "Tus asientos"
   },

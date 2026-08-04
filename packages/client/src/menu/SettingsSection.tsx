@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ThemeToggle } from '../theme/ThemeToggle.js';
 import { LanguageToggle } from '../i18n/LanguageToggle.js';
+import { SoundToggle } from '../sound/SoundToggle.js';
 import styles from './SettingsSection.module.css';
 
 /**
@@ -18,6 +19,7 @@ export function SettingsSection() {
       <div className={styles.row}>
         <LanguageToggle />
         <ThemeToggle />
+        <SoundToggle />
       </div>
     </section>
   );

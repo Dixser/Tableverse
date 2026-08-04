@@ -113,4 +113,43 @@ export interface GameLogEntry {
   key: string;
   /** Interpolation params for the translation (i18next's `t(key, params)`). */
   params?: Record<string, string | number>;
+  /**
+   * Cue to play the first time this entry is observed (see feature 030).
+   * Optional -- an entry without it is silent, so no existing game needed
+   * migrating when this was added.
+   *
+   * MUST NOT be set on an entry describing the match ending: ctx.gameover
+   * already drives 'win'/'lose'/'draw' centrally for every game, so setting
+   * both fires two sounds in the same state update. Regicide's own
+   * gameDef.test.ts asserts its terminal entries carry no cue, as the
+   * regression guard for exactly that.
+   *
+   * 'turn'/'round'/'win'/'lose'/'draw' are platform-emitted (derived from
+   * isActive/G.roundConfirm/ctx.gameover) and should not appear here; the
+   * union is kept closed rather than split in two, since a second
+   * near-identical union is more confusing than the convention.
+   */
+  sound?: SoundCue;
 }
+
+/**
+ * Semantic sound cues the platform knows how to play. A game names what an
+ * event MEANS; the platform owns what that means acoustically -- no game
+ * ever names an audio file, a frequency, or a duration. Same convention as
+ * ChatPanel's PLAYER_ID_PARAM_KEYS/COLOR_VALUE_PARAM_KEYS: the platform
+ * knows a value's semantic role without knowing which game sent it, which
+ * is what keeps tech-stack.md's "no branching on game identity" rule intact
+ * while still letting a game drive game-specific behavior.
+ *
+ * See spec/features/030-sound-cues.
+ */
+export type SoundCue =
+  | 'turn'
+  | 'round'
+  | 'win'
+  | 'lose'
+  | 'draw'
+  | 'play'
+  | 'success'
+  | 'failure'
+  | 'special';

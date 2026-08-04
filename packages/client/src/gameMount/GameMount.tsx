@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { getGameModule, type BoardProps } from '@tableverse/game-core';
 import { boardComponents } from '../boardRegistry.js';
+import { useGameSounds } from '../sound/useGameSounds.js';
 import { GameoverBanner } from './GameoverBanner.js';
 import { RoundConfirmBanner } from './RoundConfirmBanner.js';
 
@@ -22,6 +23,11 @@ export interface GameMountProps {
  */
 export function GameMount({ selectedGameID, boardProps, playerNames }: GameMountProps) {
   const { t } = useTranslation();
+  // Above the early returns -- hooks must run unconditionally. Owned here
+  // rather than in App.tsx because GameMount already renders GameoverBanner
+  // and RoundConfirmBanner off the very same state: the banners and their
+  // cues are the visual and audible halves of one moment.
+  useGameSounds(boardProps);
   if (!selectedGameID) {
     return <div>{t('gameMount.noGameSelected')}</div>;
   }

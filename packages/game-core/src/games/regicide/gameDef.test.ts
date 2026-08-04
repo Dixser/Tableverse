@@ -602,6 +602,94 @@ describe('regicide gameDef', () => {
     });
   });
 
+  describe('G.log sound cues (feature 030 AC7)', () => {
+    /** playCards -> enemy defeated -> match won, in one move, so a single
+     * fixture covers both a cued entry and the terminal entries that must
+     * NOT be cued. */
+    function winningLog(): GameLogEntry[] {
+      const client = clientWithFixture(2, () => ({
+        ...twoPlayerBase,
+        currentEnemy: face('H', 'J'),
+        _castleDeck: [],
+        damageDealt: 13,
+        hands: { '0': [num('D', 10)], '1': [] },
+      }));
+      client.moves.playCards!(['D10']);
+      return client.store.getState().G.log;
+    }
+
+    function soundFor(log: GameLogEntry[], key: string) {
+      const entry = log.find((e) => e.key === key);
+      expect(entry, `expected a ${key} entry in the log`).toBeDefined();
+      return entry!.sound;
+    }
+
+    it('cues cardsPlayed as play and enemyDefeated as success', () => {
+      const log = winningLog();
+      expect(soundFor(log, 'regicide.log.cardsPlayed')).toBe('play');
+      expect(soundFor(log, 'regicide.log.enemyDefeated')).toBe('success');
+    });
+
+    it('cues a yield as play', () => {
+      const client = clientWithFixture(2, () => ({
+        ...twoPlayerBase,
+        currentEnemy: face('C', 'J'),
+        spadeShieldTotal: 10,
+        hands: { '0': [num('S', 5)], '1': [] },
+      }));
+      client.moves.yield!();
+      expect(soundFor(client.store.getState().G.log, 'regicide.log.yielded')).toBe('play');
+    });
+
+    it('cues the Jester as special', () => {
+      const client = clientWithFixture(2, () => ({
+        ...twoPlayerBase,
+        hands: { '0': [jester(1)], '1': [] },
+      }));
+      client.moves.playCards!(['Jester1'], { jesterNextPlayerID: '1' });
+      expect(soundFor(client.store.getState().G.log, 'regicide.log.jesterPlayed')).toBe('special');
+    });
+
+    it('cues suffering damage as failure', () => {
+      const client = clientWithFixture(2, () => ({
+        ...twoPlayerBase,
+        currentEnemy: face('C', 'J'),
+        hands: { '0': [num('H', 2), num('C', 4), num('D', 3), num('S', 3)], '1': [] },
+      }));
+      client.moves.playCards!(['H2']); // required = 10, opens the defend stage
+      client.moves.discardCards!(['C4', 'D3', 'S3']); // sums to 10
+      expect(soundFor(client.store.getState().G.log, 'regicide.log.suffered')).toBe('failure');
+    });
+
+    it('leaves every terminal entry uncued, so it cannot double-fire against the gameover stinger', () => {
+      // ctx.gameover already drives win/lose/draw centrally for every game.
+      // A cue on any of these would play a second sound in the same state
+      // update -- see spec/features/030-sound-cues/spec.md.
+      const log = winningLog();
+      expect(soundFor(log, 'regicide.log.matchWon')).toBeUndefined();
+
+      const stuck = clientWithFixture(2, () => ({
+        ...twoPlayerBase,
+        currentEnemy: face('H', 'J'),
+        hands: { '0': [], '1': [] },
+        lastActionWasYield: { '0': true, '1': true },
+      }));
+      expect(soundFor(stuck.store.getState().G.log, 'regicide.log.matchLostStuck')).toBeUndefined();
+
+      // Same fixture as the Step 4 capability-check test: a hand that could
+      // never reach the required total loses immediately.
+      const defenseless = clientWithFixture(2, () => ({
+        ...twoPlayerBase,
+        currentEnemy: face('C', 'J'), // attack 10
+        hands: { '0': [num('H', 2), num('S', 3)], '1': [] }, // remainder sums to 3
+      }));
+      defenseless.moves.playCards!(['H2']);
+      expect(
+        soundFor(defenseless.store.getState().G.log, 'regicide.log.matchLostDefense'),
+      ).toBeUndefined();
+    });
+  });
+
   describe('playerView (AC16)', () => {
     it('narrows hands to the viewer\'s own seat and exposes public counts to everyone, including a spectator', () => {
       const client = clientWithFixture(2, () => ({

@@ -1,5 +1,13 @@
-export type { GameModule, BoardProps, JSONSchema, GameoverResult, GameLogEntry } from './types.js';
+export type {
+  GameModule,
+  BoardProps,
+  JSONSchema,
+  GameoverResult,
+  GameLogEntry,
+  SoundCue,
+} from './types.js';
 export { withGameName } from './types.js';
+export { extractGameLogEntries } from './gameLog.js';
 export { gamesCatalog, getGameModule } from './gamesCatalog.js';
 export { validateGameSettings } from './settingsValidation.js';
 export type { SettingsValidationError } from './settingsValidation.js';

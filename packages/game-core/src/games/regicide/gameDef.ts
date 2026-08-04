@@ -342,6 +342,7 @@ function resolveEnemyDefeat(G: RegicideG, defeatingPlayerID: string): void {
   G.log.push({
     key: 'regicide.log.enemyDefeated',
     params: { actor: defeatingPlayerID, enemy: enemy.id, damage: G.damageDealt },
+    sound: 'success',
   });
 
   if (G._castleDeck.length === 0) {
@@ -406,7 +407,11 @@ function playCards(
 
   if (isJesterPlay) {
     G.enemyImmunityCancelled = true;
-    G.log.push({ key: 'regicide.log.jesterPlayed', params: { actor: playerID } });
+    G.log.push({
+      key: 'regicide.log.jesterPlayed',
+      params: { actor: playerID },
+      sound: 'special',
+    });
     G.forcedNextSeatID = params.jesterNextPlayerID!;
     events.endTurn();
     return;
@@ -422,6 +427,7 @@ function playCards(
   G.log.push({
     key: 'regicide.log.cardsPlayed',
     params: { actor: playerID, cards: cardIds.join(','), total: totalAttack },
+    sound: 'play',
   });
 
   if (suits.has('H') && !isImmune(G, 'H')) resolveHearts(G, totalAttack, random);
@@ -467,7 +473,7 @@ function yieldTurn(
   if (!yieldAllowed(G, playerID)) return INVALID_MOVE;
 
   G.lastActionWasYield[playerID] = true;
-  G.log.push({ key: 'regicide.log.yielded', params: { actor: playerID } });
+  G.log.push({ key: 'regicide.log.yielded', params: { actor: playerID }, sound: 'play' });
   enterStep4(G, playerID, events);
 }
 
@@ -493,7 +499,7 @@ function discardCards(
 
   for (const c of selection) removeFromHand(hand, c.id);
   G.discardPile.push(...selection);
-  G.log.push({ key: 'regicide.log.suffered', params: { actor: playerID, total } });
+  G.log.push({ key: 'regicide.log.suffered', params: { actor: playerID, total }, sound: 'failure' });
   G.pendingDefense = null;
   events.endStage();
   events.endTurn();

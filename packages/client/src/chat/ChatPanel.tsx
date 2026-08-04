@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import type { GameLogEntry } from '@tableverse/game-core';
+import { extractGameLogEntries, type GameLogEntry } from '@tableverse/game-core';
 import { useChat, type ChatMessage } from './useChat.js';
 import styles from './ChatPanel.module.css';
+
+/** Re-exported from its new home in game-core so this module stays the
+ * import site its existing tests and callers already use. Moved there in
+ * feature 030 to give the sound observer a React-free way to reach it. */
+export { extractGameLogEntries };
 
 export interface ChatPanelProps {
   roomID: string;
@@ -110,20 +115,6 @@ function resolveLogParams(
     }
   }
   return resolved;
-}
-
-/**
- * Filters `gameLog` down to well-formed GameLogEntry values, tolerating an
- * absent/non-array field or malformed entries -- see
- * spec/features/012-chat/plan.md. Exported separately from the component so
- * every branch is unit-testable without mounting React.
- */
-export function extractGameLogEntries(gameLog: unknown): GameLogEntry[] {
-  if (!Array.isArray(gameLog)) return [];
-  return gameLog.filter(
-    (e): e is GameLogEntry =>
-      typeof e === 'object' && e !== null && typeof (e as GameLogEntry).key === 'string',
-  );
 }
 
 /** How close to the bottom (in px of unscrolled content below the
