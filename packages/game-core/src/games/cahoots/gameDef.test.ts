@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Client } from 'boardgame.io/client';
+import type { GameLogEntry } from '../../types.js';
 import { cahootsGameDef, type CahootsG, type CahootsSetupData } from './gameDef.js';
 import type { Card, Color } from './deck.js';
 import type { GoalDefinition } from './goals.js';
@@ -160,6 +161,8 @@ describe('cahoots gameDef', () => {
       expect(state.log).toContainEqual({
         key: 'cahoots.log.goalCompleted',
         params: { completed: 1, totalGoals: 15, descriptionKey: 'cahoots.goal.exactlyThreeColor', color: 'blue' },
+        // Goal 1 of 15 -- not the mission-completing one, so it is cued.
+        sound: 'success',
       });
     });
 
@@ -218,6 +221,47 @@ describe('cahoots gameDef', () => {
       const state = client.store.getState().G;
       expect(state.completedGoals.map((g: GoalDefinition) => g.id)).toEqual(['threeBlue']);
       expect(state.log).toContainEqual({ key: 'cahoots.log.missionCompleted', params: { totalGoals: 1 } });
+    });
+  });
+
+  describe('G.log sound cues (feature 030)', () => {
+    const entriesFor = (log: GameLogEntry[], key: string) => log.filter((e) => e.key === key);
+
+    /** One blue2 play onto pile 2 completes `threeBlue`; targetGoalCount
+     * decides whether that goal is also the mission-completing one. */
+    function playCompletingGoal(targetGoalCount: number) {
+      const client = clientWithFixture(2, () => ({
+        activeSeatIDs: ['0', '1'],
+        firstSeatID: '0',
+        targetGoalCount,
+        piles: [[card('blue', 3)], [card('blue', 5)], [card('red', 2)], [card('yellow', 7)]],
+        hands: { '0': [card('blue', 2)], '1': [] },
+        drawPile: [],
+        activeGoals: [{ id: 'threeBlue', kind: 'exactlyThreeColor', color: 'blue' }],
+        goalDeck: [],
+        completedGoals: [],
+        log: [],
+      }));
+      actAs(client, '0').playCard!(2, 'blue2');
+      return client.store.getState().G.log as GameLogEntry[];
+    }
+
+    it('cues a played card as play', () => {
+      const log = playCompletingGoal(15);
+      expect(entriesFor(log, 'cahoots.log.cardPlayed')[0]?.sound).toBe('play');
+    });
+
+    it('cues an ordinary goal completion as success', () => {
+      const log = playCompletingGoal(15);
+      expect(entriesFor(log, 'cahoots.log.goalCompleted')[0]?.sound).toBe('success');
+    });
+
+    it('leaves the mission-completing goal uncued, so it cannot double the win stinger', () => {
+      // targetGoalCount: 1 -- this same goal ends the match, so ctx.gameover
+      // already marks the moment.
+      const log = playCompletingGoal(1);
+      expect(entriesFor(log, 'cahoots.log.goalCompleted')[0]?.sound).toBeUndefined();
+      expect(entriesFor(log, 'cahoots.log.missionCompleted')[0]?.sound).toBeUndefined();
     });
   });
 

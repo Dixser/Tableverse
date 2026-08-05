@@ -102,7 +102,9 @@ const CUES: Record<SoundCue, CueSpec> = {
   turn:    { steps: [880],                    stepDuration: 0.12, type: 'sine',     peak: 0.25 },
   round:   { steps: [587.33, 880],            stepDuration: 0.13, type: 'sine',     peak: 0.24 },
   win:     { steps: [523.25, 659.25, 783.99], stepDuration: 0.14, type: 'triangle', peak: 0.30 },
-  lose:    { steps: [392.00, 311.13],         stepDuration: 0.22, type: 'triangle', peak: 0.30 },
+  // Same buzz as `failure`, longer and one step lower -- a defeat should
+  // sound like the setback it is, not like a separate motif.
+  lose:    { steps: [196.00, 155.56, 130.81], stepDuration: 0.26, type: 'sawtooth', peak: 0.30 },
   draw:    { steps: [440, 440],               stepDuration: 0.16, type: 'sine',     peak: 0.25 },
   play:    { steps: [660],                    stepDuration: 0.06, type: 'sine',     peak: 0.15 },
   success: { steps: [659.25, 987.77],         stepDuration: 0.10, type: 'triangle', peak: 0.28 },
@@ -245,12 +247,59 @@ change, no `G` shape change:
 | `regicide.log.yielded` | `play` | the other routine action |
 | `regicide.log.jesterPlayed` | `special` | one-shot, changes turn order |
 | `regicide.log.enemyDefeated` | `success` | the core milestone |
-| `regicide.log.suffered` | `failure` | taking damage to defend |
 
-Untouched, deliberately: `regicide.log.matchWon`,
-`regicide.log.matchLostStuck`, `regicide.log.matchLostDefense` — all three
-are pushed alongside setting the `G.matchResult` that `endIf` reads, so a
-cue here would double-fire against the platform's own outcome stinger.
+Untouched, deliberately: `regicide.log.suffered`,
+`regicide.log.matchWon`, `regicide.log.matchLostStuck`,
+`regicide.log.matchLostDefense`.
+
+The three terminal entries are all pushed alongside setting the
+`G.matchResult` that `endIf` reads, so a cue here would double-fire
+against the platform's own outcome stinger. `suffered` is uncued for a
+different reason: discarding to absorb an attack is an ordinary turn cost
+in Regicide, not a defeat, so it does not warrant a sound of its own —
+what marks a defeat is the `lose` stinger, which is itself the buzz (see
+`CUES` below) and which both loss paths already produce via
+`ctx.gameover`.
+
+## The rest of the catalog
+
+Added after Regicide proved the shape. Every change is a `sound` field on
+an existing `G.log.push` — no new log entries, no rules changes, no `G`
+shape changes, and no new files.
+
+`games/themind/gameDef.ts`:
+
+| entry | cue |
+|---|---|
+| `theMind.log.cardPlayed` | `play` |
+| `theMind.log.mistake` | `failure` |
+| `theMind.log.shurikenProposed`, `...shurikenUsed` | `special` |
+
+`games/loveletter/gameDef.ts`: all 13 card-play entries (the four
+`cardPlayedNoTarget` sites, `spyPlayed`, `guardGuess`, `priestUsed`,
+`baronUsed`, `handmaidUsed`, `princeUsed`, `kingUsed`, `chancellorUsed`,
+`countessPlayed`, `princessPlayed`, `cardDiscarded`) → `play`;
+`eliminated` → `failure`. A turn produces exactly one play entry — the
+switch in `playCard` takes a single branch — so there is no intra-game
+doubling; `eliminated` may accompany one, which is intended.
+
+`games/cahoots/gameDef.ts`: `cardPlayed` → `play`; `goalCompleted` →
+`success` **conditionally**, since only the mission-completing goal
+collides:
+
+```ts
+sound: completed >= G.targetGoalCount ? undefined : 'success',
+```
+
+`games/crew/gameDef.ts` and `games/tictactoe/gameDef.ts`: **unchanged.**
+Crew's every entry sits on a platform moment; Tic-Tac-Toe emits no log at
+all. Crew's test file gains a guard asserting its log contains zero cued
+entries after a completed trick.
+
+`failure` now has two consumers (The Mind's `mistake`, Love Letter's
+`eliminated`) and `success` two (Regicide's `enemyDefeated`, Cahoots'
+`goalCompleted`) — every cue in the palette is used by at least one game
+except `draw`, which only Tic-Tac-Toe can currently produce.
 
 ## i18n
 

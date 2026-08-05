@@ -57,7 +57,12 @@ const CUES: Record<SoundCue, CueSpec> = {
   turn: { steps: [880], stepDuration: 0.12, type: 'sine', peak: 0.25 },
   round: { steps: [587.33, 880], stepDuration: 0.13, type: 'sine', peak: 0.24 },
   win: { steps: [523.25, 659.25, 783.99], stepDuration: 0.14, type: 'triangle', peak: 0.3 },
-  lose: { steps: [392.0, 311.13], stepDuration: 0.22, type: 'triangle', peak: 0.3 },
+  // Deliberately the same descending sawtooth character as `failure`: a
+  // match ending in defeat should sound like the setback buzz, not like a
+  // separate motif. Longer and one step further down than `failure` so
+  // "the match is over" still reads as final rather than as one more
+  // mid-game knock, once a game actually uses `failure`.
+  lose: { steps: [196.0, 155.56, 130.81], stepDuration: 0.26, type: 'sawtooth', peak: 0.3 },
   draw: { steps: [440, 440], stepDuration: 0.16, type: 'sine', peak: 0.25 },
   play: { steps: [660], stepDuration: 0.06, type: 'sine', peak: 0.15 },
   success: { steps: [659.25, 987.77], stepDuration: 0.1, type: 'triangle', peak: 0.28 },

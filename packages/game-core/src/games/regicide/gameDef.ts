@@ -499,7 +499,7 @@ function discardCards(
 
   for (const c of selection) removeFromHand(hand, c.id);
   G.discardPile.push(...selection);
-  G.log.push({ key: 'regicide.log.suffered', params: { actor: playerID, total }, sound: 'failure' });
+  G.log.push({ key: 'regicide.log.suffered', params: { actor: playerID, total } });
   G.pendingDefense = null;
   events.endStage();
   events.endTurn();

@@ -650,7 +650,7 @@ describe('regicide gameDef', () => {
       expect(soundFor(client.store.getState().G.log, 'regicide.log.jesterPlayed')).toBe('special');
     });
 
-    it('cues suffering damage as failure', () => {
+    it('leaves suffering damage uncued -- it is an ordinary turn cost, not a defeat', () => {
       const client = clientWithFixture(2, () => ({
         ...twoPlayerBase,
         currentEnemy: face('C', 'J'),
@@ -658,7 +658,7 @@ describe('regicide gameDef', () => {
       }));
       client.moves.playCards!(['H2']); // required = 10, opens the defend stage
       client.moves.discardCards!(['C4', 'D3', 'S3']); // sums to 10
-      expect(soundFor(client.store.getState().G.log, 'regicide.log.suffered')).toBe('failure');
+      expect(soundFor(client.store.getState().G.log, 'regicide.log.suffered')).toBeUndefined();
     });
 
     it('leaves every terminal entry uncued, so it cannot double-fire against the gameover stinger', () => {

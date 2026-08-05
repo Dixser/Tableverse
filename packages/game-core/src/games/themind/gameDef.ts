@@ -253,7 +253,7 @@ function playCard({
 
   const card = hand.shift()!;
   G.playedCards.push(card);
-  G.log.push({ key: 'theMind.log.cardPlayed', params: { actor: playerID, card } });
+  G.log.push({ key: 'theMind.log.cardPlayed', params: { actor: playerID, card }, sound: 'play' });
 
   const revealedBySeat: Record<string, number[]> = {};
   for (const seat of G.activeSeatIDs) {
@@ -275,7 +275,7 @@ function playCard({
       cards.sort((a, b) => a - b);
       G.setAsideCards[seat]!.push(...cards);
     }
-    G.log.push({ key: 'theMind.log.mistake', params: { actor: playerID, card } });
+    G.log.push({ key: 'theMind.log.mistake', params: { actor: playerID, card }, sound: 'failure' });
   }
 
   if (!G.matchResult) checkLevelComplete(G, ctx, random);
@@ -301,7 +301,7 @@ function proposeShuriken({
     proposerID: playerID,
     votes: Object.fromEntries(G.activeSeatIDs.map((id) => [id, id === playerID])),
   };
-  G.log.push({ key: 'theMind.log.shurikenProposed', params: { actor: playerID } });
+  G.log.push({ key: 'theMind.log.shurikenProposed', params: { actor: playerID }, sound: 'special' });
 }
 
 function cancelShurikenVote({
@@ -351,7 +351,7 @@ function voteShuriken(
     G.starDiscards[seat]!.push(hand.shift()!);
   }
   G.shurikenVote = null;
-  G.log.push({ key: 'theMind.log.shurikenUsed' });
+  G.log.push({ key: 'theMind.log.shurikenUsed', sound: 'special' });
 
   // A shuriken can empty every hand just as a normal play can (spec.md AC5).
   checkLevelComplete(G, ctx, random);

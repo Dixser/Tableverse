@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Client } from 'boardgame.io/client';
+import type { GameLogEntry } from '../../types.js';
 import { themindGameDef, type TheMindG, type TheMindSetupData } from './gameDef.js';
 
 /**
@@ -363,6 +364,72 @@ describe('themind gameDef', () => {
       const spectatorView = themindGameDef.playerView!({ G, ctx: {} as never, playerID: null });
       expect(spectatorView.hands).toEqual({});
       expect(spectatorView.handCounts).toEqual({ '0': 2, '1': 1 });
+    });
+  });
+
+  describe('G.log sound cues (feature 030)', () => {
+    const soundFor = (log: GameLogEntry[], key: string) => {
+      const entry = log.find((e) => e.key === key);
+      expect(entry, `expected a ${key} entry in the log`).toBeDefined();
+      return entry!.sound;
+    };
+
+    it('cues a played card as play', () => {
+      const client = clientWithFixture(2, () => ({ hands: { '0': [10], '1': [30] } }));
+      actAs(client, '0').playCard!();
+      expect(soundFor(client.store.getState().G.log, 'theMind.log.cardPlayed')).toBe('play');
+    });
+
+    it('cues a misplay as failure -- the setback cue this game exists to justify', () => {
+      // Seat 0 plays 50 while seat 1 still holds 30: a mistake.
+      const client = clientWithFixture(2, () => ({ hands: { '0': [50], '1': [30] } }));
+      actAs(client, '0').playCard!();
+      expect(soundFor(client.store.getState().G.log, 'theMind.log.mistake')).toBe('failure');
+    });
+
+    it('cues proposing and resolving a shuriken as special, leaving a cancel silent', () => {
+      const proposed = clientWithFixture(3, () => ({
+        activeSeatIDs: ['0', '1', '2'],
+        stars: 1,
+        hands: { '0': [10], '1': [30], '2': [60] },
+      }));
+      actAs(proposed, '0').proposeShuriken!();
+      expect(soundFor(proposed.store.getState().G.log, 'theMind.log.shurikenProposed')).toBe('special');
+
+      // A "no" from any seat cancels; a fizzled proposal is a non-event.
+      actAs(proposed, '1').voteShuriken!(false);
+      expect(soundFor(proposed.store.getState().G.log, 'theMind.log.shurikenCancelled')).toBeUndefined();
+
+      const used = clientWithFixture(2, () => ({
+        stars: 1,
+        hands: { '0': [10, 90], '1': [30, 95] },
+      }));
+      actAs(used, '0').proposeShuriken!();
+      actAs(used, '1').voteShuriken!(true);
+      expect(soundFor(used.store.getState().G.log, 'theMind.log.shurikenUsed')).toBe('special');
+    });
+
+    it('leaves level-end and terminal entries uncued -- the platform already marks those moments', () => {
+      // Emptying every hand completes the level, which pushes levelComplete
+      // (+ any reward) and then opens the roundConfirm wait -- so the
+      // platform's own `round` cue fires in this same update. On the final
+      // level it is ctx.gameover's stinger instead. Either way a cue here
+      // would announce the same fact twice.
+      const client = clientWithFixture(2, () => ({ hands: { '0': [10], '1': [30] } }));
+      actAs(client, '0').playCard!();
+      actAs(client, '1').playCard!();
+      const G = client.store.getState().G;
+      expect(G.roundConfirm).not.toBeNull();
+      expect(soundFor(G.log, 'theMind.log.levelComplete')).toBeUndefined();
+
+      const lost = clientWithFixture(2, () => ({
+        lives: 1,
+        hands: { '0': [50], '1': [30] },
+      }));
+      actAs(lost, '0').playCard!();
+      const lostG = lost.store.getState().G;
+      expect(lostG.matchResult).toBe('lost');
+      expect(soundFor(lostG.log, 'theMind.log.matchLost')).toBeUndefined();
     });
   });
 });

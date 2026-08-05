@@ -133,9 +133,81 @@ Also confirmed incidentally: a public `G.log` cue reaches **every**
 client, not just the acting one (the host heard Player2's yield).
 
 **Still outstanding, needs a human:** how the cues actually *sound*
-(plan.md open risk 1 — `turn` and `round` are the pair most likely to
-need pulling apart by ear). Not reached in the browser run and covered
-only by unit tests: the `round` cue, the `win`/`lose` stingers, `success`
-(`enemyDefeated`) and `special` (Jester), and the reload-no-replay path —
-the last because the spy cannot be installed before the app's own module
-executes on load.
+(plan.md open risk 1). Not reached in the browser run and covered only by
+unit tests: the `win` stinger, `special` (Jester), and the
+reload-no-replay path — the last because the spy cannot be installed
+before the app's own module executes on load.
+
+### Follow-up change: `failure` moved off `suffered`, `lose` retuned
+
+Requested after the first pass: suffering damage should not buzz, and
+losing a match should. Since both Regicide loss paths already produce a
+`lose` stinger via `ctx.gameover`, cueing their log entries would have
+stacked a second sound rather than replaced one — so `lose` itself was
+retuned to the buzz instead, and `regicide.log.suffered` lost its cue.
+
+Re-verified in a second browser run (a fresh solo two-seat match driven
+to a round completion):
+
+| Check | Observed |
+|---|---|
+| `round` on `roundConfirm` null→non-null | 587.33 + 880 Hz sine, as the confirm banner appeared |
+| `success` on `enemyDefeated` | 659.25 + 987.77 Hz triangle |
+| `suffered` after the change | several defends across the run, **0 oscillators** |
+| `lose` cue itself | 196 + 155.56 + 130.81 Hz sawtooth through a real AudioContext |
+| Outcome wiring | `resolveGameoverCue({}, '0')` → `'lose'` in-page — `{}` is exactly what Regicide's `endIf` returns for **both** loss paths |
+
+Suite after the change: shared 24, game-core 546, client 241 =
+**811 passing**.
+
+### Follow-up: cues for the rest of the catalog
+
+- [x] 10. Extend cues to the remaining five games, each decided with the
+      user rather than guessed.
+      **Verify:** `npm run test:unit` → shared 24, game-core 557, client
+      241 = **822 passing**; `npm run typecheck` clean. Each game's own
+      `gameDef.test.ts` gained cue assertions covering both what is cued
+      and what must stay uncued.
+
+Outcome: The Mind, Love Letter, Regicide and Cahoots carry per-game cues;
+**Tic-Tac-Toe and Crew are deliberately platform-only.** See spec.md's
+cue map for the full table.
+
+**Deviation from the original plan:** the "never cue a terminal entry"
+rule turned out to be too narrow. Entries that land in the same update as
+the **`round`** cue collide identically — The Mind's `levelComplete` and
+rewards, Love Letter's `roundWinner`/`spyBonus`, and Crew's `trickWon` all
+sit on the path ending at `beginRoundConfirm`. The rule in spec.md is now
+stated generally ("same update as any platform cue"), with the operative
+distinction being *same fact announced twice* (suppress) versus *two
+different facts* (allow — e.g. Love Letter's `eliminated` firing alongside
+the play that caused it).
+
+Crew is the notable result: it has **no** cueable entry at all, because
+every event it logs is already a trick, round, or match boundary. That the
+platform layer alone fully covers a real game is the strongest evidence
+the two-layer split sits in the right place. Its test file carries a guard
+asserting `G.log` holds zero cued entries after a completed trick, so this
+does not get "fixed" later.
+
+One pre-existing test needed updating rather than a new one: cahoots'
+`completes a goal the instant a play satisfies it` asserted a whole log
+entry with `toContainEqual`, so the added `sound` field had to be
+reflected there.
+
+Browser-verified against a real solo two-seat **The Mind** match — the
+game whose misplay was the original motivating example. Seat 1 held 26 and
+seat 2 held 42; playing 42 first forces a mistake:
+
+| Oscillators | Cue | Source |
+|---|---|---|
+| 587.33 + 880 Hz sine | `round` | level complete opened the roundConfirm wait |
+| 660 Hz sine | `play` | `theMind.log.cardPlayed` |
+| 196 + 155.56 Hz sawtooth | `failure` | `theMind.log.mistake` |
+
+Two things this confirms beyond the cues themselves: `levelComplete`
+produced **no** fourth cue (the `round` cue already marked that moment —
+the collision rule working in the real app), and match start fired
+**nothing at all**, confirming a turnless game gets no turn ping outside
+of unit tests. Effect order is round → log, matching plan.md's declared
+ordering.

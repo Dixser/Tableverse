@@ -60,12 +60,28 @@ inventing a parallel event system, a second reserved field on `G`, or a
 fourth registration point (feature 011 already observes that three is one
 more than it wanted).
 
-Deliberately scoped narrower than "audio for the platform": only Regicide
-populates per-game cues here. The contract serves all six games, but per
-the precedent set by features 009, 015 and 027, a shared shape is
-validated against a real consumer rather than designed speculatively for
-six at once — and cue selection for a game is a judgement call about that
-game, not plumbing.
+All six catalog games are covered. Regicide was built first as the single
+real consumer that validated the shape, per the precedent set by features
+009, 015 and 027; the rest followed once the contract had been proven
+against it. Two of the six turn out to need no per-game cue at all, which
+is a result rather than an omission — see the map below.
+
+### Cue map for the catalog
+
+| Game | Cued entries | Uncued, and why |
+|---|---|---|
+| **Tic-Tac-Toe** | none — emits no `G.log` at all | Turn + win/lose/draw already cover a 3×3 game; adding entries purely to make noise would also put a row in the chat feed for every mark |
+| **Love Letter** | all 13 card-play entries → `play`; `eliminated` → `failure` | `roundWinner`, `spyBonus` (round boundary); `matchWinner` (terminal) |
+| **The Mind** | `cardPlayed` → `play`; `mistake` → `failure`; `shurikenProposed`, `shurikenUsed` → `special` | `shurikenCancelled` (a fizzled proposal is a non-event); `levelComplete`, `rewardLife`, `rewardStar` (round boundary); `matchWon`, `matchLost` (terminal) |
+| **Regicide** | `cardsPlayed`, `yielded` → `play`; `jesterPlayed` → `special`; `enemyDefeated` → `success` | `suffered` (an ordinary turn cost, not a defeat); `matchWon`, `matchLostStuck`, `matchLostDefense` (terminal) |
+| **Crew** | **none** | `trickWon` always coincides with either the `round` cue or a terminal stinger; every notable Crew event *is* a platform moment |
+| **Cahoots** | `cardPlayed` → `play`; `goalCompleted` → `success`, except the goal that completes the mission | `missionCompleted` (terminal); the final `goalCompleted` (terminal, data-dependent) |
+
+Crew is the interesting case: it ends up platform-only not because it was
+skipped but because its rules produce no event that isn't already a trick,
+round, or match boundary. That the platform layer fully covers a real game
+on its own is the clearest evidence the two-layer split was drawn in the
+right place.
 
 ## Resolved design decisions
 
@@ -90,14 +106,39 @@ Called out up front since they shape every acceptance criterion below.
   prefix. (Note `ChatPanel` does currently special-case
   `key.endsWith('.eliminated')` for styling; this feature deliberately does
   not copy that, since the typed field makes it unnecessary.)
-- **`sound` is never set on a log entry that describes the match ending.**
-  `ctx.gameover` already drives win/lose/draw centrally for every game, so
-  a cue on e.g. `regicide.log.matchWon` would fire a second sound on top of
-  the platform's own stinger. This is a real trap rather than a
-  hypothetical: Regicide pushes `matchWon`/`matchLostStuck`/
-  `matchLostDefense` alongside setting the `G.matchResult` its `endIf`
-  reads, so both would fire in the same state update. AC7 is the
-  regression guard.
+- **`lose` is the same descending sawtooth buzz as `failure`**, just longer
+  and one step lower. Losing a match should sound like the setback buzz
+  rather than a separate motif, and routing it through the platform's
+  existing `ctx.gameover` stinger — instead of cueing the log entries that
+  announce the loss — is what keeps it to a single sound. This is the
+  concrete reason the rule below matters: Regicide's two loss paths
+  (`matchLostStuck`, `matchLostDefense`) both set `G.matchResult` in the
+  same update as their log entry, so cueing those entries would stack the
+  buzz on top of the stinger rather than replace it.
+- **`sound` is never set on a log entry that lands in the same state update
+  as a platform cue.** The platform already announces those moments, so a
+  cue there is the *same fact announced twice*, not extra information. Two
+  cases in practice:
+  - **Terminal entries**, coinciding with `ctx.gameover`'s stinger —
+    Regicide's `matchWon`/`matchLostStuck`/`matchLostDefense`, The Mind's
+    `matchWon`/`matchLost`, Crew's `matchWon`/`matchLost`, Love Letter's
+    `matchWinner`, Cahoots' `missionCompleted`. Each is pushed in the same
+    breath as the `matchResult` its `endIf` reads.
+  - **Round-boundary entries**, coinciding with the `round` cue — The
+    Mind's `levelComplete` and its two reward entries, Love Letter's
+    `roundWinner`/`spyBonus`, and Crew's `trickWon`. Each sits on the path
+    that ends at `beginRoundConfirm`.
+
+  The distinction that matters is *same fact* versus *different facts*.
+  Love Letter's `eliminated` deliberately **does** fire alongside the play
+  that caused it: "a card was played" and "someone is out" are two things,
+  and hearing both is informative. AC7 is the regression guard for the
+  whole rule.
+- **Cahoots' `goalCompleted` is cued conditionally**, the one entry whose
+  collision is data-dependent rather than structural: completing goal *n*
+  of *n* ends the match, every earlier goal does not. The game knows which
+  it is, so it sets `sound` on all but the mission-completing one — the
+  rule above held without needing any new platform machinery.
 - **The turn cue fires only for the currently focused seat** (per user
   decision). tech-stack.md's multi-seat section foreshadows notifications
   on a *non*-focused seat, and the machinery would support it
@@ -263,11 +304,12 @@ since audio output cannot be observed from `jsdom` or a screenshot.
    resetting it) re-baselines silently rather than replaying it as new —
    verified without threading a `matchID` prop into `GameMount`, which
    does not receive one today.
-7. `[unit]` In Regicide's `gameDef.test.ts`: `cardsPlayed` and `yielded`
-   carry `'play'`, `jesterPlayed` carries `'special'`, `enemyDefeated`
-   carries `'success'`, and `suffered` carries `'failure'`; and
-   `matchWon`, `matchLostStuck` and `matchLostDefense` carry **no** `sound`
-   field at all (the double-fire guard from "Resolved design decisions").
+7. `[unit]` Each game's own `gameDef.test.ts` asserts its cue map by
+   playing the relevant move and reading the resulting entry, and — just
+   as importantly — asserts that every entry listed as uncued in "Resolved
+   design decisions" carries **no** `sound` field at all. Crew's is the
+   strongest form: after a completed trick, `G.log` contains a `trickWon`
+   entry and **zero** entries with a `sound` field of any kind.
 8. `[unit]` `soundPlayer` plays a cue by creating and starting an
    oscillator against a stubbed `AudioContext`; plays nothing when
    settings are disabled; scales output gain by the configured volume; and
@@ -316,12 +358,10 @@ since audio output cannot be observed from `jsdom` or a screenshot.
 
 ## Non-goals
 
-- **Per-game cues for Tic-Tac-Toe, Love Letter, The Mind, Crew or
-  Cahoots.** The contract serves them and they need no migration — an
-  entry without `sound` is simply silent. Choosing cues for each is a
-  per-game judgement call, deferred rather than guessed at here; Regicide
-  is this feature's one real consumer, per features 009/015/027's
-  precedent.
+- **Adding new `G.log` entries to a game purely so it has something to
+  cue.** Tic-Tac-Toe emits none and stays platform-only; a log entry is a
+  chat row first and a sound second, so inventing one for audio would
+  change what players *read* in order to change what they hear.
 - **A private, per-viewer sound channel.** Love Letter's `privateReveals`
   is already `GameLogEntry[]` filtered by `playerView`, so the same
   `sound` field would work there unchanged — but no game needs a you-only

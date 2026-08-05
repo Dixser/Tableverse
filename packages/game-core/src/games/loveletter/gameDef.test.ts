@@ -730,4 +730,49 @@ describe('loveletter gameDef', () => {
       expect(G.privateReveals['0']!.length).toBeGreaterThan(0);
     });
   });
+
+  describe('G.log sound cues (feature 030)', () => {
+    const soundFor = (log: GameLogEntry[], key: string) => {
+      const entry = log.find((e) => e.key === key);
+      expect(entry, `expected a ${key} entry in the log`).toBeDefined();
+      return entry!.sound;
+    };
+
+    it('cues every kind of card play as the same play click', () => {
+      // A targeted power (Guard) and a plain card (Handmaid) sound alike:
+      // Love Letter plays one card per turn, so a per-card palette would
+      // just make `special` fire nearly every turn and stop meaning "rare".
+      const guard = clientWithFixture(2, () => ({ hands: { '0': [1], '1': [5] }, _deck: [0] }));
+      guard.moves.playCard!(0, { target: '1', guessRank: 3 });
+      expect(soundFor(guard.store.getState().G.log, 'loveLetter.log.guardGuess')).toBe('play');
+
+      const handmaid = clientWithFixture(2, () => ({ hands: { '0': [4], '1': [5] }, _deck: [0, 0] }));
+      handmaid.moves.playCard!(0, {});
+      expect(soundFor(handmaid.store.getState().G.log, 'loveLetter.log.handmaidUsed')).toBe('play');
+    });
+
+    it('cues an elimination as failure, alongside the play that caused it', () => {
+      // Two cues in one update is intended here: "a card was played" and
+      // "someone is out" are two different facts, unlike the same-fact
+      // collisions the round/terminal entries are kept silent for.
+      const client = clientWithFixture(2, () => ({ hands: { '0': [1], '1': [5] }, _deck: [0] }));
+      client.moves.playCard!(0, { target: '1', guessRank: 5 });
+      const log = client.store.getState().G.log as GameLogEntry[];
+      expect(soundFor(log, 'loveLetter.log.eliminated')).toBe('failure');
+      expect(soundFor(log, 'loveLetter.log.guardGuess')).toBe('play');
+    });
+
+    it('leaves round-end and terminal entries uncued', () => {
+      // roundWinner/spyBonus are pushed on the path that ends at
+      // beginRoundConfirm, so the platform's own `round` cue fires in the
+      // same update; matchWinner coincides with ctx.gameover's stinger.
+      const client = clientWithFixture(2, () => ({ hands: { '0': [1], '1': [5] }, _deck: [0] }));
+      client.moves.playCard!(0, { target: '1', guessRank: 5 });
+      const log = client.store.getState().G.log as GameLogEntry[];
+      expect(soundFor(log, 'loveLetter.log.roundWinner')).toBeUndefined();
+      for (const entry of log.filter((e) => e.key === 'loveLetter.log.matchWinner')) {
+        expect(entry.sound).toBeUndefined();
+      }
+    });
+  });
 });

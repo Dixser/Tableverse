@@ -138,6 +138,11 @@ function resolveGoals(G: CahootsG): void {
     G.log.push({
       key: 'cahoots.log.goalCompleted',
       params: { completed, totalGoals: G.targetGoalCount, descriptionKey, ...descriptionParams },
+      // Cued for every goal EXCEPT the one that completes the mission: that
+      // goal ends the match in the same state update, so ctx.gameover's own
+      // 'win' stinger already marks the moment and a 'success' here would
+      // just double it. See spec/features/030-sound-cues.
+      sound: completed >= G.targetGoalCount ? undefined : 'success',
     });
   }
 }
@@ -206,6 +211,7 @@ function playCard(
   // resolved to seat names) and colors the interpolated {{number}} itself.
   G.log.push({
     key: 'cahoots.log.cardPlayed',
+    sound: 'play',
     params: { actor: playerID, color: card.color, number: card.number, pile: pileIndex + 1 },
   });
 

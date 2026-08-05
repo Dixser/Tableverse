@@ -114,6 +114,20 @@ describe('soundPlayer', () => {
     expect(fake.oscillators[0]!.frequency.setValueAtTime).toHaveBeenCalledWith(880, 0);
   });
 
+  it('plays lose as the descending sawtooth buzz, matching failure s character', async () => {
+    const fake = makeFakeAudio();
+    vi.stubGlobal('AudioContext', fake.FakeAudioContext);
+    const { playCue } = await loadPlayer();
+
+    playCue('lose');
+
+    // A match ending in defeat is deliberately the same buzz as a setback
+    // (see CUES), just longer and one step lower -- not a separate motif.
+    expect(fake.oscillators).toHaveLength(3);
+    expect(fake.oscillators.every((o) => o.type === 'sawtooth')).toBe(true);
+    expect(fake.oscillators[0]!.frequency.setValueAtTime).toHaveBeenCalledWith(196, 0);
+  });
+
   it('creates no audio nodes at all when sound is disabled', async () => {
     const fake = makeFakeAudio();
     vi.stubGlobal('AudioContext', fake.FakeAudioContext);

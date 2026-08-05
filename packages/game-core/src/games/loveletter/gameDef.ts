@@ -251,7 +251,12 @@ function eliminate(G: LoveLetterG, playerID: string): void {
   G.eliminated[playerID] = true;
   const remainingCards = G.hands[playerID]!.splice(0, G.hands[playerID]!.length);
   G.playedCards[playerID]!.push(...remainingCards);
-  G.log.push({ key: 'loveLetter.log.eliminated', params: { player: playerID } });
+  // The one Love Letter event that is not an ordinary card play. It can land
+  // in the same update as the play that caused it (a correct Guard guess, a
+  // lost Baron comparison, a Prince-forced Princess discard) -- that pair is
+  // intended: two different facts, unlike the collisions spec.md rules out,
+  // which are one fact announced twice.
+  G.log.push({ key: 'loveLetter.log.eliminated', params: { player: playerID }, sound: 'failure' });
 }
 
 /** Prince's forced discard-and-redraw, shared by self- and other-targeting. */
@@ -280,6 +285,7 @@ function resolveGuard(
   G.log.push({
     key: 'loveLetter.log.guardGuess',
     params: { actor: actingID, target: targetID, rank: guessRank },
+    sound: 'play',
   });
   if (G.hands[targetID]![0] === guessRank) {
     eliminate(G, targetID);
@@ -287,7 +293,11 @@ function resolveGuard(
 }
 
 function resolvePriest(G: LoveLetterG, actingID: string, targetID: string): void {
-  G.log.push({ key: 'loveLetter.log.priestUsed', params: { actor: actingID, target: targetID } });
+  G.log.push({
+    key: 'loveLetter.log.priestUsed',
+    params: { actor: actingID, target: targetID },
+    sound: 'play',
+  });
   G.privateReveals[actingID]!.push({
     key: 'loveLetter.reveal.priestViewed',
     params: { opponent: targetID, opponentRank: G.hands[targetID]![0]! },
@@ -297,7 +307,11 @@ function resolvePriest(G: LoveLetterG, actingID: string, targetID: string): void
 function resolveBaron(G: LoveLetterG, actingID: string, targetID: string): void {
   const actingRank = G.hands[actingID]![0]!;
   const targetRank = G.hands[targetID]![0]!;
-  G.log.push({ key: 'loveLetter.log.baronUsed', params: { actor: actingID, target: targetID } });
+  G.log.push({
+    key: 'loveLetter.log.baronUsed',
+    params: { actor: actingID, target: targetID },
+    sound: 'play',
+  });
   if (actingRank !== targetRank) {
     eliminate(G, actingRank < targetRank ? actingID : targetID);
   }
@@ -309,16 +323,24 @@ function resolveBaron(G: LoveLetterG, actingID: string, targetID: string): void 
 
 function resolveHandmaid(G: LoveLetterG, actingID: string): void {
   G.handmaidProtected[actingID] = true;
-  G.log.push({ key: 'loveLetter.log.handmaidUsed', params: { actor: actingID } });
+  G.log.push({ key: 'loveLetter.log.handmaidUsed', params: { actor: actingID }, sound: 'play' });
 }
 
 function resolvePrince(G: LoveLetterG, actingID: string, targetID: string): void {
-  G.log.push({ key: 'loveLetter.log.princeUsed', params: { actor: actingID, target: targetID } });
+  G.log.push({
+    key: 'loveLetter.log.princeUsed',
+    params: { actor: actingID, target: targetID },
+    sound: 'play',
+  });
   discardAndRedraw(G, targetID);
 }
 
 function resolveKing(G: LoveLetterG, actingID: string, targetID: string): void {
-  G.log.push({ key: 'loveLetter.log.kingUsed', params: { actor: actingID, target: targetID } });
+  G.log.push({
+    key: 'loveLetter.log.kingUsed',
+    params: { actor: actingID, target: targetID },
+    sound: 'play',
+  });
   const actingHand = G.hands[actingID]!;
   const targetHand = G.hands[targetID]!;
   const actingCards = actingHand.splice(0, actingHand.length);
@@ -335,7 +357,7 @@ function resolveKing(G: LoveLetterG, actingID: string, targetID: string): void {
  * only, until that follow-up move resolves it.
  */
 function beginChancellorChoice(G: LoveLetterG, actingID: string): void {
-  G.log.push({ key: 'loveLetter.log.chancellorUsed', params: { actor: actingID } });
+  G.log.push({ key: 'loveLetter.log.chancellorUsed', params: { actor: actingID }, sound: 'play' });
   const hand = G.hands[actingID]!;
   const drawn: CardRank[] = [];
   for (let i = 0; i < 2 && G._deck.length > 0; i++) drawn.push(G._deck.pop()!);
@@ -435,7 +457,11 @@ function playCard(
     // deliberate discard, not just a Prince-forced one, so it still
     // eliminates here -- this isn't the Princess's "effect" resolving,
     // it's the same discard-triggered rule eliminate() enforces elsewhere.
-    G.log.push({ key: 'loveLetter.log.cardDiscarded', params: { actor: playerID, card: rank } });
+    G.log.push({
+      key: 'loveLetter.log.cardDiscarded',
+      params: { actor: playerID, card: rank },
+      sound: 'play',
+    });
     if (rank === 9) eliminate(G, playerID);
     events.endTurn();
     return;
@@ -447,13 +473,14 @@ function playCard(
   // doc comment.
   switch (rank) {
     case 0:
-      G.log.push({ key: 'loveLetter.log.spyPlayed', params: { actor: playerID } });
+      G.log.push({ key: 'loveLetter.log.spyPlayed', params: { actor: playerID }, sound: 'play' });
       break;
     case 1:
       if (target === undefined) {
         G.log.push({
           key: 'loveLetter.log.cardPlayedNoTarget',
           params: { actor: playerID, card: rank },
+          sound: 'play',
         });
         break;
       }
@@ -465,6 +492,7 @@ function playCard(
         G.log.push({
           key: 'loveLetter.log.cardPlayedNoTarget',
           params: { actor: playerID, card: rank },
+          sound: 'play',
         });
         break;
       }
@@ -475,6 +503,7 @@ function playCard(
         G.log.push({
           key: 'loveLetter.log.cardPlayedNoTarget',
           params: { actor: playerID, card: rank },
+          sound: 'play',
         });
         break;
       }
@@ -495,16 +524,17 @@ function playCard(
         G.log.push({
           key: 'loveLetter.log.cardPlayedNoTarget',
           params: { actor: playerID, card: rank },
+          sound: 'play',
         });
         break;
       }
       resolveKing(G, playerID, target);
       break;
     case 8:
-      G.log.push({ key: 'loveLetter.log.countessPlayed', params: { actor: playerID } });
+      G.log.push({ key: 'loveLetter.log.countessPlayed', params: { actor: playerID }, sound: 'play' });
       break;
     case 9:
-      G.log.push({ key: 'loveLetter.log.princessPlayed', params: { actor: playerID } });
+      G.log.push({ key: 'loveLetter.log.princessPlayed', params: { actor: playerID }, sound: 'play' });
       eliminate(G, playerID);
       break;
   }

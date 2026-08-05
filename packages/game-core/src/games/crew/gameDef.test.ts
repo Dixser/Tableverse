@@ -176,6 +176,24 @@ describe('crew gameDef', () => {
       expect(state.ctx.gameover).toEqual({ winner: ['0', '1', '2'] });
     });
 
+    it('emits no sound-cued entries at all (feature 030) -- Crew is deliberately platform-only', () => {
+      // `trickWon` is always followed either by a terminal result
+      // (ctx.gameover's own stinger) or by beginRoundConfirm (the `round`
+      // cue), so any cue here would announce a moment the platform already
+      // announces rather than adding one. This is the guard against that
+      // being "fixed" later.
+      const client = clientWithFixture(3, winScenarioFixture, { level: 1 });
+      playThroughToTrick1(client);
+
+      actAs(client, '0').playCard!('pink1');
+      actAs(client, '1').playCard!('pink5');
+      actAs(client, '2').playCard!('pink9');
+
+      const log = client.store.getState().G.log as { key: string; sound?: string }[];
+      expect(log.some((e) => e.key === 'crew.log.trickWon')).toBe(true);
+      expect(log.filter((e) => e.sound !== undefined)).toEqual([]);
+    });
+
     it('is an immediate loss when the task target card ends up in a trick won by someone other than its owner', () => {
       const client = clientWithFixture(
         3,
@@ -972,4 +990,5 @@ describe('crew gameDef', () => {
       expect(state.G.tasks[1].ownerSeatID).toBe('2');
     });
   });
+
 });
