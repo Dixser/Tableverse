@@ -12,6 +12,7 @@ import { CommanderChoicePanel } from './CommanderChoicePanel.js';
 import { CommanderDistributionPanel } from './CommanderDistributionPanel.js';
 import { TaskHandoverPanel } from './TaskHandoverPanel.js';
 import { getLevel } from './levels.js';
+import { useHandOrder } from '../../ui/useHandOrder.js';
 import styles from './BoardComponent.module.css';
 
 /**
@@ -25,7 +26,13 @@ import styles from './BoardComponent.module.css';
  */
 export const CrewBoard: React.FC<BoardProps<CrewView>> = ({ G, ctx, moves, playerID, isActive, playerNames }) => {
   const { t } = useTranslation();
-  const ownHand = playerID != null ? (G.hands[playerID] ?? []) : [];
+  const serverHand = playerID != null ? (G.hands[playerID] ?? []) : [];
+  // feature 031: the player's own cosmetic arrangement of the same cards.
+  // `ownHand` below is the ordered view -- both HandView and the
+  // communication panel render it, so they never disagree about card order.
+  // Nothing here reaches the server: moves still take card ids.
+  const { orderedHand: ownHand, itemIds, moveCard, applySort, resetOrder, isCustomised } =
+    useHandOrder(serverHand);
   const roundConfirmActive = G.roundConfirm !== null;
   const isDraftPhase = ctx.phase === 'missionDraft';
   const isTrickPhase = ctx.phase === 'trick';
@@ -153,6 +160,11 @@ export const CrewBoard: React.FC<BoardProps<CrewView>> = ({ G, ctx, moves, playe
             interactive={canPlay}
             onCardClicked={(cardId) => moves.playCard?.(cardId)}
             communicatedCardID={ownComm?.cardId}
+            itemIds={itemIds}
+            onReorder={moveCard}
+            onSort={applySort}
+            onResetOrder={resetOrder}
+            isCustomised={isCustomised}
           />
           {roundConfirmActive && ownComm && (
             <CommunicationPanel

@@ -94,6 +94,23 @@
     "newMessages_other": "{{count}} new messages",
     "collapse": "Close chat"
   },
+  "handSort": {
+    "groupAriaLabel": "Arrange your hand",
+    "bySuit": "By suit",
+    "byRank": "By rank",
+    "byColor": "By colour",
+    "byNumber": "By number",
+    "reset": "Dealt order",
+    "applied": "Hand arranged: {{preset}}",
+    "dragHandleAriaLabel": "Reorder {{card}}",
+    "a11y": {
+      "instructions": "Press space or enter to pick up a card, use the arrow keys to move it, then press space or enter again to drop it. Press escape to cancel.",
+      "picked": "Picked up {{card}}.",
+      "over": "Now over {{target}}.",
+      "dropped": "Dropped {{card}} on {{target}}.",
+      "cancelled": "Move cancelled. The card returned to where it started."
+    }
+  },
   "loveLetter": {
     "cards": {
       "0": {

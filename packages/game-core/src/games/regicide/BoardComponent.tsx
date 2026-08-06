@@ -10,6 +10,7 @@ import { PlayerStatusList } from './PlayerStatusList.js';
 import { DefendPanel } from './DefendPanel.js';
 import { JesterNextPlayerPicker } from './JesterNextPlayerPicker.js';
 import { playerLabel } from './playerLabel.js';
+import { useHandOrder } from '../../ui/useHandOrder.js';
 import styles from './BoardComponent.module.css';
 
 /**
@@ -57,7 +58,13 @@ export const RegicideBoard: React.FC<BoardProps<RegicideView>> = ({
     setDraft({ step: 'idle' });
   }, [playerID, ctx.currentPlayer]);
 
-  const ownHand = playerID != null ? (G.hands[playerID] ?? []) : [];
+  const serverHand = playerID != null ? (G.hands[playerID] ?? []) : [];
+  // feature 031: the player's own cosmetic arrangement of the same cards.
+  // `ownHand` below is the ordered view -- everything downstream renders it,
+  // so the hand and the defend panel never disagree about card order. Nothing
+  // here is sent to the server: `moves.playCards` still takes ids.
+  const { orderedHand: ownHand, itemIds, moveCard, applySort, resetOrder, isCustomised } =
+    useHandOrder(serverHand);
   const isDefending = playerID != null && G.pendingDefense !== null && ctx.currentPlayer === playerID;
   const roundConfirmActive = G.roundConfirm !== null;
   const canAct = isActive && !roundConfirmActive && !isDefending && draft.step === 'idle';
@@ -138,6 +145,11 @@ export const RegicideBoard: React.FC<BoardProps<RegicideView>> = ({
             selectedCardIds={selectedCardIDs}
             interactive={canAct}
             onCardClicked={toggleCard}
+            itemIds={itemIds}
+            onReorder={moveCard}
+            onSort={applySort}
+            onResetOrder={resetOrder}
+            isCustomised={isCustomised}
           />
           <div className={styles.actions}>
             <button className={styles.playButton} type="button" disabled={playDisabled} onClick={handlePlay}>

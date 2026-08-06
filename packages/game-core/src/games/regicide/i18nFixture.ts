@@ -16,6 +16,24 @@ void i18n.use(initReactI18next).init({
     en: {
       translation: {
         room: { seatLabel: 'Seat {{seatNumber}}' },
+        // Feature 031's shared hand-sorting namespace -- not a `regicide.*`
+        // string, because HandSortControls/SortableCardSlot are shared across
+        // three games (see src/ui/). Same TEST_ prefixing convention.
+        handSort: {
+          groupAriaLabel: 'TEST_arrange_hand',
+          bySuit: 'TEST_by_suit',
+          byRank: 'TEST_by_rank',
+          reset: 'TEST_dealt_order',
+          applied: 'TEST_hand_arranged {{preset}}',
+          dragHandleAriaLabel: 'TEST_reorder {{card}}',
+          a11y: {
+            instructions: 'TEST_drag_instructions',
+            picked: 'TEST_picked {{card}}',
+            over: 'TEST_over {{target}}',
+            dropped: 'TEST_dropped {{card}}_{{target}}',
+            cancelled: 'TEST_cancelled',
+          },
+        },
         regicide: {
           suits: {
             S: 'TEST_S',

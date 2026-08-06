@@ -1,0 +1,41 @@
+.slot {
+  position: relative;
+  /* Without this, a touch drag scrolls the page instead of moving the card.
+     Cahoots' own .cardSlot already carried it; Regicide's and Crew's hands
+     never needed it before this feature. */
+  touch-action: none;
+}
+
+.dragging {
+  opacity: 0.4;
+  z-index: 10;
+}
+
+.handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--space-4);
+  min-height: var(--space-4);
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  line-height: 1;
+  cursor: grab;
+  opacity: 0.65;
+}
+
+.handle:hover,
+.handle:focus-visible {
+  opacity: 1;
+  color: var(--color-text);
+}
+
+.handle:active {
+  cursor: grabbing;
+}

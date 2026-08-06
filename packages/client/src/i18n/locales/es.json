@@ -94,6 +94,23 @@
     "newMessages_other": "{{count}} mensajes nuevos",
     "collapse": "Cerrar chat"
   },
+  "handSort": {
+    "groupAriaLabel": "Ordena tu mano",
+    "bySuit": "Por palo",
+    "byRank": "Por valor",
+    "byColor": "Por color",
+    "byNumber": "Por número",
+    "reset": "Orden de reparto",
+    "applied": "Mano ordenada: {{preset}}",
+    "dragHandleAriaLabel": "Reordenar {{card}}",
+    "a11y": {
+      "instructions": "Pulsa espacio o intro para coger una carta, usa las flechas para moverla y vuelve a pulsar espacio o intro para soltarla. Pulsa escape para cancelar.",
+      "picked": "Has cogido {{card}}.",
+      "over": "Ahora sobre {{target}}.",
+      "dropped": "Has soltado {{card}} sobre {{target}}.",
+      "cancelled": "Movimiento cancelado. La carta ha vuelto a su sitio."
+    }
+  },
   "loveLetter": {
     "cards": {
       "0": {

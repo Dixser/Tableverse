@@ -274,3 +274,108 @@ describe('RegicideBoard', () => {
     expect(discardCards).toHaveBeenCalledWith(['S4']);
   });
 });
+
+describe('RegicideBoard hand arrangement (feature 031)', () => {
+  const c9: Card = { id: 'C9', kind: 'number', suit: 'C', rank: 9 };
+
+  /** Card buttons inside the hand, in render order (excludes the drag grips). */
+  function handCardLabels() {
+    const hand = screen.getByRole('group', { name: 'TEST_your_hand' });
+    return within(hand)
+      .getAllByRole('button')
+      .filter((b) => !b.getAttribute('aria-label')?.startsWith('TEST_reorder'))
+      .map((b) => b.getAttribute('aria-label'));
+  }
+
+  it('a sort preset reorders the rendered hand without sending any move', () => {
+    const playCards = vi.fn();
+    render(
+      <RegicideBoard
+        G={seatedView({ hands: { '0': [c9, s4, h4] } })}
+        ctx={makeCtx()}
+        moves={{ ...noopMoves, playCards }}
+        playerID="0"
+        isActive={true}
+      />,
+    );
+    expect(handCardLabels()).toEqual(['TEST_C 9', 'TEST_S 4', 'TEST_H 4']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_by_suit' }));
+
+    // SUITS order is S, H, D, C.
+    expect(handCardLabels()).toEqual(['TEST_S 4', 'TEST_H 4', 'TEST_C 9']);
+    expect(playCards).not.toHaveBeenCalled();
+  });
+
+  it('an in-progress selection survives a reorder', () => {
+    // The regression guard for the draft-state risk: selection is tracked by
+    // card id and the order is a separate id list, so the two never interact --
+    // but it would be easy for a later change to reset one from the other.
+    render(
+      <RegicideBoard
+        G={seatedView({ hands: { '0': [c9, s4, h4] } })}
+        ctx={makeCtx()}
+        moves={{ ...noopMoves }}
+        playerID="0"
+        isActive={true}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_S 4' }));
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_H 4' }));
+    expect(screen.getByText('TEST_Play')).not.toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_by_rank' }));
+
+    expect(screen.getByRole('button', { name: 'TEST_S 4' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'TEST_H 4' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('TEST_Play')).not.toBeDisabled();
+  });
+
+  it('the arrangement controls work when it is NOT this seat\'s turn', () => {
+    render(
+      <RegicideBoard
+        G={seatedView({ hands: { '0': [c9, s4] } })}
+        ctx={makeCtx({ currentPlayer: '1' })}
+        moves={{ ...noopMoves }}
+        playerID="0"
+        isActive={false}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'TEST_by_suit' })).not.toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_by_suit' }));
+
+    expect(handCardLabels()).toEqual(['TEST_S 4', 'TEST_C 9']);
+  });
+
+  it('the defend panel follows the arranged order, so the two never disagree', () => {
+    const { rerender } = render(
+      <RegicideBoard
+        G={seatedView({ hands: { '0': [c9, s4, h4] } })}
+        ctx={makeCtx()}
+        moves={{ ...noopMoves }}
+        playerID="0"
+        isActive={true}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'TEST_by_suit' }));
+
+    rerender(
+      <RegicideBoard
+        G={seatedView({ hands: { '0': [c9, s4, h4] }, pendingDefense: { requiredTotal: 4 } })}
+        ctx={makeCtx()}
+        moves={{ ...noopMoves }}
+        playerID="0"
+        isActive={true}
+      />,
+    );
+
+    const panel = screen.getByRole('group', { name: 'TEST_defend_title 4' });
+    expect(
+      within(panel)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label'))
+        .filter((l): l is string => l !== null),
+    ).toEqual(['TEST_S 4', 'TEST_H 4', 'TEST_C 9']);
+  });
+});

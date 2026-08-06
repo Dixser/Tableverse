@@ -1,38 +1,36 @@
 import { useTranslation } from 'react-i18next';
-import { useDraggable } from '@dnd-kit/core';
+import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import type { Card } from './deck.js';
-import { CardTile } from './CardTile.js';
+import { CardTile, cardLabel } from './CardTile.js';
+import { SortableCardSlot } from '../../ui/SortableCardSlot.js';
+import { HandSortControls, type HandSortPreset } from '../../ui/HandSortControls.js';
+import { byColorThenNumber, byNumberThenColor } from './handSort.js';
 import styles from './HandView.module.css';
 
-interface DraggableCardProps {
-  card: Card;
-  interactive: boolean;
-}
-
-/**
- * The one dnd-kit draggable in this board -- `disabled` (not simply
- * omitting listeners) is what keeps a non-interactive card from ever
- * starting a drag at all, rather than merely rejecting the resulting
- * move server-side.
- */
-function DraggableCard({ card, interactive }: DraggableCardProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: card.id,
-    disabled: !interactive,
-  });
-  const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined;
-  const className = [styles.cardSlot, isDragging ? styles.dragging : null].filter(Boolean).join(' ');
-  return (
-    <div ref={setNodeRef} style={style} className={className} {...(interactive ? listeners : {})} {...(interactive ? attributes : {})}>
-      <CardTile card={card} />
-    </div>
-  );
-}
+const SORT_PRESETS: HandSortPreset<Card>[] = [
+  { id: 'color', labelKey: 'handSort.byColor', comparator: byColorThenNumber },
+  { id: 'number', labelKey: 'handSort.byNumber', comparator: byNumberThenColor },
+];
 
 export interface HandViewProps {
+  /** Already in the player's chosen order -- see BoardComponent's useHandOrder. */
   hand: Card[];
-  /** False outside the acting seat's own turn -- a non-interactive card renders but cannot be picked up at all. */
+  /**
+   * Whether playing a card is possible right now (this seat's turn).
+   *
+   * Since feature 031 this NO LONGER gates draggability: a card is always
+   * draggable, because dragging it onto another hand card rearranges the hand,
+   * which must work on someone else's turn. What `interactive` still conveys
+   * is whether a drag can end in an actual move -- BoardComponent's onDragEnd
+   * is the one place that decides, and PileZone's highlighting keys off the
+   * same flag via `draggedCard`.
+   */
   interactive: boolean;
+  /** feature 031: hand-order actions, straight from useHandOrder. */
+  itemIds: string[];
+  onSort: (comparator: (a: Card, b: Card) => number) => void;
+  onResetOrder: () => void;
+  isCustomised: boolean;
 }
 
 /**
@@ -40,14 +38,39 @@ export interface HandViewProps {
  * pile (see BoardComponent's DndContext), replacing the click-to-select
  * pattern every earlier game in this codebase uses (feature 029 is the
  * first real @dnd-kit consumer).
+ *
+ * Unlike Regicide's and Crew's hands, the whole card is the drag activator
+ * (`handle={false}`): this game's CardTile is an inert <div> with no click
+ * semantics to collide with, and the drag has to be able to land on a pile,
+ * not just on a neighbouring card. There is no DndContext here either -- the
+ * board owns the single one, because it also covers the piles.
  */
-export function HandView({ hand, interactive }: HandViewProps) {
+export function HandView({ hand, interactive, itemIds, onSort, onResetOrder, isCustomised }: HandViewProps) {
   const { t } = useTranslation();
   return (
-    <div className={styles.hand} role="group" aria-label={t('cahoots.hand.ariaLabel')}>
-      {hand.map((card) => (
-        <DraggableCard key={card.id} card={card} interactive={interactive} />
-      ))}
-    </div>
+    <>
+      <div className={styles.hand} role="group" aria-label={t('cahoots.hand.ariaLabel')}>
+        <SortableContext items={itemIds} strategy={rectSortingStrategy}>
+          {hand.map((card) => (
+            <SortableCardSlot
+              key={card.id}
+              id={card.id}
+              handle={false}
+              dragLabel={t('handSort.dragHandleAriaLabel', { card: cardLabel(card, t) })}
+              className={interactive ? styles.playable : undefined}
+            >
+              <CardTile card={card} />
+            </SortableCardSlot>
+          ))}
+        </SortableContext>
+      </div>
+      <HandSortControls
+        presets={SORT_PRESETS}
+        onSort={onSort}
+        onReset={onResetOrder}
+        isCustomised={isCustomised}
+        cardCount={hand.length}
+      />
+    </>
   );
 }

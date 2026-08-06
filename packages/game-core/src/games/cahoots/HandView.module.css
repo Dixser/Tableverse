@@ -5,12 +5,13 @@
   justify-content: center;
 }
 
-.cardSlot {
-  touch-action: none;
+/* Drag affordance for a card that could actually be played right now. The
+   slot is always draggable (feature 031 -- reordering works off-turn too);
+   this only signals that a drag onto a pile would land a move. */
+.playable {
   cursor: grab;
 }
 
-.dragging {
-  opacity: 0.4;
-  z-index: 10;
+.playable:active {
+  cursor: grabbing;
 }
