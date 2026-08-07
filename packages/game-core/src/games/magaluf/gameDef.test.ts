@@ -145,6 +145,37 @@ describe('magaluf gameDef', () => {
       if (G(client).phase === 0) expect(player.status).not.toBe('partying');
     });
 
+    it('records the draw in lastDraw for the board to reveal', () => {
+      const client = makeClient(3, (g) => stack(g, ['pinta'], ['foto']));
+      const seat = G(client).turnSeatID;
+      expect(G(client).lastDraw).toBeNull();
+
+      actAs(client, seat).drink!();
+      expect(G(client).lastDraw).toEqual({ seatID: seat, alcohol: 'pinta', event: 'foto' });
+    });
+
+    it('keeps lastDraw on the draw that caused a ronda, not its knock-on drinks', () => {
+      const client = makeClient(3, (g) => stack(g, ['pinta', 'cana', 'cana', 'cana'], ['ronda']));
+      const seat = G(client).turnSeatID;
+      actAs(client, seat).drink!();
+
+      expect(G(client).lastDraw).toEqual({ seatID: seat, alcohol: 'pinta', event: 'ronda' });
+      // The ronda really did pour for everyone; it just did not claim the reveal.
+      for (const id of G(client).activeSeatIDs) {
+        expect(G(client).players[id]!.drinksThisPhase).toBeGreaterThan(0);
+      }
+    });
+
+    it('clears lastDraw when a new phase opens', () => {
+      const client = makeClient(3);
+      play(client, alwaysDrink, (g) => g.lastDraw !== null);
+      expect(G(client).lastDraw).not.toBeNull();
+
+      const phase = G(client).phase;
+      play(client, alwaysWithdraw, (g) => g.phase !== phase);
+      expect(G(client).lastDraw).toBeNull();
+    });
+
     it('counts a drink nobody chose toward the phase total', () => {
       const client = makeClient(3, (g) => stack(g, ['cana', 'cana'], ['chupitoCasa']));
       const seat = G(client).turnSeatID;

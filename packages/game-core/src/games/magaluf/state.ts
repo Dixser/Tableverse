@@ -53,6 +53,20 @@ export interface JumpRecord {
   lostVP: number;
 }
 
+/**
+ * The cards face-up on the table from the most recent draw.
+ *
+ * Public, and kept in `G` rather than recovered from the log tail: a Ronda
+ * appends one `drank` entry per player and a Chupito de la casa chains a
+ * second for the same seat, so "the last entry" is not reliably "the draw
+ * that just happened". Added by feature 033, which needs to render it.
+ */
+export interface LastDraw {
+  seatID: string;
+  alcohol: string;
+  event: EventId | null;
+}
+
 export interface MagalufG {
   /** Seats claimed by a real user at match start; the platform always creates maxPlayers engine seats. */
   activeSeatIDs: string[];
@@ -70,6 +84,8 @@ export interface MagalufG {
   eventDiscard: EventId[];
   players: Record<string, MagalufPlayer>;
   withdrawCounter: number;
+  /** Most recent draw, for the board's reveal. Cleared at each phase start. */
+  lastDraw: LastDraw | null;
   /** Every jump resolved this match, oldest first. Drives the board's balcony moment. */
   jumps: JumpRecord[];
   log: GameLogEntry[];

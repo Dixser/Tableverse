@@ -119,6 +119,8 @@ function startPhase(G: MagalufG, rng: Rng, phaseIndex: number): void {
   G.eventDeck = rng.shuffle(buildDeck<EventId>(rules.events));
   G.eventDiscard = [];
   G.withdrawCounter = 0;
+  // Nothing on the table when a new venue opens.
+  G.lastDraw = null;
 
   if (G.settings.limitRevealAt === PHASE_IDS[phaseIndex]) G.limitRevealed = true;
 
@@ -294,10 +296,16 @@ function takeDrink(
   if (!card) return;
   consumeAlcohol(G, seatID, card, { halveIntox: options.halveIntox });
 
+  let drawnEvent: EventId | null = null;
   if (options.drawEventCard !== false) {
-    const eventId = drawEvent(G, rng);
-    if (eventId) resolveEvent(G, seatID, eventId, rng);
+    drawnEvent = drawEvent(G, rng);
+    if (drawnEvent) resolveEvent(G, seatID, drawnEvent, rng);
   }
+
+  // Written after the event resolves so the pair lands together, and written
+  // last so a Ronda's knock-on drinks do not overwrite the draw that caused
+  // them: those go through consumeAlcohol, never through here.
+  G.lastDraw = { seatID, alcohol: card.id, event: drawnEvent };
 }
 
 /** Returns true when using the item consumed the player's turn. */
@@ -463,6 +471,7 @@ export const magalufGameDef: Game<MagalufG, Record<string, unknown>, MagalufSetu
       eventDiscard: [],
       players,
       withdrawCounter: 0,
+      lastDraw: null,
       jumps: [],
       log: [],
       finished: false,

@@ -99,6 +99,28 @@
       `localeParity` only proves EN and ES agree with *each other*, so both
       could be missing the same key and still pass.
 
+## Amended by feature 033
+
+- [x] 14. `G.lastDraw` added to `MagalufG` — `{ seatID, alcohol, event }`, set
+      in `takeDrink` and cleared in `startPhase`.
+
+      **Why it did not exist here:** nothing in the rules needs it. It is
+      purely so the board can reveal what a player drew, and that consumer did
+      not exist until 033. Recovering it from the log tail was considered and
+      rejected: a Ronda appends one `drank` entry per player and a Chupito de
+      la casa chains a second for the same seat, so "the last entry" is not
+      reliably "the draw that just happened".
+
+      **Why this is not a `magaluf-v2`:** `tech-stack.md` forbids mutating a
+      published version *once real matches are recorded against it*, because
+      boardgame.io replays the move log against the `Game` definition.
+      `magaluf-v1` shipped without a board and was never playable, so no match
+      exists to corrupt. This was the last moment the change was free.
+
+      **Verify:** three new tests — a drink populates it, a Ronda's knock-on
+      drinks do not steal the reveal from the draw that caused them, and a new
+      phase clears it. Suite now 47 tests.
+
 ## Verification record
 
 - `npx vitest run --root packages/game-core src/games/magaluf` — **44 passed**
