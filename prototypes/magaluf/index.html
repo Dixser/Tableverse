@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Magaluf — prototype</title>
+    <style>
+      :root {
+        --bg: #0b0a1a;
+        --panel: #16142c;
+        --panel-2: #1e1b3a;
+        --line: #2e2a52;
+        --text: #e8e6f5;
+        --dim: #9a95bd;
+        --neon: #ff2d95;
+        --cyan: #26d7d7;
+        --amber: #ffb020;
+        --green: #3ddc84;
+        --red: #ff4d5e;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: radial-gradient(1200px 600px at 50% -10%, #2a1350 0%, var(--bg) 60%);
+        color: var(--text);
+        font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        min-height: 100vh;
+      }
+      .wrap { max-width: 1180px; margin: 0 auto; padding: 16px; }
+
+      header {
+        display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+        padding: 12px 16px; background: var(--panel); border: 1px solid var(--line);
+        border-radius: 12px; margin-bottom: 14px;
+      }
+      .brand { font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--neon); }
+      .chip {
+        padding: 4px 10px; border-radius: 999px; background: var(--panel-2);
+        border: 1px solid var(--line); font-size: 12px; white-space: nowrap;
+      }
+      .chip strong { color: var(--cyan); }
+      .spacer { flex: 1; }
+      button {
+        font: inherit; color: var(--text); background: var(--panel-2);
+        border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer;
+      }
+      button:hover:not(:disabled) { border-color: var(--neon); }
+      button:disabled { opacity: .4; cursor: not-allowed; }
+      button.primary { background: var(--neon); border-color: var(--neon); color: #fff; font-weight: 700; }
+      button.danger { background: transparent; border-color: var(--red); color: var(--red); }
+
+      .limit {
+        display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px;
+        border-radius: 10px; border: 1px dashed var(--line); background: var(--panel-2);
+      }
+      .limit .value { font-size: 20px; font-weight: 800; color: var(--amber); }
+      .limit.hidden .value { color: var(--dim); letter-spacing: .2em; }
+
+      .cols { display: grid; grid-template-columns: 1fr 340px; gap: 14px; align-items: start; }
+      @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+
+      .players { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+      .player {
+        background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+        position: relative; overflow: hidden;
+      }
+      .player.active { border-color: var(--neon); box-shadow: 0 0 0 1px var(--neon) inset; }
+      .player.dead { opacity: .45; }
+      .player .name { font-weight: 700; display: flex; align-items: center; gap: 8px; }
+      .badge {
+        font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+        padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim);
+      }
+      .badge.out { border-color: var(--dim); }
+      .badge.jail { border-color: var(--amber); color: var(--amber); }
+      .badge.dead { border-color: var(--red); color: var(--red); }
+      .badge.risk { border-color: var(--red); color: #fff; background: var(--red); font-weight: 700; }
+
+      .meter { margin: 10px 0 8px; }
+      .meter .track {
+        position: relative; height: 12px; border-radius: 999px;
+        background: #221f42; border: 1px solid var(--line); overflow: hidden;
+      }
+      .meter .fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--cyan), var(--amber)); }
+      .meter .fill.over { background: linear-gradient(90deg, var(--amber), var(--red)); }
+      .meter .resaca { position: absolute; top: 0; bottom: 0; left: 0; background: rgba(255,77,94,.42); }
+      .meter .limitmark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #fff; }
+      .meter .labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); margin-top: 4px; }
+
+      .stats { display: flex; gap: 12px; font-size: 12px; color: var(--dim); flex-wrap: wrap; }
+      .stats b { color: var(--text); font-size: 14px; }
+      .items { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; min-height: 22px; }
+      .item {
+        font-size: 11px; padding: 2px 7px; border-radius: 6px;
+        background: var(--panel-2); border: 1px solid var(--line);
+      }
+      .item.illegal { border-color: var(--neon); color: var(--neon); }
+
+      .actions {
+        margin-top: 14px; padding: 12px; background: var(--panel);
+        border: 1px solid var(--line); border-radius: 12px;
+        display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      }
+      .actions .who { font-weight: 700; margin-right: 4px; }
+
+      aside { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+      aside h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--dim); }
+      #log { height: 380px; overflow-y: auto; font-size: 12.5px; }
+      #log div { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+      #log .hl { color: var(--cyan); }
+      #log .bad { color: var(--red); }
+      #log .good { color: var(--green); }
+      #log .head { color: var(--neon); font-weight: 700; margin-top: 6px; }
+
+      .tuning { margin-top: 14px; }
+      .tuning label { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; padding: 3px 0; }
+      .tuning input, .tuning select { width: 92px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 4px 6px; font: inherit; }
+
+      .modal {
+        position: fixed; inset: 0; background: rgba(6,4,18,.86); display: none;
+        align-items: center; justify-content: center; padding: 20px; z-index: 10;
+      }
+      .modal.show { display: flex; }
+      .modal .box {
+        background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+        padding: 24px; max-width: 520px; width: 100%; text-align: center;
+      }
+      .modal h2 { margin: 0 0 6px; }
+      .modal .odds { font-size: 44px; font-weight: 800; color: var(--amber); margin: 10px 0; }
+      .modal .outcome { font-size: 22px; font-weight: 800; margin: 10px 0; }
+      .modal .outcome.pool { color: var(--green); }
+      .modal .outcome.concrete { color: var(--red); }
+      .modal p { color: var(--dim); margin: 6px 0; }
+      table.final { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+      table.final td, table.final th { padding: 5px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <span class="brand">Magaluf</span>
+        <span class="chip" id="dayChip"></span>
+        <span class="chip" id="phaseChip"></span>
+        <span class="chip" id="multChip"></span>
+        <span class="limit" id="limitBox"><span id="limitLabel"></span><span class="value" id="limitValue"></span></span>
+        <span class="spacer"></span>
+        <button id="langBtn">ES / EN</button>
+        <button id="newBtn" class="primary"></button>
+      </header>
+
+      <div class="cols">
+        <main>
+          <div class="players" id="players"></div>
+          <div class="actions" id="actions"></div>
+        </main>
+        <aside>
+          <h3 id="logTitle"></h3>
+          <div id="log"></div>
+          <div class="tuning">
+            <h3 id="tuneTitle"></h3>
+            <div id="tuning"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
+    <script type="module" src="/web/main.ts"></script>
+  </body>
+</html>
