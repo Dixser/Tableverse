@@ -1,9 +1,13 @@
 /**
  * Event resolution.
  *
+ * Most events are now pure data — their numbers live on the card in
+ * `cards.ts` and are applied generically below. Only events with genuinely
+ * structural behaviour (forced drinks, the police, the ambulance, anything
+ * that retargets away from the drawing player) need a case of their own.
+ *
  * Kept separate from `engine.ts` and built only on the primitives in
- * `state.ts`, so there is no import cycle and each event stays a small,
- * readable state mutation.
+ * `state.ts`, so there is no import cycle.
  *
  * Both police events deliberately only reach players who are still
  * **partying**. A player who has gone home is not raided — which also closes
@@ -11,8 +15,8 @@
  * Redada banked your VP and cancelled your limit check for free.
  */
 
-import type { EventId, ItemId } from './cards.ts';
-import { ITEMS } from './cards.ts';
+import type { EventCard, EventId, ItemId } from './cards.ts';
+import { EVENTS, ITEMS } from './cards.ts';
 import { CAMELLO_POOL } from './config.ts';
 import type { Config } from './config.ts';
 import type { Random } from './rng.ts';
@@ -33,6 +37,16 @@ import {
   partying,
 } from './state.ts';
 
+/** Applies a card's data fields to the drawing player. */
+function applyCardEffects(state: GameState, player: PlayerState, card: EventCard): void {
+  if (card.vp) gainVP(player, card.vp);
+  if (card.vpAll) for (const p of partying(state)) gainVP(p, card.vpAll);
+  if (card.intox) addIntox(player, card.intox);
+  if (card.relief) addIntox(player, -card.relief);
+  if (card.resaca) addResaca(player, card.resaca);
+  if (card.losesItems) player.items = [];
+}
+
 export function resolveEvent(
   state: GameState,
   config: Config,
@@ -40,34 +54,25 @@ export function resolveEvent(
   actor: PlayerState,
   eventId: EventId,
 ): void {
-  const ev = config.events;
+  const card = EVENTS[eventId];
   log(state, { kind: 'event', player: actor.id, event: eventId });
 
   switch (eventId) {
-    case 'ligue':
-      gainVP(actor, ev.ligueVP);
-      break;
-
-    case 'ligueGrande':
-      gainVP(actor, ev.ligueGrandeVP);
-      break;
-
-    case 'foto':
-      gainVP(actor, ev.fotoVP);
-      break;
-
-    case 'soloVoyAMirar':
-      gainVP(actor, ev.soloVoyAMirarVP);
-      break;
-
-    case 'espuma':
-      for (const p of partying(state)) gainVP(p, ev.espumaVP);
-      break;
-
+    // --- Retargeted away from the drawing player -------------------------
     case 'karaoke': {
       const top = drunkest(state);
       const isDrunkest = top !== null && top.id === actor.id;
-      gainVP(actor, isDrunkest ? ev.karaokeDrunkestVP : ev.karaokeVP);
+      gainVP(actor, isDrunkest ? (card.vp ?? 0) * 2 : (card.vp ?? 0));
+      break;
+    }
+
+    case 'reyGuiri': {
+      const most = Math.max(...state.players.map((p) => p.drinksThisPhase));
+      if (most > 0) {
+        for (const p of state.players) {
+          if (p.drinksThisPhase === most) gainVP(p, card.vp ?? 0);
+        }
+      }
       break;
     }
 
@@ -75,63 +80,37 @@ export function resolveEvent(
       gainVP(actor, actor.drinksThisPhase);
       break;
 
-    case 'reyGuiri': {
-      const most = Math.max(...state.players.map((p) => p.drinksThisPhase));
-      if (most > 0) {
-        for (const p of state.players) {
-          if (p.drinksThisPhase === most) gainVP(p, ev.reyGuiriVP);
-        }
+    case 'ambulancia': {
+      const victim = drunkest(state);
+      if (victim) {
+        addIntox(victim, -(card.relief ?? 0));
+        addResaca(victim, card.resaca ?? 0);
+        leavePhase(state, victim, 'ambulance');
       }
       break;
     }
 
-    case 'movilAlMar':
-      gainVP(actor, -ev.movilAlMarVP);
-      break;
-
-    case 'cartera':
-      actor.items = [];
-      break;
-
+    // --- Structural ------------------------------------------------------
     case 'perdido':
       actor.skipNextTurn = true;
       break;
 
+    case 'gorila':
+      // Thrown out rather than choosing to leave, so no aguafiestas penalty.
+      leavePhase(state, actor, 'bouncer');
+      break;
+
     case 'chupitoCasa': {
-      const card = drawAlcohol(state, rng);
-      if (card) consumeAlcohol(state, config, actor, card);
+      const drink = drawAlcohol(state, rng);
+      if (drink) consumeAlcohol(state, config, actor, drink);
       break;
     }
 
     case 'ronda': {
       for (const p of partying(state)) {
-        const card = drawAlcohol(state, rng);
-        if (!card) break;
-        consumeAlcohol(state, config, p, card);
-      }
-      break;
-    }
-
-    case 'garrafonEvent':
-      addIntox(actor, ev.garrafonIntox);
-      break;
-
-    case 'pelea':
-      gainVP(actor, ev.peleaVP);
-      addIntox(actor, ev.peleaIntox);
-      break;
-
-    case 'vomitona':
-      addIntox(actor, -ev.vomitonaRelief);
-      addResaca(actor, config.resaca.vomitona);
-      break;
-
-    case 'ambulancia': {
-      const victim = drunkest(state);
-      if (victim) {
-        addIntox(victim, -ev.ambulanciaRelief);
-        addResaca(victim, config.resaca.ambulancia);
-        leavePhase(state, victim, 'ambulance');
+        const drink = drawAlcohol(state, rng);
+        if (!drink) break;
+        consumeAlcohol(state, config, p, drink);
       }
       break;
     }
@@ -163,7 +142,7 @@ export function resolveEvent(
       for (const p of partying(state)) {
         if (!hasContraband(p)) continue;
         dropContraband(p);
-        gainVP(p, -ev.cacheoVP);
+        gainVP(p, card.vp ?? 0);
         log(state, { kind: 'searched', player: p.id });
       }
       break;
@@ -186,8 +165,9 @@ export function resolveEvent(
       break;
     }
 
-    case 'nada':
-      break;
+    // --- Everything else is pure data ------------------------------------
+    default:
+      applyCardEffects(state, actor, card);
   }
 }
 

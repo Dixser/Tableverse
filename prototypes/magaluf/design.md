@@ -259,33 +259,68 @@ upside playing against the Cacheo's steady punishment.
 
 ## 11. Events
 
-Drawn after every drink from a phase-tiered deck. Tardeo events are mild,
-Noche events interactive, After events savage with heavy forced consumption.
+Drawn after every drink. **The event decks are tiered by phase the same way
+the alcohol decks are** — each phase has its own cards, not just different
+quantities of shared ones.
 
-| Event (ES / EN) | Effect | Tardeo | Noche | After |
+> **Why the tiering exists.** One `ligue` card worth +3 VP appearing in all
+> three decks meant a Tardeo draw and an After draw paid the same. Since
+> Tardeo drinks are cheap, a player got far more draws per point of capacity
+> there — which is half of why the Tardeo was once the most VP-efficient phase
+> in the game. Tiering the events was the other half of that fix, and it is
+> what finally made the phase economy **monotonic**: 1.20 → 1.24 → 1.53. Under
+> the previous build the Noche was a dip, slightly *worse* value than day
+> drinking.
+
+Five families run across all three tiers, escalating in both reward and cost:
+
+| Family | Tardeo | Noche | After |
+|---|---|---|---|
+| **Ligue** / Hook-up | Ligue de piscina, +2 VP | Ligue en la pista, +4 VP | Ligue del after, +6 VP |
+| **Fiesta** (everyone still in) | Chiringuito, +1 VP | Fiesta de la espuma, +2 VP | Amanecer en la playa, +3 VP |
+| **Pelea** / Fight | Piques de guiris, +2 VP +1 Int | Pelea, +4 VP +2 Int | Pelea con los porteros, +6 VP +3 Int |
+| **Chungo** (it goes wrong) | Móvil al mar, −2 VP | Te roban la cartera, lose all items | Despiertas sin nada, lose all items and −4 VP |
+| **Castigo** (it goes badly wrong) | Insolación, +2 Int | El portero te saca, thrown out of the phase | Coma etílico, +5 Int |
+
+Phase-exclusive singles:
+
+| Event | Effect | Deck |
+|---|---|---|
+| Foto para el Insta | +2 VP | Tardeo |
+| Te dan garrafón | +3 Intoxication | Noche, After |
+| "Solo voy a mirar" | +6 VP | After |
+| **La terraza del quinto** | **+8 VP and +3 Intoxication** | After |
+
+**La terraza del quinto** is the single most tempting card in the game and
+the only one that pays 8. It is also, of course, a balcony.
+
+Shared across tiers at different frequencies:
+
+| Event | Effect | Tardeo | Noche | After |
 |---|---|---|---|---|
-| Ligue / Hook-up | +3 VP | 2 | 2 | — |
-| Ligue de la noche | +5 VP | — | 2 | 4 |
-| Fiesta de la espuma / Foam party | +2 VP to everyone still in | 1 | 2 | — |
-| Karaoke | +2 VP, or +4 if you are the most intoxicated | 1 | 2 | 3 |
-| Foto para el Insta | +2 VP | 2 | 2 | — |
-| Barra libre / Open bar | +1 VP per drink this phase | 1 | 2 | 2 |
+| Karaoke | +2 VP, doubled if you are the most intoxicated | — | 2 | 2 |
+| Barra libre / Open bar | +1 VP per drink this phase | — | 2 | 2 |
 | Rey del guiri | +3 VP to whoever drank most this phase | — | 2 | 3 |
-| "Solo voy a mirar" | +5 VP | — | — | 4 |
-| Se te cae el móvil al mar | −3 VP | 2 | 2 | 2 |
-| Te roban la cartera / Pickpocketed | Lose all items | 1 | 1 | 1 |
 | Te pierdes / You get lost | Skip your next turn, stay in | 2 | 2 | 1 |
-| Chupito de la casa / House shot | Draw another Alcohol card | 2 | 3 | 5 |
+| Chupito de la casa | Draw another Alcohol card | 2 | 3 | 5 |
 | Ronda / Round of drinks | Everyone still in drinks an Alcohol card | 2 | 3 | 5 |
-| Te dan garrafón | +3 Intoxication | — | 2 | 4 |
-| Pelea / Fight | +4 VP and +2 Intoxication | 1 | 2 | 3 |
 | Vomitona / Puke | −4 Intoxication, Resaca +3 | 1 | 2 | 2 |
-| Ambulancia | Most drunk withdraws, −5 Intoxication, Resaca +4 | — | 1 | 2 |
+| Ambulancia | Most drunk withdraws, −5 Int, Resaca +4 | — | 1 | 2 |
 | Kebab / Botellín / Red Bull | Gain that item | 2/2/2 | 2/1/— | 1/—/— |
 | Camello / Dealer | Gain a contraband item | 5 | 7 | 8 |
 | Cacheo / Stop-and-search | See §10 | 1 | 1 | 1 |
 | Redada / Police raid | See §10 | — | 1 | 2 |
 | No pasa nada / Nothing happens | — | 4 | 1 | — |
+| **Deck size** | | **34** | **42** | **50** |
+
+The After deck contains no **No pasa nada**. Nothing in the After is ever
+nothing.
+
+Event effect magnitudes live on the cards in `cards.ts`, next to the alcohol
+values, rather than in `config.ts`. Keeping a card's numbers on the card is
+what stops the effect and the flavour text drifting apart — which had already
+happened once, with Vomitona's text still promising Resaca 2 after it was
+tuned to 3. `config.ts` now owns deck *compositions* only.
 
 ## 12. Winning
 
@@ -302,19 +337,20 @@ weekend — the most hardcore survivor wins.
 
 | Measure | Result |
 |---|---|
-| Death rate Fri / Sat / Sun | **8.1% / 11.7% / 18.3%** of players still alive that morning |
-| Players dead by Monday | **33.5%** |
-| Games with at least one death | **85.7%** |
-| Total wipeouts | 0.7% |
-| Jumps per game | 2.55, of which **52.6% are fatal** |
+| Death rate Fri / Sat / Sun | **8.8% / 12.8% / 20.1%** of players still alive that morning |
+| Players dead by Monday | **36.0%** |
+| Games with at least one death | **87.0%** |
+| Total wipeouts | 0.8% |
+| Jumps per game | 2.68, of which **53.8% are fatal** |
 | Distribution of `d` | 28% at 1, 23% at 2, 17% at 3, tail to 10 |
-| Win rate: cautious / balanced / greedy / reckless | 31.4% / 36.3% / 27.2% / 5.0% |
-| Median winning score | 139 VP |
-| Sunday-After leader goes on to win | 60.3% |
-| Farlopa played Sunday vs Friday | 3.71× |
-| Redada does nothing | 33.4% |
-| Aguafiestas penalty rate | 21.7% of exits |
-| Median game length | 95 player-turns |
+| Phase economy (VP per point of intoxication) | **1.20 / 1.24 / 1.53** — strictly rising |
+| Win rate: cautious / balanced / greedy / reckless | 33.7% / 34.7% / 26.3% / 5.3% |
+| Median winning score | 132 VP |
+| Sunday-After leader goes on to win | 61.4% |
+| Farlopa played Sunday vs Friday | 3.69× |
+| Redada does nothing | 35.8% |
+| Aguafiestas penalty rate | 22.3% of exits |
+| Median game length | 92 player-turns |
 
 **15 of 15 balance targets met at 4 players.**
 
@@ -355,13 +391,13 @@ The revised targets are in `checks()` in `src/sim.ts` alongside the reasoning.
 
 The design needs **4+ players**, and 2-player does not work.
 
-| Players | Dead by Monday | Targets met |
-|---|---|---|
-| 2 | 11.1% | 7/15 |
-| 3 | 21.9% | 10/15 |
-| 4 | 35.7% | 15/15 |
-| 5 | 30.9% | 13/15 |
-| 6 | 30.2% | 12/15 |
+| Players | Dead by Monday | Median turns | Targets met |
+|---|---|---|---|
+| 2 | 11.1% | 54 | 7/15 |
+| 3 | 21.9% | 75 | 10/15 |
+| 4 | 35.8% | 92 | 15/15 |
+| 5 | 30.9% | 112 | 13/15 |
+| 6 | 30.5% | 132 | 12/15 |
 
 The cause is structural rather than a tuning miss: forced-consumption events
 (**Ronda** above all) hit *everyone still partying*, so the unavoidable

@@ -117,6 +117,8 @@ function logLine(entry: LogEntry): { text: string; cls: string } | null {
       return { text: `${who}: ${lang === 'es' ? 'cierran el local' : 'closing time'}`, cls: '' };
     case 'ambulance':
       return { text: `${who}: ${lang === 'es' ? 'se lo lleva la ambulancia' : 'taken by ambulance'}`, cls: 'bad' };
+    case 'bouncer':
+      return { text: `${who}: ${lang === 'es' ? 'le echa el portero' : 'thrown out by the bouncer'}`, cls: 'bad' };
     case 'aguafiestas':
       return { text: `${who}: ${lang === 'es' ? 'aguafiestas' : 'party pooper'} −${entry.n} ${t('vp')}`, cls: 'bad' };
     case 'ultimoEnPie':
@@ -329,7 +331,6 @@ const TUNABLE: { path: string; label: Bilingual; step: number }[] = [
   { path: 'balconing.decay', label: { es: 'Caída por punto', en: 'Decay per point' }, step: 0.01 },
   { path: 'balconing.legendBase', label: { es: 'Bonus leyenda', en: 'Legend base' }, step: 1 },
   { path: 'balconing.resaca', label: { es: 'Resaca del salto', en: 'Jump resaca' }, step: 1 },
-  { path: 'resaca.vomitona', label: { es: 'Resaca vomitona', en: 'Puke resaca' }, step: 1 },
   { path: 'resaca.farlopa', label: { es: 'Resaca farlopa', en: 'Cocaine resaca' }, step: 1 },
   { path: 'items.kebabRelief', label: { es: 'Kebab', en: 'Kebab' }, step: 1 },
 ];

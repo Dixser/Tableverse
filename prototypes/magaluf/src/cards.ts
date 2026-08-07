@@ -85,22 +85,46 @@ export const CONTRABAND_ITEMS: readonly ItemId[] = ['porro', 'pastis', 'farlopa'
 // Events
 // ---------------------------------------------------------------------------
 
+/**
+ * Events are tiered by phase in the same way the alcohol decks are.
+ *
+ * Reusing one `ligue` card at +3 VP across all three phases meant a Tardeo
+ * draw and an After draw were worth the same, while the Tardeo's cheap drinks
+ * bought far more draws per point of capacity — which is half of why the
+ * Tardeo was once the most profitable phase in the game. Each tier now has its
+ * own cards: the Tardeo's pay little and cost little, the After's pay a lot
+ * and can take your whole night with them.
+ */
 export type EventId =
-  | 'ligue'
-  | 'ligueGrande'
-  | 'espuma'
-  | 'karaoke'
+  // Tardeo tier — mild, cheap, forgiving
+  | 'ligueTardeo'
+  | 'fiestaTardeo'
+  | 'peleaTardeo'
+  | 'chungoTardeo'
+  | 'insolacion'
   | 'foto'
+  // Noche tier — interactive, real teeth
+  | 'ligueNoche'
+  | 'fiestaNoche'
+  | 'peleaNoche'
+  | 'chungoNoche'
+  | 'gorila'
+  | 'garrafonEvent'
+  // After tier — the big money and the real damage
+  | 'ligueAfter'
+  | 'fiestaAfter'
+  | 'peleaAfter'
+  | 'chungoAfter'
+  | 'soloVoyAMirar'
+  | 'terraza'
+  | 'comaEtilico'
+  // Present in more than one tier, at different frequencies
+  | 'karaoke'
   | 'barraLibre'
   | 'reyGuiri'
-  | 'soloVoyAMirar'
-  | 'movilAlMar'
-  | 'cartera'
   | 'perdido'
   | 'chupitoCasa'
   | 'ronda'
-  | 'garrafonEvent'
-  | 'pelea'
   | 'vomitona'
   | 'ambulancia'
   | 'kebabEvent'
@@ -115,33 +139,163 @@ export interface EventCard {
   id: EventId;
   name: Bilingual;
   text: Bilingual;
+  /** VP to the drawing player. Negative is a loss. */
+  vp?: number;
+  /** Intoxication to the drawing player. */
+  intox?: number;
+  /** VP to every player still partying, including the drawer. */
+  vpAll?: number;
+  /** Permanent Resaca inflicted on the drawing player. */
+  resaca?: number;
+  /** Intoxication removed before Resaca is applied. */
+  relief?: number;
+  /** The drawing player loses every item they hold. */
+  losesItems?: boolean;
 }
 
+/**
+ * Most events are pure data: the numeric fields are applied generically and
+ * only the ones with genuinely structural behaviour (forced drinks, the
+ * police, the ambulance) need a handler in `events.ts`.
+ *
+ * Effect magnitudes live here, next to the alcohol values, rather than in
+ * `config.ts`. Keeping a card's numbers on the card is what stops the flavour
+ * text and the effect drifting apart, which has already happened once.
+ */
 export const EVENTS: Record<EventId, EventCard> = {
-  ligue: {
-    id: 'ligue',
-    name: { es: 'Ligue', en: 'Hook-up' },
-    text: { es: 'Te lías con alguien en la pista. +3 PV.', en: 'You get off with someone on the dancefloor. +3 VP.' },
+  // --- Tardeo tier -------------------------------------------------------
+  ligueTardeo: {
+    id: 'ligueTardeo',
+    name: { es: 'Ligue de piscina', en: 'Poolside hook-up' },
+    text: { es: 'Algo es algo. +2 PV.', en: 'Better than nothing. +2 VP.' },
+    vp: 2,
   },
-  ligueGrande: {
-    id: 'ligueGrande',
-    name: { es: 'Ligue de la noche', en: 'Hook-up of the night' },
-    text: { es: 'Ha sido tremendo. +5 PV.', en: 'That was something else. +5 VP.' },
+  fiestaTardeo: {
+    id: 'fiestaTardeo',
+    name: { es: 'Chiringuito', en: 'Beach bar' },
+    text: { es: '+1 PV para todos los que sigan de fiesta.', en: '+1 VP to everyone still partying.' },
+    vpAll: 1,
   },
-  espuma: {
-    id: 'espuma',
-    name: { es: 'Fiesta de la espuma', en: 'Foam party' },
-    text: { es: '+2 PV para todos los que sigan de fiesta.', en: '+2 VP to everyone still partying.' },
+  peleaTardeo: {
+    id: 'peleaTardeo',
+    name: { es: 'Piques de guiris', en: 'Tourist bickering' },
+    text: { es: 'Nada serio. +2 PV y +1 de Intoxicación.', en: 'Nothing serious. +2 VP and +1 Intoxication.' },
+    vp: 2,
+    intox: 1,
   },
-  karaoke: {
-    id: 'karaoke',
-    name: { es: 'Karaoke', en: 'Karaoke' },
-    text: { es: '+2 PV, o +4 si eres el más borracho.', en: '+2 VP, or +4 if you are the most intoxicated.' },
+  chungoTardeo: {
+    id: 'chungoTardeo',
+    name: { es: 'Se te cae el móvil al mar', en: 'Phone in the sea' },
+    text: { es: '−2 PV.', en: '−2 VP.' },
+    vp: -2,
+  },
+  insolacion: {
+    id: 'insolacion',
+    name: { es: 'Insolación', en: 'Sunstroke' },
+    text: { es: 'Seis horas al sol bebiendo. +2 de Intoxicación.', en: 'Six hours drinking in the sun. +2 Intoxication.' },
+    intox: 2,
   },
   foto: {
     id: 'foto',
     name: { es: 'Foto para el Insta', en: 'Photo for the feed' },
     text: { es: '+2 PV.', en: '+2 VP.' },
+    vp: 2,
+  },
+
+  // --- Noche tier --------------------------------------------------------
+  ligueNoche: {
+    id: 'ligueNoche',
+    name: { es: 'Ligue en la pista', en: 'Dancefloor hook-up' },
+    text: { es: '+4 PV.', en: '+4 VP.' },
+    vp: 4,
+  },
+  fiestaNoche: {
+    id: 'fiestaNoche',
+    name: { es: 'Fiesta de la espuma', en: 'Foam party' },
+    text: { es: '+2 PV para todos los que sigan de fiesta.', en: '+2 VP to everyone still partying.' },
+    vpAll: 2,
+  },
+  peleaNoche: {
+    id: 'peleaNoche',
+    name: { es: 'Pelea', en: 'Fight' },
+    text: { es: '+4 PV y +2 de Intoxicación.', en: '+4 VP and +2 Intoxication.' },
+    vp: 4,
+    intox: 2,
+  },
+  chungoNoche: {
+    id: 'chungoNoche',
+    name: { es: 'Te roban la cartera', en: 'Pickpocketed' },
+    text: { es: 'Pierdes todos tus objetos.', en: 'You lose all your items.' },
+    losesItems: true,
+  },
+  gorila: {
+    id: 'gorila',
+    name: { es: 'El portero te saca', en: 'Thrown out by the bouncer' },
+    text: {
+      es: 'Te echan del local: te retiras de la fase, pero sin penalización.',
+      en: 'You are thrown out: you leave the phase, but with no penalty.',
+    },
+  },
+  garrafonEvent: {
+    id: 'garrafonEvent',
+    name: { es: 'Te dan garrafón', en: 'Served bootleg' },
+    text: { es: '+3 de Intoxicación.', en: '+3 Intoxication.' },
+    intox: 3,
+  },
+
+  // --- After tier --------------------------------------------------------
+  ligueAfter: {
+    id: 'ligueAfter',
+    name: { es: 'Ligue del after', en: 'Afterparty hook-up' },
+    text: { es: 'Nadie se acordará. +6 PV.', en: 'Nobody will remember. +6 VP.' },
+    vp: 6,
+  },
+  fiestaAfter: {
+    id: 'fiestaAfter',
+    name: { es: 'Amanecer en la playa', en: 'Sunrise on the beach' },
+    text: { es: '+3 PV para todos los que sigan de fiesta.', en: '+3 VP to everyone still partying.' },
+    vpAll: 3,
+  },
+  peleaAfter: {
+    id: 'peleaAfter',
+    name: { es: 'Pelea con los porteros', en: 'Fight with the bouncers' },
+    text: { es: '+6 PV y +3 de Intoxicación.', en: '+6 VP and +3 Intoxication.' },
+    vp: 6,
+    intox: 3,
+  },
+  chungoAfter: {
+    id: 'chungoAfter',
+    name: { es: 'Despiertas sin nada', en: 'You wake up with nothing' },
+    text: { es: 'Pierdes todos tus objetos y 4 PV.', en: 'You lose all your items and 4 VP.' },
+    vp: -4,
+    losesItems: true,
+  },
+  soloVoyAMirar: {
+    id: 'soloVoyAMirar',
+    name: { es: 'Solo voy a mirar', en: 'Just going to look' },
+    text: { es: 'Te asomas al balcón un momento. +6 PV.', en: 'You step out onto the balcony for a second. +6 VP.' },
+    vp: 6,
+  },
+  terraza: {
+    id: 'terraza',
+    name: { es: 'La terraza del quinto', en: 'The fifth-floor terrace' },
+    text: { es: 'La mejor fiesta del viaje. +8 PV y +3 de Intoxicación.', en: 'The best party of the trip. +8 VP and +3 Intoxication.' },
+    vp: 8,
+    intox: 3,
+  },
+  comaEtilico: {
+    id: 'comaEtilico',
+    name: { es: 'Coma etílico', en: 'Alcohol poisoning' },
+    text: { es: '+5 de Intoxicación.', en: '+5 Intoxication.' },
+    intox: 5,
+  },
+
+  // --- Present in more than one tier --------------------------------------
+  karaoke: {
+    id: 'karaoke',
+    name: { es: 'Karaoke', en: 'Karaoke' },
+    text: { es: '+2 PV, o +4 si eres el más borracho.', en: '+2 VP, or +4 if you are the most intoxicated.' },
+    vp: 2,
   },
   barraLibre: {
     id: 'barraLibre',
@@ -152,21 +306,7 @@ export const EVENTS: Record<EventId, EventCard> = {
     id: 'reyGuiri',
     name: { es: 'Rey del guiri', en: 'King of the tourists' },
     text: { es: '+3 PV para quien más haya bebido en esta fase.', en: '+3 VP to whoever has drunk most this phase.' },
-  },
-  soloVoyAMirar: {
-    id: 'soloVoyAMirar',
-    name: { es: 'Solo voy a mirar', en: 'Just going to look' },
-    text: { es: 'Te asomas al balcón un momento. +5 PV.', en: 'You step out onto the balcony for a second. +5 VP.' },
-  },
-  movilAlMar: {
-    id: 'movilAlMar',
-    name: { es: 'Se te cae el móvil al mar', en: 'Phone in the sea' },
-    text: { es: '−3 PV.', en: '−3 VP.' },
-  },
-  cartera: {
-    id: 'cartera',
-    name: { es: 'Te roban la cartera', en: 'Pickpocketed' },
-    text: { es: 'Pierdes todos tus objetos.', en: 'You lose all your items.' },
+    vp: 3,
   },
   perdido: {
     id: 'perdido',
@@ -183,24 +323,12 @@ export const EVENTS: Record<EventId, EventCard> = {
     name: { es: 'Ronda', en: 'Round of drinks' },
     text: { es: 'Todos los que sigan de fiesta beben una carta de alcohol.', en: 'Everyone still partying drinks an alcohol card.' },
   },
-  garrafonEvent: {
-    id: 'garrafonEvent',
-    name: { es: 'Te dan garrafón', en: 'Served bootleg' },
-    text: { es: '+3 de Intoxicación.', en: '+3 Intoxication.' },
-  },
-  pelea: {
-    id: 'pelea',
-    name: { es: 'Pelea', en: 'Fight' },
-    text: { es: '+4 PV y +2 de Intoxicación.', en: '+4 VP and +2 Intoxication.' },
-  },
-  // NOTE: these two carry config-driven numbers in their flavour text, which is
-  // how they went stale once the values were tuned. In the real module the text
-  // becomes a `t()` call with params, so the number can only ever come from one
-  // place. Until then they are kept in step with config.ts by hand.
   vomitona: {
     id: 'vomitona',
     name: { es: 'Vomitona', en: 'Puking' },
     text: { es: '−4 de Intoxicación ahora, pero +3 de Resaca para siempre.', en: '−4 Intoxication now, but +3 Resaca permanently.' },
+    relief: 4,
+    resaca: 3,
   },
   ambulancia: {
     id: 'ambulancia',
@@ -209,6 +337,8 @@ export const EVENTS: Record<EventId, EventCard> = {
       es: 'El más borracho se retira de la fase, −5 de Intoxicación y +4 de Resaca.',
       en: 'The most intoxicated player withdraws, −5 Intoxication and +4 Resaca.',
     },
+    relief: 5,
+    resaca: 4,
   },
   kebabEvent: {
     id: 'kebabEvent',
@@ -237,6 +367,7 @@ export const EVENTS: Record<EventId, EventCard> = {
       es: 'Todo el que lleve algo ilegal lo tira y pierde 3 PV.',
       en: 'Everyone holding contraband discards it and loses 3 VP.',
     },
+    vp: -3,
   },
   redada: {
     id: 'redada',

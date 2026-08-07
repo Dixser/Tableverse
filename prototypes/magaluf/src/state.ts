@@ -274,7 +274,7 @@ export function consumeAlcohol(
   log(state, { kind: 'drank', player: player.id, card: card.id, n: intox });
 }
 
-export type LeaveReason = 'withdrew' | 'closingTime' | 'ambulance';
+export type LeaveReason = 'withdrew' | 'closingTime' | 'ambulance' | 'bouncer';
 
 /**
  * Removes a player from the current phase without judgement about why.

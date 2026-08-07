@@ -54,9 +54,12 @@ export interface Config {
     resaca: number;
   };
 
+  /**
+   * Only Farlopa's Resaca lives here. Vomitona's and Ambulancia's live on
+   * their cards in `cards.ts`, next to their flavour text — which is what
+   * stops the two drifting apart, as they already did once.
+   */
   resaca: {
-    vomitona: number;
-    ambulancia: number;
     farlopa: number;
   };
 
@@ -67,24 +70,6 @@ export interface Config {
     farlopaDrawsEvent: boolean;
     /** Rounding for Farlopa's halved intoxication. */
     farlopaRounding: 'floor' | 'ceil';
-  };
-
-  events: {
-    ligueVP: number;
-    ligueGrandeVP: number;
-    espumaVP: number;
-    karaokeVP: number;
-    karaokeDrunkestVP: number;
-    fotoVP: number;
-    reyGuiriVP: number;
-    soloVoyAMirarVP: number;
-    movilAlMarVP: number;
-    peleaVP: number;
-    peleaIntox: number;
-    garrafonIntox: number;
-    vomitonaRelief: number;
-    ambulanciaRelief: number;
-    cacheoVP: number;
   };
 
   phases: Record<PhaseId, PhaseConfig>;
@@ -119,8 +104,6 @@ export const defaultConfig: Config = {
   },
 
   resaca: {
-    vomitona: 3,
-    ambulancia: 4,
     farlopa: 3,
   },
 
@@ -129,24 +112,6 @@ export const defaultConfig: Config = {
     botellaRelief: 2,
     farlopaDrawsEvent: true,
     farlopaRounding: 'floor',
-  },
-
-  events: {
-    ligueVP: 3,
-    ligueGrandeVP: 5,
-    espumaVP: 2,
-    karaokeVP: 2,
-    karaokeDrunkestVP: 4,
-    fotoVP: 2,
-    reyGuiriVP: 3,
-    soloVoyAMirarVP: 5,
-    movilAlMarVP: 3,
-    peleaVP: 4,
-    peleaIntox: 2,
-    garrafonIntox: 3,
-    vomitonaRelief: 4,
-    ambulanciaRelief: 5,
-    cacheoVP: 3,
   },
 
   phases: {
@@ -168,22 +133,20 @@ export const defaultConfig: Config = {
         chupito: 1,
         agua: 1,
       },
-      // Events pay out per draw, not per point of intoxication. Because Tardeo
-      // drinks are cheap you get many more draws per point, so a VP-rich Tardeo
-      // event deck made the safest phase the most profitable one. Its VP
-      // density is deliberately thin.
+      // Events pay out per draw, not per point of intoxication, and Tardeo
+      // drinks are cheap — so this deck gets many more draws per point of
+      // capacity than the After's does. Its own low-value tier plus a thin VP
+      // density is what stops the safest phase being the most profitable one.
       events: {
-        ligue: 2,
-        espuma: 1,
+        ligueTardeo: 3,
+        fiestaTardeo: 2,
+        peleaTardeo: 2,
+        chungoTardeo: 2,
+        insolacion: 2,
         foto: 2,
-        karaoke: 1,
-        barraLibre: 1,
-        movilAlMar: 2,
-        cartera: 1,
         perdido: 2,
         chupitoCasa: 2,
         ronda: 2,
-        pelea: 1,
         vomitona: 1,
         kebabEvent: 2,
         aguaEvent: 2,
@@ -212,21 +175,22 @@ export const defaultConfig: Config = {
         cargada: 2,
         agua: 1,
       },
+      // Middle tier: rewards roughly double the Tardeo's, and the punishments
+      // start actually costing something — a bouncer can end your phase and
+      // the first Redada appears.
       events: {
-        ligue: 2,
-        ligueGrande: 2,
-        espuma: 2,
+        ligueNoche: 3,
+        fiestaNoche: 2,
+        peleaNoche: 3,
+        chungoNoche: 2,
+        gorila: 2,
+        garrafonEvent: 3,
         karaoke: 2,
-        foto: 2,
         barraLibre: 2,
         reyGuiri: 2,
-        movilAlMar: 2,
-        cartera: 1,
         perdido: 2,
         chupitoCasa: 3,
         ronda: 3,
-        garrafonEvent: 2,
-        pelea: 2,
         vomitona: 2,
         ambulancia: 1,
         kebabEvent: 2,
@@ -255,19 +219,24 @@ export const defaultConfig: Config = {
         pecera: 2,
         agua: 1,
       },
+      // Top tier: the biggest rewards in the game sitting next to the two
+      // cards that can end a weekend on their own. No `nada` — nothing in the
+      // After is ever nothing.
       events: {
-        ligueGrande: 4,
-        soloVoyAMirar: 4,
-        karaoke: 3,
-        reyGuiri: 3,
+        ligueAfter: 3,
+        fiestaAfter: 2,
+        peleaAfter: 3,
+        chungoAfter: 2,
+        soloVoyAMirar: 3,
+        terraza: 2,
+        comaEtilico: 2,
+        karaoke: 2,
         barraLibre: 2,
-        movilAlMar: 2,
-        cartera: 1,
+        reyGuiri: 3,
         perdido: 1,
         chupitoCasa: 5,
         ronda: 5,
         garrafonEvent: 4,
-        pelea: 3,
         vomitona: 2,
         ambulancia: 2,
         kebabEvent: 1,

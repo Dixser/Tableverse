@@ -11,6 +11,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { EventId, ItemId } from './cards.ts';
+import { EVENTS } from './cards.ts';
 import type { Config } from './config.ts';
 import { cloneConfig, defaultConfig } from './config.ts';
 import { applyAction, createGame, currentPlayer } from './engine.ts';
@@ -447,12 +448,13 @@ describe('the designed dramas', () => {
     const state = createGame(config, 32);
     const player = currentPlayer(state)!;
 
+    const vomitonaResaca = EVENTS.vomitona.resaca!;
     applyAction(state, config, { type: 'drink' });
-    expect(player.resaca).toBe(config.resaca.vomitona);
+    expect(player.resaca).toBe(vomitonaResaca);
 
     withdrawAll(state, config, atPhase(state, 2, 0));
     expect(state.day).toBe(2);
-    expect(player.intox).toBeGreaterThanOrEqual(config.resaca.vomitona);
+    expect(player.intox).toBeGreaterThanOrEqual(vomitonaResaca);
     expect(player.intox).toBe(player.resaca);
   });
 });
