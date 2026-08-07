@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--workspace=packages/server"],
       "port": 8000
+    },
+    {
+      "name": "magaluf-proto",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "prototypes/magaluf", "--port", "5174", "--strictPort"],
+      "port": 5174
     }
   ]
 }

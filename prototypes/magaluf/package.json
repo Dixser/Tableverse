@@ -1,0 +1,11 @@
+{
+  "name": "magaluf-prototype",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Design prototype for Magaluf. Deliberately outside the npm workspaces (packages/*) so it cannot affect the app's build, lint or tests.",
+  "scripts": {
+    "sim": "node --experimental-strip-types src/sim.ts",
+    "web": "vite web"
+  }
+}
