@@ -66,12 +66,6 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
         limit={limit}
       />
 
-      <DrawnCards
-        lastDraw={G.lastDraw}
-        drawerName={G.lastDraw ? nameFor(G.lastDraw.seatID) : null}
-        eventPending={G.pendingEvent != null}
-      />
-
       <div className={styles.players}>
         {G.activeSeatIDs.map((seatID) => {
           const player = G.players[seatID];
@@ -91,6 +85,11 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
           );
         })}
       </div>
+      <DrawnCards
+        lastDraw={G.lastDraw}
+        drawerName={G.lastDraw ? nameFor(G.lastDraw.seatID) : null}
+        eventPending={G.pendingEvent != null}
+      />
 
       {myTurn && me && (
         <ActionBar

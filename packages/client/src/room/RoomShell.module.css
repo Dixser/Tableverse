@@ -182,3 +182,31 @@
   border: 1px solid var(--color-border);
   cursor: default;
 }
+
+/* Mobile (768px, matching ChatPanel.tsx's MOBILE_BREAKPOINT_PX): on a
+   narrow screen the two fixed-corner controls -- `.drawerToggle` top-left
+   and ChatPanel's collapsed chat button bottom-left -- float directly over
+   the board, which spans the full width. These gutters reserve their
+   corners so the page's first and last rows of content are never stuck
+   underneath one: the board's own action row could otherwise end flush
+   with the viewport bottom, permanently under the chat button, with no
+   scroll position that frees it.
+
+   `.boardArea` has to become min-height for the bottom gutter to mean
+   anything: with a fixed `height`, a board taller than the box overflows
+   it visibly, and the container's padding lands *above* that overflow
+   rather than after it. The floor is the same value, so a short board's
+   footprint is unchanged. */
+@media (max-width: 768px) {
+  .container {
+    /* Clears `.drawerToggle` (top: var(--space-3) + ~2.25rem tall). */
+    padding-top: 4rem;
+    /* Clears the collapsed chat button (bottom: var(--space-3) + 2.75rem). */
+    padding-bottom: 4.5rem;
+  }
+
+  .boardArea {
+    height: auto;
+    min-height: min(38rem, 72vh);
+  }
+}
