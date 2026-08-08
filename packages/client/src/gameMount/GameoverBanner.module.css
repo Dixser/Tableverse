@@ -9,3 +9,61 @@
   font-weight: 600;
   text-align: center;
 }
+
+.message {
+  margin: 0;
+}
+
+/* Only rendered when a game supplied standings; every other game's banner is
+   the single line it has always been. */
+.standings {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--font-size-base);
+  font-weight: 400;
+  text-align: left;
+}
+
+.standing,
+.standingSelf {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+}
+
+.standingSelf {
+  background: color-mix(in srgb, var(--color-accent) 22%, var(--color-surface));
+  font-weight: 600;
+}
+
+.rank {
+  min-width: 1.5em;
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+
+.standingName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.standingLabel {
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.8;
+}
+
+.score {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}

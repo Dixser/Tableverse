@@ -6,6 +6,7 @@ import {
   RegicideBoard,
   CrewBoard,
   CahootsBoard,
+  MagalufBoard,
 } from '@tableverse/game-core/src/boards.js';
 import type { BoardProps } from '@tableverse/game-core';
 
@@ -22,4 +23,5 @@ export const boardComponents: Record<string, ComponentType<BoardProps<any>>> = {
   'regicide-v1': RegicideBoard,
   'crew-v1': CrewBoard,
   'cahoots-v1': CahootsBoard,
+  'magaluf-v1': MagalufBoard,
 };

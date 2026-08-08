@@ -3,6 +3,7 @@ export type {
   BoardProps,
   JSONSchema,
   GameoverResult,
+  GameoverStanding,
   GameLogEntry,
   SoundCue,
 } from './types.js';

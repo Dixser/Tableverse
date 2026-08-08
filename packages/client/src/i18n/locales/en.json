@@ -78,7 +78,8 @@
     "youAndOthersWin": "You and {{names}} win!",
     "othersWin_one": "{{names}} wins!",
     "othersWin_other": "{{names}} win!",
-    "fallback": "Game over."
+    "fallback": "Game over.",
+    "points": "{{score}} VP"
   },
   "roundConfirm": {
     "title": "Round complete",
@@ -577,6 +578,45 @@
       "piscina": "{{actor}} lands in the pool! {{d}} over the limit: +{{vp}} VP for the legend.",
       "cemento": "{{actor}} does not reach the pool. {{d}} over the limit.",
       "awaitingTable": "Waiting for everyone to be ready…"
+    },
+    "status": {
+      "dead": "Dead"
+    },
+    "board": {
+      "drink": "Drink",
+      "withdraw": "Withdraw",
+      "use": "Use {{item}}",
+      "banked": "Banked",
+      "atRisk": "At risk",
+      "intoxication": "Intoxication",
+      "resaca": "Hangover",
+      "limit": "Limit",
+      "limitBetween": "Limit: between {{min}} and {{max}}",
+      "drinks_one": "{{count}} drink",
+      "drinks_other": "{{count}} drinks",
+      "dayMultiplier": "Points x{{multiplier}}",
+      "you": "{{name}} (you)",
+      "statusOut": "Out",
+      "statusJail": "Jail",
+      "statusDead": "Dead",
+      "balconyRisk": "Balcony {{percent}}%",
+      "intoxShort": "{{n}} int",
+      "vpShort": "{{n}} VP",
+      "meterAria": "Intoxication {{intox}}, hangover {{resaca}}",
+      "nothingDrawn": "Nobody has had a drink yet this phase.",
+      "drewCaption": "{{name}} drank:",
+      "balconyTitle": "To the balcony",
+      "balconyBody": "{{name}} is {{over}} over the limit. All that is left is whether they reach the pool.",
+      "balconyNumbers": "Intoxication {{intox}} · Limit {{limit}}",
+      "balconyOdds": "{{percent}}%",
+      "balconyLost": "Forfeits {{vp}} VP from tonight.",
+      "balconyJump": "Jump",
+      "balconyPool": "Into the pool!",
+      "balconyConcrete": "Into the concrete.",
+      "balconyPoolBody": "{{name}} survives. Legend of Magaluf: +{{vp}} VP.",
+      "balconyConcreteBody": "{{name}}’s weekend is over.",
+      "balconyContinue": "Continue",
+      "balconySkip": "Skip the rest"
     }
   }
 }

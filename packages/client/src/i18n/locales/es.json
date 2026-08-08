@@ -78,7 +78,8 @@
     "youAndOthersWin": "¡Tú y {{names}} ganan!",
     "othersWin_one": "¡{{names}} gana!",
     "othersWin_other": "¡{{names}} ganan!",
-    "fallback": "Fin de la partida."
+    "fallback": "Fin de la partida.",
+    "points": "{{score}} PV"
   },
   "roundConfirm": {
     "title": "Ronda completada",
@@ -577,6 +578,45 @@
       "piscina": "¡{{actor}} cae en la piscina! {{d}} por encima del límite: +{{vp}} PV de leyenda.",
       "cemento": "{{actor}} no llega a la piscina. {{d}} por encima del límite.",
       "awaitingTable": "Esperando a que todos estén listos…"
+    },
+    "status": {
+      "dead": "Muerto"
+    },
+    "board": {
+      "drink": "Beber",
+      "withdraw": "Retirarse",
+      "use": "Usar {{item}}",
+      "banked": "Banco",
+      "atRisk": "En juego",
+      "intoxication": "Intoxicación",
+      "resaca": "Resaca",
+      "limit": "Límite",
+      "limitBetween": "Límite: entre {{min}} y {{max}}",
+      "drinks_one": "{{count}} copa",
+      "drinks_other": "{{count}} copas",
+      "dayMultiplier": "Puntos x{{multiplier}}",
+      "you": "{{name}} (tú)",
+      "statusOut": "Fuera",
+      "statusJail": "Calabozo",
+      "statusDead": "Muerto",
+      "balconyRisk": "Balcón {{percent}}%",
+      "intoxShort": "{{n}} int",
+      "vpShort": "{{n}} PV",
+      "meterAria": "Intoxicación {{intox}}, resaca {{resaca}}",
+      "nothingDrawn": "Aún no ha bebido nadie en esta fase.",
+      "drewCaption": "{{name}} ha bebido:",
+      "balconyTitle": "Al balcón",
+      "balconyBody": "{{name}} está {{over}} por encima del límite. Solo queda saber si llega a la piscina.",
+      "balconyNumbers": "Intoxicación {{intox}} · Límite {{limit}}",
+      "balconyOdds": "{{percent}}%",
+      "balconyLost": "Pierde {{vp}} PV de la noche.",
+      "balconyJump": "Saltar",
+      "balconyPool": "¡A la piscina!",
+      "balconyConcrete": "Al cemento.",
+      "balconyPoolBody": "{{name}} sobrevive. Leyenda de Magaluf: +{{vp}} PV.",
+      "balconyConcreteBody": "Se acabó el fin de semana de {{name}}.",
+      "balconyContinue": "Continuar",
+      "balconySkip": "Saltar el resto"
     }
   }
 }

@@ -24,7 +24,7 @@
  */
 
 import type { Ctx, Game, TurnOrderConfig } from 'boardgame.io';
-import type { GameoverResult } from '../../types.js';
+import type { GameoverResult, GameoverStanding } from '../../types.js';
 import {
   beginRoundConfirm,
   confirmRoundReadyMove,
@@ -511,7 +511,20 @@ function matchGameoverResult(G: MagalufG): GameoverResult | undefined {
     return p.bankedVP === best.bankedVP && p.totalIntoxSurvived === best.totalIntoxSurvived;
   });
 
-  return winners.length === 1 ? { winner: winners[0]! } : { winner: winners };
+  // The whole table, best first. Magaluf's death toll is the point of the
+  // game, so who did not make it home belongs in the result rather than only
+  // in the log.
+  const standings = ranked.map((id) => {
+    const player = G.players[id]!;
+    const row: GameoverStanding = { playerID: id, score: player.bankedVP };
+    if (player.status === 'dead') row.labelKey = 'magaluf.status.dead';
+    return row;
+  });
+
+  return {
+    winner: winners.length === 1 ? winners[0]! : winners,
+    standings,
+  };
 }
 
 // ---------------------------------------------------------------------------

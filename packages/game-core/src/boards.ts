@@ -11,3 +11,4 @@ export { TheMindBoard } from './games/themind/BoardComponent.js';
 export { RegicideBoard } from './games/regicide/BoardComponent.js';
 export { CrewBoard } from './games/crew/BoardComponent.js';
 export { CahootsBoard } from './games/cahoots/BoardComponent.js';
+export { MagalufBoard } from './games/magaluf/BoardComponent.js';

@@ -760,6 +760,35 @@ describe('magaluf gameDef', () => {
     });
   });
 
+  describe('gameover standings (AC35)', () => {
+    it('returns every seat best-first, marking the dead', () => {
+      // A limit of 0 and a certain-death curve guarantees casualties to mark.
+      const client = makeClient(3, (g) => {
+        g.limit = 0;
+        g.settings = { ...g.settings, basePoolChance: 0, poolDecay: 0 };
+      });
+      play(client, (g, s) => (s === '0' && g.players[s]!.drinksThisPhase < 1 ? 'drink' : 'withdraw'));
+
+      const g = G(client);
+      const gameover = client.store.getState().ctx.gameover as {
+        standings: { playerID: string; score: number; labelKey?: string }[];
+      };
+
+      expect(gameover.standings).toHaveLength(g.activeSeatIDs.length);
+      expect(gameover.standings.map((s) => s.playerID).sort()).toEqual([...g.activeSeatIDs].sort());
+
+      const scores = gameover.standings.map((s) => s.score);
+      expect([...scores].sort((a, b) => b - a)).toEqual(scores);
+
+      for (const row of gameover.standings) {
+        expect(row.score).toBe(g.players[row.playerID]!.bankedVP);
+        const isDead = g.players[row.playerID]!.status === 'dead';
+        expect(row.labelKey).toBe(isDead ? 'magaluf.status.dead' : undefined);
+      }
+      expect(gameover.standings.some((s) => s.labelKey === 'magaluf.status.dead')).toBe(true);
+    });
+  });
+
   describe('decks (AC21)', () => {
     it('never needs a mid-phase reshuffle in a full match at maxPlayers', () => {
       const client = makeClient(magalufModule.maxPlayers);
