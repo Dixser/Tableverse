@@ -616,7 +616,7 @@
       "balconyPoolBody": "{{name}} sobrevive. Leyenda de Magaluf: +{{vp}} PV.",
       "balconyConcreteBody": "Se acabó el fin de semana de {{name}}.",
       "balconyContinue": "Continuar",
-      "balconySkip": "Saltar el resto"
+      "balconySkip": "Omitir el resto"
     }
   }
 }
