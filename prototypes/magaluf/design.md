@@ -13,6 +13,12 @@ source for `spec/features/032-magaluf-rules/spec.md` once the design settles.
 > comedy about it. That is deliberate, and worth a one-line note wherever the
 > game is listed.
 
+> **Everything here is physically playable.** Every probability in the game is
+> either a count of cards in a deck or a roll of one d6. There are no
+> percentages to look up and nothing that needs a computer to adjudicate —
+> the digital version is an implementation of a tabletop game, not the other
+> way round.
+
 ---
 
 ## 1. Structure
@@ -31,8 +37,20 @@ Round-robin among players still partying in the current phase. On your turn:
 
 | Action | Effect |
 |---|---|
-| **Beber** / Drink | Draw 1 Alcohol card → gain its Intoxication and VP → draw 1 Event card and resolve it |
+| **Beber** / Drink | Turn over 1 Alcohol card and gain its Intoxication and VP. The Event card is drawn but stays **face-down** |
+| **Revelar evento** / Reveal event | Turn the Event over and read it to the table. Ends the turn |
 | **Retirarse** / Withdraw | Out for this phase. Aguafiestas penalty applies if you drank too little |
+
+**Drinking is deliberately two steps, because at a table it is two decks.**
+You flip the drink, everybody updates their numbers, and only then does
+somebody turn the event over and read it out. Doing both in one action asked
+players to absorb two cards at once and hold the arithmetic in their heads.
+While an event is face-down its drawer may do nothing else, and nobody else
+may turn it over.
+
+This changes nothing about *what* is drawn or in what order, so it has no
+balance effect and the simulator was deliberately not changed for it — only
+where the game pauses.
 
 Using an item is a **free action**, maximum one per turn, and can be combined
 with either choice. Two items are exceptions and are described in §8.
@@ -98,16 +116,38 @@ players already watch.
 
 ## 5. Balconing
 
-Exceeding the limit is not instant death. Let **`d` = Intoxication − Limit**
+Exceeding the limit is not instant death. Let **`d` = Intoxication − Limit`**
 (so `d ≥ 1`).
 
-```
-P(pool) = clamp01( 0.70 − (d − 1) × 0.12 )
-```
+> **Roll a d6. You survive if you roll higher than `d`.**
 
-| `d` | 1 | 2 | 3 | 4 | 5 | 6 | 7+ |
-|---|---|---|---|---|---|---|---|
-| Survival | 70% | 58% | 46% | 34% | 22% | 10% | 0% |
+That is the whole rule. Everything is playable with cardboard and one die —
+there is no probability anywhere in this game that a table cannot produce.
+
+| `d` | 1 | 2 | 3 | 4 | 5 | 6+ |
+|---|---|---|---|---|---|---|
+| Survival | 5/6 = 83% | 4/6 = 67% | 3/6 = 50% | 2/6 = 33% | 1/6 = 17% | 0% |
+
+> **This replaced a continuous formula, and lost nothing.** The earlier design
+> read `clamp01(0.70 − (d − 1) × 0.12)`, giving 70/58/46/34/22/10%. Those are
+> not numbers a die can make. But `base − (d − 1) × decay` with
+> `base = (N−1)/N` and `decay = 1/N` collapses to exactly `(N − d)/N` — the
+> chance of rolling above `d` on a dN. The curve was always die-shaped; it was
+> just carrying two invented constants instead of naming the object that
+> produces it. Swapping them for a d6 changed the simulated outcome by about
+> three points and removed two free parameters, two unbounded inputs from the
+> settings form, and the last unphysical rule in the game.
+
+**Which die is the difficulty setting.** A dN survives at `(N − d)/N` and
+becomes impossible at `d = N`, so the die alone sets both the base chance and
+how fast it collapses:
+
+| Die | Over-limit deaths | Dead by Monday | Targets met |
+|---|---|---|---|
+| d4 | 64.0% | 40.5% | 13/15 — Friday gets too lethal |
+| **d6 (default)** | **48.9%** | **33.4%** | **15/15** |
+| d8 | 38.4% | 27.5% | 12/15 |
+| d10+ | ≤31% | ≤23% | stops earning the theme |
 
 **Either way you lose the entire round's unbanked VP and all your items.**
 You are in a swimming pool with a fractured pelvis; the night is over.
@@ -118,10 +158,10 @@ You are in a swimming pool with a fractured pelvis; the night is over.
   on nights you already survived stays yours.
 
 **Jumping is never worth planning for.** The legend bonus grows with `d` but
-survival falls faster, so expected value peaks at **2.90 VP (at d = 2)**
-against a median round pool of **40 VP**. There is no `d` at which a player
-should aim to go over. The simulator asserts this every run rather than
-trusting the arithmetic.
+survival falls faster, so expected value peaks at **3.33 VP** against a median
+round pool of **39 VP**. There is no `d` at which a player should aim to go
+over. The simulator asserts this every run rather than trusting the
+arithmetic.
 
 ## 6. The Drinking Limit
 
@@ -416,10 +456,17 @@ non-player actor and it would have to be modelled as a regular seat.
 
 ## 14. Deliberate simplifications in the prototype
 
-- **Camello hands over a random contraband item** rather than letting the
-  player choose. A choice needs a pending-decision stage, which is real
-  machinery for a modest balance effect. Worth revisiting in the real module,
-  where boardgame.io stages make it cheap.
+- **The Camello does not let the player choose** which contraband they get.
+  A choice needs a pending-decision stage, which is real machinery for a
+  modest balance effect. Worth revisiting in the real module, where
+  boardgame.io stages make it cheap.
+
+  It is no longer *random*, though: there are three separate dealer cards
+  (`camelloPorro`, `camelloPastis`, `camelloFarlopa`) and the odds are their
+  counts in the deck, like everything else. That also bought something the
+  old single card could not express — the mix shifts across the weekend, from
+  mostly joints in the Tardeo to mostly powder in the After, which is where
+  Farlopa wants to be anyway.
 - **No bots ship in the game.** The policies in `src/bots.ts` exist only to
   drive the simulator.
 - **The jump modal shows the odds and then the outcome**, but the engine has

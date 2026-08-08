@@ -1,0 +1,89 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.active {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent) inset;
+}
+
+.dead {
+  opacity: 0.55;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.name {
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status,
+.risk {
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px var(--space-1);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+}
+
+.risk {
+  border-color: var(--color-danger, #c0392b);
+  background: var(--color-danger, #c0392b);
+  color: #fff;
+  font-weight: 700;
+}
+
+.scores {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.drinks {
+  margin-left: auto;
+  opacity: 0.75;
+}
+
+.items {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  min-height: 1.5rem;
+}
+
+.item,
+.contraband {
+  font-size: var(--font-size-sm);
+  padding: 1px var(--space-1);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+}
+
+/* Contraband is what the Cacheo taxes and the Redada arrests you for, so it
+   has to be readable at a glance which of your items are the risky ones. */
+.contraband {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  font-weight: 600;
+}

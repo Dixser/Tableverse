@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { gamesCatalog, getGameModule } from './gamesCatalog.js';
 
 describe('gamesCatalog', () => {
-  it('contains exactly tictactoe-v1, loveletter-v1, themind-v1, regicide-v1, crew-v1, and cahoots-v1 as of feature 028', () => {
+  it('contains exactly tictactoe-v1, loveletter-v1, themind-v1, regicide-v1, crew-v1, cahoots-v1 and magaluf-v1 as of feature 032', () => {
     expect(gamesCatalog.map((m) => m.id)).toEqual([
       'tictactoe-v1',
       'loveletter-v1',
@@ -10,6 +10,7 @@ describe('gamesCatalog', () => {
       'regicide-v1',
       'crew-v1',
       'cahoots-v1',
+      'magaluf-v1',
     ]);
   });
 
@@ -20,6 +21,7 @@ describe('gamesCatalog', () => {
     expect(getGameModule('regicide-v1')?.displayName).toBe('Regicide');
     expect(getGameModule('crew-v1')?.displayName).toBe('The Crew: The Quest for Planet Nine');
     expect(getGameModule('cahoots-v1')?.displayName).toBe('Mission Accomplished');
+    expect(getGameModule('magaluf-v1')?.displayName).toBe('Magaluf');
     expect(getGameModule('anything')).toBeUndefined();
   });
 });

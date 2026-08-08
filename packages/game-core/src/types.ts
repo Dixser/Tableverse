@@ -84,11 +84,32 @@ export function withGameName<G>(module: GameModule<G>): Game<G> {
  * logic must not assume exactly one winner just because Tic-Tac-Toe always
  * has one.
  */
+/**
+ * One row of a game's final table.
+ *
+ * Deliberately says nothing about what is being counted. The platform renders
+ * a seat, a number and an optional label; whether that number is victory
+ * points, tricks taken or rounds survived is the game's business, which is
+ * what keeps GameoverBanner free of any per-game branching.
+ */
+export interface GameoverStanding {
+  playerID: string;
+  /** Final score, rendered as-is. */
+  score: number;
+  /** Optional i18n key for a status label, e.g. a game's own "eliminated". */
+  labelKey?: string;
+}
+
 export interface GameoverResult {
   /** playerID(s) who won. Omit for a draw or any non-win end state. */
   winner?: string | string[];
   /** True when the match ended with no winner. */
   draw?: boolean;
+  /**
+   * Optional final table, best first. Games that omit it are unaffected --
+   * GameoverBanner renders exactly what it always did (feature 033).
+   */
+  standings?: GameoverStanding[];
 }
 
 /**

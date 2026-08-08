@@ -1,0 +1,71 @@
+.meter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.track {
+  position: relative;
+  height: 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-text) 8%, var(--color-surface));
+  overflow: hidden;
+}
+
+/* The range the face-down limit could fall in. Wide on Sunday, nearly a line
+   on Friday -- that contrast is the information. */
+.band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--color-text) 22%, transparent) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+.marker {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--color-text);
+  z-index: 2;
+}
+
+.resaca {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: color-mix(in srgb, var(--color-danger, #c0392b) 35%, transparent);
+}
+
+.fill,
+.fillOver {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--color-accent);
+  opacity: 0.85;
+}
+
+.fillOver {
+  background: var(--color-danger, #c0392b);
+  opacity: 1;
+}
+
+.labels {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.resacaLabel {
+  opacity: 0.75;
+}

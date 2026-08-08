@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { GameoverBanner, resolveGameoverMessage } from './GameoverBanner.js';
+import { GameoverBanner, resolveGameoverMessage, resolveStandings } from './GameoverBanner.js';
 import i18n from '../i18n/i18n.js';
 
 const NAMES = { '0': 'Alice', '1': 'Bob', '2': 'Carol' };
@@ -133,5 +133,103 @@ describe('GameoverBanner', () => {
     await i18n.changeLanguage('es');
     render(<GameoverBanner gameover={{ winner: '0' }} playerID="0" playerNames={NAMES} />);
     expect(screen.getByRole('status')).toHaveTextContent('¡Ganaste!');
+  });
+});
+
+// --- Feature 033: generic gameover standings ---------------------------
+
+describe('resolveStandings', () => {
+  it('returns nothing for a gameover that supplied none (AC31)', () => {
+    expect(resolveStandings({ winner: '0' }, NAMES, tEn)).toEqual([]);
+    expect(resolveStandings(undefined, NAMES, tEn)).toEqual([]);
+  });
+
+  it('resolves seat names and keeps the given order (AC32)', () => {
+    const rows = resolveStandings(
+      { winner: '1', standings: [{ playerID: '1', score: 42 }, { playerID: '0', score: 7 }] },
+      NAMES,
+      tEn,
+    );
+    expect(rows.map((r) => [r.name, r.score])).toEqual([
+      ['Bob', 42],
+      ['Alice', 7],
+    ]);
+  });
+
+  it('falls back to a seat label for a player with no synced name', () => {
+    expect(resolveStandings({ standings: [{ playerID: '5', score: 1 }] }, {}, tEn)[0]!.name).toBe(
+      'Seat 6',
+    );
+  });
+
+  it('translates a labelKey and leaves an entry without one unlabelled (AC33)', () => {
+    const rows = resolveStandings(
+      {
+        standings: [
+          { playerID: '0', score: 3, labelKey: 'magaluf.status.dead' },
+          { playerID: '1', score: 9 },
+        ],
+      },
+      NAMES,
+      tEn,
+    );
+    expect(rows[0]!.label).toBe('Dead');
+    expect(rows[1]!.label).toBeNull();
+  });
+
+  it('survives malformed standings rather than crashing the banner (AC34)', () => {
+    expect(resolveStandings({ standings: 'nope' }, NAMES, tEn)).toEqual([]);
+    expect(resolveStandings({ standings: [null, 7, { playerID: '0' }] }, NAMES, tEn)).toEqual([]);
+    // A well-formed row alongside broken ones still survives.
+    expect(
+      resolveStandings({ standings: [null, { playerID: '0', score: 2 }] }, NAMES, tEn),
+    ).toHaveLength(1);
+  });
+});
+
+describe('GameoverBanner standings rendering', () => {
+  afterEach(() => {
+    void i18n.changeLanguage('en');
+  });
+
+  it('renders exactly the message when a game supplies no standings (AC31)', () => {
+    const { container } = render(
+      <GameoverBanner gameover={{ winner: '0' }} playerID="0" playerNames={NAMES} />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('You win!');
+    expect(container.querySelector('ol')).toBeNull();
+  });
+
+  it('renders one row per standing, with rank, name and score (AC32)', () => {
+    render(
+      <GameoverBanner
+        gameover={{
+          winner: '1',
+          standings: [
+            { playerID: '1', score: 120 },
+            { playerID: '0', score: 95, labelKey: 'magaluf.status.dead' },
+          ],
+        }}
+        playerID="0"
+        playerNames={NAMES}
+      />,
+    );
+    const rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent('Bob');
+    expect(rows[0]).toHaveTextContent('120 VP');
+    expect(rows[1]).toHaveTextContent('Alice');
+    expect(rows[1]).toHaveTextContent('Dead');
+  });
+
+  it('does not crash on malformed standings (AC34)', () => {
+    render(
+      <GameoverBanner
+        gameover={{ winner: '0', standings: { not: 'an array' } }}
+        playerID="0"
+        playerNames={NAMES}
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('You win!');
   });
 });

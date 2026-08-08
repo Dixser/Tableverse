@@ -130,7 +130,9 @@ export type EventId =
   | 'kebabEvent'
   | 'aguaEvent'
   | 'redbullEvent'
-  | 'camello'
+  | 'camelloPorro'
+  | 'camelloPastis'
+  | 'camelloFarlopa'
   | 'cacheo'
   | 'redada'
   | 'nada';
@@ -355,10 +357,20 @@ export const EVENTS: Record<EventId, EventCard> = {
     name: { es: 'Red Bull', en: 'Red Bull' },
     text: { es: 'Consigues un Red Bull.', en: 'You get a Red Bull.' },
   },
-  camello: {
-    id: 'camello',
+  camelloPorro: {
+    id: 'camelloPorro',
     name: { es: 'Camello', en: 'Dealer' },
-    text: { es: 'Consigues un objeto ilegal.', en: 'You get a contraband item.' },
+    text: { es: 'Consigues un Porro.', en: 'You get a Joint.' },
+  },
+  camelloPastis: {
+    id: 'camelloPastis',
+    name: { es: 'Camello', en: 'Dealer' },
+    text: { es: 'Consigues Pastis.', en: 'You get MDMA.' },
+  },
+  camelloFarlopa: {
+    id: 'camelloFarlopa',
+    name: { es: 'Camello', en: 'Dealer' },
+    text: { es: 'Consigues Farlopa.', en: 'You get Farlopa.' },
   },
   cacheo: {
     id: 'cacheo',

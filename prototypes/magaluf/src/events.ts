@@ -127,12 +127,11 @@ export function resolveEvent(
       giveItem(actor, 'redbull');
       break;
 
-    case 'camello': {
-      // The prototype hands over a random contraband item rather than offering
-      // a choice. A choice needs a pending-decision stage, which is real
-      // machinery for a modest balance effect — noted in design.md as a
-      // deliberate simplification to revisit in the real module.
-      const item = CAMELLO_POOL[rng.int(CAMELLO_POOL.length)]! as ItemId;
+    case 'camelloPorro':
+    case 'camelloPastis':
+    case 'camelloFarlopa': {
+      // The card names the item. Contraband odds are deck counts, not a roll.
+      const item = ({ camelloPorro: 'porro', camelloPastis: 'pastis', camelloFarlopa: 'farlopa' } as const)[eventId];
       giveItem(actor, item);
       log(state, { kind: 'gotItem', player: actor.id, item });
       break;

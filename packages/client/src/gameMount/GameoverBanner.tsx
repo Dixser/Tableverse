@@ -64,18 +64,85 @@ export function resolveGameoverMessage(
 }
 
 /**
+ * One row of a game's final table, already resolved for display.
+ *
+ * Exported separately from the component for the same reason
+ * resolveGameoverMessage is: every branch stays testable without mounting
+ * React. Tolerates a malformed `standings` exactly as resolveGameoverMessage
+ * tolerates a non-conforming `gameover` -- a future game getting this wrong
+ * must degrade, not crash the banner every other game depends on.
+ */
+export interface ResolvedStanding {
+  playerID: string;
+  name: string;
+  score: number;
+  label: string | null;
+}
+
+export function resolveStandings(
+  gameover: unknown,
+  playerNames: Record<string, string>,
+  t: TFunction,
+): ResolvedStanding[] {
+  if (!gameover || typeof gameover !== 'object') return [];
+  const raw = (gameover as { standings?: unknown }).standings;
+  if (!Array.isArray(raw)) return [];
+
+  const rows: ResolvedStanding[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') continue;
+    const { playerID, score, labelKey } = entry as {
+      playerID?: unknown;
+      score?: unknown;
+      labelKey?: unknown;
+    };
+    if (typeof playerID !== 'string' || typeof score !== 'number') continue;
+    rows.push({
+      playerID,
+      name: nameFor(playerID, playerNames, t),
+      score,
+      label: typeof labelKey === 'string' ? t(labelKey) : null,
+    });
+  }
+  return rows;
+}
+
+/**
  * Platform-wide gameover/victory message, rendered by GameMount (never by a
  * BoardComponent) so every game gets it for free -- see
  * spec/features/009-gameover-banner. Renders nothing while the match is
  * still in progress (ctx.gameover is undefined).
+ *
+ * Since feature 033 it also renders an optional final table when a game's
+ * endIf supplied `standings`. The platform never learns what the number
+ * counts -- it renders a seat, a score and a translated label key -- which is
+ * what keeps this free of any per-game branching. A game that supplies
+ * nothing renders exactly what it always did.
  */
 export function GameoverBanner({ gameover, playerID, playerNames }: GameoverBannerProps) {
   const { t } = useTranslation();
   const message = resolveGameoverMessage(gameover, playerID, playerNames, t);
   if (message === null) return null;
+  const standings = resolveStandings(gameover, playerNames, t);
+
   return (
     <div className={styles.banner} role="status">
-      {message}
+      <p className={styles.message}>{message}</p>
+      {standings.length > 0 && (
+        <ol className={styles.standings}>
+          {standings.map((row, index) => (
+            <li
+              key={row.playerID}
+              className={row.playerID === playerID ? styles.standingSelf : styles.standing}
+            >
+              <span className={styles.rank}>{index + 1}</span>
+              <span className={styles.standingName}>{row.name}</span>
+              {row.label && <span className={styles.standingLabel}>{row.label}</span>}
+              <span className={styles.score}>{t('gameover.points', { score: row.score })}</span>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }

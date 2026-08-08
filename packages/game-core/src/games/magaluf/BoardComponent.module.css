@@ -1,0 +1,13 @@
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Wraps rather than shrinking: at six seats the meters still have to be
+   readable, so an extra row beats six squeezed columns. */
+.players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-2);
+}
