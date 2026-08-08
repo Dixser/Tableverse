@@ -54,8 +54,12 @@ export interface JumpRecord {
   limit: number;
   survived: boolean;
   legendVP: number;
-  /** Unbanked VP forfeited by jumping — what the gamble actually cost. */
+  /** The round pool riding on the roll — what the gamble actually put up. */
+  poolVP: number;
+  /** Unbanked VP forfeited. Only the concrete costs anything: 0 on a survival. */
   lostVP: number;
+  /** Banked by a survivor: the pool at the day's rate, legend bonus excluded. */
+  bankedVP: number;
 }
 
 export interface LogEntry {

@@ -149,19 +149,33 @@ how fast it collapses:
 | d8 | 38.4% | 27.5% | 12/15 |
 | d10+ | ≤31% | ≤23% | stops earning the theme |
 
-**Either way you lose the entire round's unbanked VP and all your items.**
-You are in a swimming pool with a fractured pelvis; the night is over.
+**The roll is the entire penalty.** Losing the night is what dying costs, not
+what jumping costs.
 
-- **Piscina / Pool** — you live. Bank a **Leyenda de Magaluf** bonus of
-  `3 + d` VP, take **Resaca 4**, and continue the weekend.
-- **Cemento / Concrete** — dead, out for the rest of the weekend. VP banked
-  on nights you already survived stays yours.
+- **Piscina / Pool** — you live, and the night lives with you: bank the round
+  pool at the day's multiplier exactly as anyone under the limit would, keep
+  your items, and take a **Leyenda de Magaluf** bonus of `3 + d` VP on top,
+  plus **Resaca 4**.
+- **Cemento / Concrete** — dead, out for the rest of the weekend. The round's
+  unbanked VP and every item go with you. VP banked on nights you already
+  survived stays yours.
 
-**Jumping is never worth planning for.** The legend bonus grows with `d` but
-survival falls faster, so expected value peaks at **3.33 VP** against a median
-round pool of **39 VP**. There is no `d` at which a player should aim to go
-over. The simulator asserts this every run rather than trusting the
-arithmetic.
+**What the jumper is risking is the pool, not the bonus.** The Leyenda bonus
+still peaks at **3.33 VP** at `d = 2`, far below a median round pool of **41
+VP**, so it never justifies going over on its own. The real sum is
+`(N − d)/N × pool` against a certain `pool` for stopping under the limit —
+83% of the night at `d = 1`, half of it by `d = 3`.
+
+> **This replaced a forfeit on both outcomes**, which was inherited from the
+> era when going over simply killed you. Measured over 20,000 games at 4
+> players, the lethality is untouched (33.2% dead by Monday against 33.4%,
+> phase economy identical to three decimals) but the reward curve is not:
+> median winning score 133 → **151**, and win rates move from cautious 33.6% /
+> balanced 35.0% / greedy 26.3% / reckless 5.0% to **19.4 / 36.1 / 31.2 /
+> 13.3**. That fails the greedy-share target at 61.6% (band 40–60%) — the one
+> target this rule costs. The bots do not adapt their thresholds, so the true
+> shift is smaller than it reads; playtesting decides whether it needs paying
+> back, and `balconyDie` is the obvious dial if it does.
 
 ## 6. The Drinking Limit
 
@@ -248,7 +262,7 @@ cautious play on Sunday.
 | Botella de agua / Water bottle | −2 Intoxication | ✔ |
 | Red Bull | Peek at the Drinking Limit | ✔ |
 | Porro / Joint | **Skip your draw this turn without withdrawing** — watch what everyone else does, decide next turn | ✘ |
-| Pastis / MDMA | Double your next drink's VP, +2 Intoxication | ✘ |
+| Pastis / MDMA | Double your next drink's VP | ✘ |
 | Farlopa / Cocaine | **Immediately take another turn; that drink's Intoxication is halved (round down). Gain Resaca 3** | ✘ |
 
 The joint and the farlopa are mirror images: one buys a turn of hesitation,
@@ -377,24 +391,34 @@ weekend — the most hardcore survivor wins.
 
 | Measure | Result |
 |---|---|
-| Death rate Fri / Sat / Sun | **8.8% / 12.8% / 20.1%** of players still alive that morning |
-| Players dead by Monday | **36.0%** |
-| Games with at least one death | **87.0%** |
-| Total wipeouts | 0.8% |
-| Jumps per game | 2.68, of which **53.8% are fatal** |
-| Distribution of `d` | 28% at 1, 23% at 2, 17% at 3, tail to 10 |
-| Phase economy (VP per point of intoxication) | **1.20 / 1.24 / 1.53** — strictly rising |
-| Win rate: cautious / balanced / greedy / reckless | 33.7% / 34.7% / 26.3% / 5.3% |
-| Median winning score | 132 VP |
-| Sunday-After leader goes on to win | 61.4% |
-| Farlopa played Sunday vs Friday | 3.69× |
-| Redada does nothing | 35.8% |
-| Aguafiestas penalty rate | 22.3% of exits |
-| Median game length | 92 player-turns |
+| Death rate Fri / Sat / Sun | **7.9% / 11.7% / 18.4%** of players still alive that morning |
+| Players dead by Monday | **33.2%** |
+| Games with at least one death | **84.4%** |
+| Total wipeouts | 0.6% |
+| Jumps per game | 2.72, of which **48.8% are fatal** |
+| Distribution of `d` | 27% at 1, 22% at 2, 17% at 3, tail to 10 |
+| Phase economy (VP per point of intoxication) | **1.19 / 1.24 / 1.56** — strictly rising |
+| Win rate: cautious / balanced / greedy / reckless | 19.4% / 36.1% / 31.2% / 13.3% |
+| Median winning score | 151 VP |
+| Sunday-After leader goes on to win | 57.1% |
+| Farlopa played Sunday vs Friday | 4.25× |
+| Redada does nothing | 34.6% |
+| Aguafiestas penalty rate | 22.6% of exits |
+| Median game length | 93 player-turns |
 
-**15 of 15 balance targets met at 4 players.**
+**14 of 15 balance targets met at 4 players.** The miss is the greedy share of
+greedy-plus-cautious wins, at 61.6% against a 40–60% band — the price of the
+survivor keeping their night (§5). Every other target holds, including the
+three the theme depends on: rising danger, a lethal weekend, and a phase
+economy that pays for the danger it sells.
 
 ### There is a skill ceiling, and it is not at the limit
+
+> Measured under the old rule, where both jump outcomes forfeited the round.
+> The shape of the claim survives the change — a buffer still beats precision,
+> because the pool is still what is at stake — but the exact figures below have
+> not been re-swept, and the optimum should now sit slightly closer to the
+> limit than 0.90.
 
 Sweeping the risk threshold — the fraction of estimated capacity a player will
 project themselves to before leaving — gives a clear optimum and a cliff:

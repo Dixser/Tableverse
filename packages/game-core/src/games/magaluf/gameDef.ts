@@ -253,16 +253,44 @@ function startDay(G: MagalufG, rng: Rng, day: number): void {
   startPhase(G, rng, 0);
 }
 
-function jump(G: MagalufG, rng: Rng, seatID: string): void {
+/**
+ * The jump.
+ *
+ * **Forfeiting the night is the price of dying, not the price of jumping.**
+ * A player who reaches the pool is a survivor in every respect: they bank the
+ * round pool at the day's rate exactly as somebody who stayed under the limit
+ * would, keep their items, and take the Leyenda bonus on top. Only the
+ * concrete costs the pool.
+ *
+ * That makes the die the whole penalty, and turns the limit from a cliff into
+ * a graded one — at `d = 1` on a d6 you keep the night five times out of six.
+ */
+function jump(G: MagalufG, rng: Rng, seatID: string, multiplier: number): void {
   const player = G.players[seatID]!;
   const d = player.intox - G.limit;
-
-  // Forfeited either way. You are in a swimming pool with a fractured pelvis.
-  const lostVP = player.roundVP;
-  player.roundVP = 0;
-  player.items = [];
+  const poolVP = player.roundVP;
 
   const outcome = resolveJump(d, G.settings, rng);
+  let bankedVP = 0;
+
+  if (outcome.survived) {
+    // A survived night counts as survived for the tiebreak too — and it is the
+    // drunkest night anybody will ever bring to it.
+    player.totalIntoxSurvived += player.intox;
+    bankedVP = bankRound(G, seatID, multiplier);
+    player.bankedVP += outcome.legendVP;
+    player.resaca += outcome.resaca;
+    log(G, 'piscina', { actor: seatID, d, roll: outcome.roll, vp: outcome.legendVP }, 'special');
+    // The ordinary survivor's line, reused: from here the night reads the same
+    // as anybody else's, which is exactly the claim the rule now makes.
+    log(G, 'survived', { actor: seatID, vp: bankedVP }, 'success');
+  } else {
+    player.roundVP = 0;
+    player.items = [];
+    player.status = 'dead';
+    log(G, 'cemento', { actor: seatID, d, roll: outcome.roll }, 'failure');
+  }
+
   G.jumps.push({
     day: G.day,
     seatID,
@@ -272,17 +300,10 @@ function jump(G: MagalufG, rng: Rng, seatID: string): void {
     die: G.settings.balconyDie,
     survived: outcome.survived,
     legendVP: outcome.legendVP,
-    lostVP,
+    poolVP,
+    lostVP: outcome.survived ? 0 : poolVP,
+    bankedVP,
   });
-
-  if (outcome.survived) {
-    player.bankedVP += outcome.legendVP;
-    player.resaca += outcome.resaca;
-    log(G, 'piscina', { actor: seatID, d, roll: outcome.roll, vp: outcome.legendVP }, 'special');
-  } else {
-    player.status = 'dead';
-    log(G, 'cemento', { actor: seatID, d, roll: outcome.roll }, 'failure');
-  }
 }
 
 function resolveNight(G: MagalufG, rng: Rng): void {
@@ -300,7 +321,7 @@ function resolveNight(G: MagalufG, rng: Rng): void {
     }
 
     if (player.intox > G.limit) {
-      jump(G, rng, id);
+      jump(G, rng, id, multiplier);
     } else {
       player.totalIntoxSurvived += player.intox;
       const banked = bankRound(G, id, multiplier);

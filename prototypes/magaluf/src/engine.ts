@@ -443,15 +443,33 @@ function resolveNight(state: GameState, config: Config, rng: Random): void {
   startDay(state, config, rng, state.day + 1);
 }
 
+/**
+ * Forfeiting the night is the price of dying, not the price of jumping. Reach
+ * the pool and you are a survivor in every respect — the round pool banks at
+ * the day's rate, the items stay in your pocket, and the Leyenda bonus goes on
+ * top. The die is the whole penalty.
+ */
 function jump(state: GameState, config: Config, rng: Random, player: PlayerState): void {
   const d = player.intox - state.limit;
-
-  // Lost either way. You are in a swimming pool with a fractured pelvis.
-  const lostVP = player.roundVP;
-  player.roundVP = 0;
-  player.items = [];
+  const poolVP = player.roundVP;
 
   const outcome = resolveJump(d, config, rng);
+  let bankedVP = 0;
+
+  if (outcome.survived) {
+    player.totalIntoxSurvived += player.intox;
+    bankedVP = bankRound(state, config, player);
+    player.bankedVP += outcome.legendVP;
+    addResaca(player, outcome.resaca);
+    log(state, { kind: 'piscina', player: player.id, n: d });
+    log(state, { kind: 'survived', player: player.id, n: bankedVP });
+  } else {
+    player.roundVP = 0;
+    player.items = [];
+    player.status = 'dead';
+    log(state, { kind: 'cemento', player: player.id, n: d });
+  }
+
   state.jumps.push({
     day: state.day,
     playerId: player.id,
@@ -459,15 +477,8 @@ function jump(state: GameState, config: Config, rng: Random, player: PlayerState
     limit: state.limit,
     survived: outcome.survived,
     legendVP: outcome.legendVP,
-    lostVP,
+    poolVP,
+    lostVP: outcome.survived ? 0 : poolVP,
+    bankedVP,
   });
-
-  if (outcome.survived) {
-    player.bankedVP += outcome.legendVP;
-    addResaca(player, outcome.resaca);
-    log(state, { kind: 'piscina', player: player.id, n: d });
-  } else {
-    player.status = 'dead';
-    log(state, { kind: 'cemento', player: player.id, n: d });
-  }
 }

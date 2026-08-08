@@ -53,8 +53,12 @@ export interface JumpRecord {
   die: number;
   survived: boolean;
   legendVP: number;
-  /** Unbanked VP forfeited by jumping. */
+  /** The round pool riding on the roll. Shown before the die is read. */
+  poolVP: number;
+  /** Unbanked VP forfeited. Only the concrete costs anything: 0 on a survival. */
   lostVP: number;
+  /** Banked by a survivor: the pool at the day's rate, legend bonus excluded. */
+  bankedVP: number;
 }
 
 /**

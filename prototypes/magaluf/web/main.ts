@@ -59,7 +59,9 @@ const UI: Record<string, Bilingual> = {
   concrete: { es: 'Al cemento.', en: 'Into the concrete.' },
   poolBody: { es: 'Sobrevive. Leyenda de Magaluf', en: 'Survives. Legend of Magaluf' },
   concreteBody: { es: 'Se acabó el fin de semana.', en: 'The weekend is over.' },
+  atRisk: { es: 'Se juega en la tirada', en: 'Riding on the roll' },
   lostAll: { es: 'Pierde todos los PV de la noche', en: 'Loses the whole night' },
+  bankedNight: { es: 'Guarda la noche', en: 'Banks the night' },
   continue: { es: 'Continuar', en: 'Continue' },
   gameOver: { es: 'Fin de semana terminado', en: 'Weekend over' },
   close: { es: 'Cerrar', en: 'Close' },
@@ -279,7 +281,7 @@ function showPendingJumps(): boolean {
     <p><strong>${player.name}</strong> ${t('jumpBody')}</p>
     <p>${t('intox')} ${jump.limit + jump.d} / ${t('limit')} ${jump.limit} &nbsp;·&nbsp; d = ${jump.d}</p>
     <div class="odds">${Math.round(poolChance(jump.d, config) * 100)}%</div>
-    ${jump.lostVP > 0 ? `<p>${t('lostAll')}: −${jump.lostVP} ${t('vp')}</p>` : ''}
+    ${jump.poolVP > 0 ? `<p>${t('atRisk')}: ${jump.poolVP} ${t('vp')}</p>` : ''}
     <button class="primary" id="jumpBtn">${t('jumpBtn')}</button>`;
   modal.classList.add('show');
 
@@ -293,6 +295,11 @@ function showPendingJumps(): boolean {
         jump.survived
           ? `${t('poolBody')} +${jump.legendVP} ${t('vp')}, ${t('resaca')} +${config.balconing.resaca}`
           : t('concreteBody')
+      }</p>
+      <p>${
+        jump.survived
+          ? `${t('bankedNight')}: +${jump.bankedVP} ${t('vp')}`
+          : `${t('lostAll')}: −${jump.lostVP} ${t('vp')}`
       }</p>
       <button class="primary" id="contBtn">${t('continue')}</button>`;
     document.getElementById('contBtn')!.onclick = () => {

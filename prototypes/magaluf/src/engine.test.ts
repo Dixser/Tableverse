@@ -102,7 +102,7 @@ describe('resaca', () => {
 });
 
 describe('balconing', () => {
-  it('costs the whole round pool whether you live or die', () => {
+  it('costs the round pool only when the roll fails', () => {
     for (const basePoolChance of [1, 0]) {
       const config = noFrictionConfig('cana', 'nada', (c) => {
         c.balconing.basePoolChance = basePoolChance;
@@ -116,10 +116,20 @@ describe('balconing', () => {
       withdrawAll(state, config, () => state.day !== 0);
 
       const jump = state.jumps.at(0)!;
-      expect(jump.lostVP).toBe(40);
+      expect(jump.poolVP).toBe(40);
       expect(jump.survived).toBe(basePoolChance === 1);
-      // The only VP a jumper can end up with is the legend bonus.
-      expect(victim.bankedVP).toBe(jump.survived ? jump.legendVP : 0);
+
+      if (jump.survived) {
+        // Friday is x1, so the pool banks at face value — with the legend
+        // bonus on top of it rather than instead of it.
+        expect(jump.lostVP).toBe(0);
+        expect(jump.bankedVP).toBe(40);
+        expect(victim.bankedVP).toBe(40 + jump.legendVP);
+      } else {
+        expect(jump.lostVP).toBe(40);
+        expect(jump.bankedVP).toBe(0);
+        expect(victim.bankedVP).toBe(0);
+      }
     }
   });
 

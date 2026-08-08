@@ -83,12 +83,16 @@ export function playGame(config: Config, seed: number, policies: string[]): Game
   }
 
   // What was on the table at each night's check: banked by survivors, forfeited
-  // by jumpers. This is the number the jump's expected value must lose to.
+  // by the ones who hit the concrete. This is the number the jump's expected
+  // value must lose to. A survived jump already logs `survived`, so only the
+  // fatal ones are added here — counting both would double the pool.
   const roundPools: number[] = [];
   for (const entry of state.log) {
     if (entry.kind === 'survived') roundPools.push(entry.n ?? 0);
   }
-  for (const jump of state.jumps) roundPools.push(jump.lostVP);
+  for (const jump of state.jumps) {
+    if (!jump.survived) roundPools.push(jump.lostVP);
+  }
 
   const deathsByDay = [0, 0, 0];
   for (const jump of state.jumps) {

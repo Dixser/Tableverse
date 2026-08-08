@@ -128,21 +128,26 @@ to zero. Resaca is permanent and only ever grows:
 At the end of each round, any surviving, non-arrested player whose
 Intoxication **exceeds** the limit jumps. Let `d = intox − limit` (`d ≥ 1`):
 
-```
-P(pool) = clamp01( basePoolChance − (d − 1) × poolDecay )
-```
+**Roll a dN and survive by beating `d`.** `P(pool) = (N − d) / N`, clamped,
+which on the default d6 gives 83% at `d = 1` falling to 0% at `d ≥ 6`. The die
+replaced a `basePoolChance`/`poolDecay` pair that collapsed to exactly this
+curve; see `balconing.ts`.
 
-Defaults `0.70` and `0.12`, giving 70% at `d = 1` falling to 0% at `d ≥ 7`.
+**Only the failed roll forfeits anything.** The night is the price of dying,
+not the price of jumping.
 
-**Both outcomes forfeit the entire round's unbanked VP and all items.**
+- **Piscina** — survives, and is a survivor in every respect: banks the round
+  pool at the day's multiplier exactly as an under-limit player would, keeps
+  their items, banks `3 + d` VP on top (the Leyenda bonus, unmultiplied),
+  takes Resaca 4, and plays on. The night also counts toward the
+  intoxication-survived tiebreak.
+- **Cemento** — dead. Forfeits the entire round's unbanked VP and all items,
+  and is out for the remainder of the weekend. Previously banked VP is kept.
 
-- **Piscina** — survives. Banks `3 + d` VP (the Leyenda bonus, unmultiplied),
-  takes Resaca 4, plays on.
-- **Cemento** — dead. Out for the remainder of the weekend. Previously banked
-  VP is kept.
-
-Jumping is never worth planning for: expected value peaks at 2.90 VP at
-`d = 2` against a median round pool of ~39 VP.
+This makes the limit a graded cliff rather than an absolute one: a player one
+over keeps the night five times out of six, and the pool they are risking —
+not the Leyenda bonus, which still peaks near 3.3 VP — is what the decision is
+actually about.
 
 ### Decks
 
@@ -184,7 +189,7 @@ to the bonus without drinking.
 | Botella de agua | −2 Intoxication | no |
 | Red Bull | Peek at the limit | no |
 | Porro | Skip your draw this turn without withdrawing | yes |
-| Pastis | Double your next drink's VP, +2 Intoxication | yes |
+| Pastis | Double your next drink's VP | yes |
 | Farlopa | Take an extra drink at halved Intoxication (floor); Resaca +3 | yes |
 
 ### The police
@@ -237,6 +242,16 @@ survived across the weekend; a tie surviving that returns all tied seats in
   risk cheapest exactly when it should be dearest. Round-banking plus a
   survival roll means Sunday's After — the largest unbanked pile in the game
   — is the most dangerous thing the leader owns.
+- **The forfeit belongs to the death, not to the jump.** Originally both
+  outcomes cost the round pool, which was coherent while going over meant
+  dying and merely severe once the roll arrived. Handing the survivor their
+  night back makes the die the entire penalty and the rule a single sentence.
+  It is not free: at 20,000 games the death rates and the phase economy barely
+  move (33.2% dead by Monday against 33.4%), but the median winning score
+  rises 133 → 151 and the win rates tilt from cautious 33.6% / greedy 26.3% to
+  cautious 19.4% / greedy 31.2%, which fails the greedy-share balance target
+  at 61.6%. Accepted deliberately, to be re-measured against playtesters
+  rather than bots.
 - **The lasting cost of relief is Resaca, not a modifier on the limit.** Both
   are mathematically identical; Resaca keeps everything in one currency
   moving in one direction, and shows the damage on the counter players
@@ -311,9 +326,10 @@ rather than a free escape.
 
 ### 5. Going over the balcony
 
-As a seated player whose intoxication exceeds the limit at the end of a day,
-I forfeit the round's VP and my items, and a single roll decides whether I
-survive with a Leyenda bonus or am eliminated for the rest of the weekend.
+As a seated player whose intoxication exceeds the limit at the end of a day, a
+single roll decides whether I keep the night — banking it as usual, with a
+Leyenda bonus on top — or lose the round's VP, my items and the rest of the
+weekend with it.
 
 ### 6. Watching after dying
 
@@ -351,10 +367,12 @@ definition. `[conformance]` denotes the shared conformance suite.
 9. `[unit]` Reaching the phase drink cap auto-withdraws the player.
 10. `[unit]` Intoxication resets each morning to the player's Resaca, never to
     zero and never below zero at any point.
-11. `[unit]` Surviving the night banks `round(roundVP × dayMultiplier)`;
-    balconing forfeits the whole round pool on both outcomes.
-12. `[unit]` A surviving jumper banks `legendBase + d`, gains Resaca 4, and
-    stays alive; a failed jump sets the seat dead and pays no bonus.
+11. `[unit]` Surviving the night banks `round(roundVP × dayMultiplier)`,
+    whether it was survived under the limit or in the pool; only a failed jump
+    forfeits the round pool, and only a failed jump empties the items.
+12. `[unit]` A surviving jumper banks `legendBase + d` on top of the night's
+    banked pool, gains Resaca 4, and stays alive; a failed jump sets the seat
+    dead and pays no bonus.
 13. `[unit]` No jump is ever recorded at `d < 1`, and a player at exactly the
     limit survives.
 14. `[unit]` A Redada arrests every partying contraband holder, banks their

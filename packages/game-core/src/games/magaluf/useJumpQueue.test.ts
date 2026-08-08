@@ -21,7 +21,9 @@ function jump(seatID: string, d = 2, survived = true): JumpRecord {
     die: 6,
     survived,
     legendVP: survived ? 3 + d : 0,
-    lostVP: 10,
+    poolVP: 10,
+    lostVP: survived ? 0 : 10,
+    bankedVP: survived ? 10 : 0,
   };
 }
 

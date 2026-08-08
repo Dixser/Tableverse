@@ -334,7 +334,9 @@ describe('MagalufBoard', () => {
       die: 6,
       survived: true,
       legendVP: 5,
-      lostVP: 12,
+      poolVP: 12,
+      lostVP: 0,
+      bankedVP: 12,
       ...over,
     });
 
@@ -378,9 +380,17 @@ describe('MagalufBoard', () => {
         />,
       );
 
+      // Before the roll the pool is at stake, not gone: the first beat says
+      // what is riding on it and never says it was lost.
+      expect(screen.getByText('TEST_at_risk 12')).toBeInTheDocument();
+      expect(screen.queryByTestId('balcony-lost')).toBeNull();
+
       fireEvent.click(screen.getByTestId('balcony-jump'));
       expect(screen.getByTestId('balcony-outcome')).toHaveTextContent('TEST_pool');
       expect(screen.getByText('TEST_pool_body Bob 5')).toBeInTheDocument();
+      // The night is banked, not forfeited.
+      expect(screen.getByTestId('balcony-banked')).toHaveTextContent('TEST_banked 12');
+      expect(screen.queryByTestId('balcony-lost')).toBeNull();
     });
 
     it('distinguishes the concrete (AC21)', () => {
@@ -388,7 +398,7 @@ describe('MagalufBoard', () => {
       const { rerender } = renderBoard(G);
       rerender(
         <MagalufBoard
-          G={{ ...G, jumps: [jump({ survived: false, legendVP: 0 })] }}
+          G={{ ...G, jumps: [jump({ survived: false, legendVP: 0, lostVP: 12, bankedVP: 0 })] }}
           ctx={makeCtx()}
           moves={{} as never}
           playerID="0"
@@ -399,6 +409,9 @@ describe('MagalufBoard', () => {
 
       fireEvent.click(screen.getByTestId('balcony-jump'));
       expect(screen.getByTestId('balcony-outcome')).toHaveTextContent('TEST_concrete');
+      // Only the concrete costs the night.
+      expect(screen.getByTestId('balcony-lost')).toHaveTextContent('TEST_lost 12');
+      expect(screen.queryByTestId('balcony-banked')).toBeNull();
     });
 
     it('walks through two jumps from one update, then closes (AC22)', () => {

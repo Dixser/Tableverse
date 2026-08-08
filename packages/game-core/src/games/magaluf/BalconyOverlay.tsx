@@ -60,9 +60,11 @@ export function BalconyOverlay({
             <p className={styles.numbers} data-testid="balcony-target">
               {t('magaluf.board.balconyTarget', { die: jump.die, over: jump.d })}
             </p>
-            {jump.lostVP > 0 && (
+            {/* What is riding on the roll, not what is already gone: the pool
+                is only forfeited by the concrete. */}
+            {jump.poolVP > 0 && (
               <p className={styles.lost}>
-                {t('magaluf.board.balconyLost', { vp: jump.lostVP })}
+                {t('magaluf.board.balconyAtRisk', { vp: jump.poolVP })}
               </p>
             )}
             <button
@@ -90,6 +92,18 @@ export function BalconyOverlay({
                 ? t('magaluf.board.balconyPoolBody', { name: jumperName, vp: jump.legendVP })
                 : t('magaluf.board.balconyConcreteBody', { name: jumperName })}
             </p>
+            {/* The night itself: banked by a survivor, gone with the drowned. */}
+            {jump.survived
+              ? jump.bankedVP > 0 && (
+                  <p className={styles.numbers} data-testid="balcony-banked">
+                    {t('magaluf.board.balconyBanked', { vp: jump.bankedVP })}
+                  </p>
+                )
+              : jump.lostVP > 0 && (
+                  <p className={styles.lost} data-testid="balcony-lost">
+                    {t('magaluf.board.balconyLost', { vp: jump.lostVP })}
+                  </p>
+                )}
             <button
               type="button"
               className={styles.jump}

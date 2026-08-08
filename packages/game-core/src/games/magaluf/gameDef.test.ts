@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Client } from 'boardgame.io/client';
 
 import type { EventId, ItemId, PhaseId } from './cards.js';
-import { PHASE_IDS } from './cards.js';
+import { ALCOHOL, PHASE_IDS } from './cards.js';
 import { PHASE_RULES } from './constants.js';
 import { HIDDEN_LIMIT, magalufGameDef, type MagalufG } from './gameDef.js';
 import { magalufModule } from './index.js';
@@ -295,6 +295,29 @@ describe('magaluf gameDef', () => {
       }
     });
 
+    it('pastis doubles exactly one drink and costs no intoxication (AC3)', () => {
+      const client = makeClient(3, (g) => {
+        g.players[g.turnSeatID]!.items = ['pastis'];
+        stack(g, ['cana', 'cana'], ['nada', 'nada']);
+      });
+      const seat = G(client).turnSeatID;
+      const before = G(client).players[seat]!.intox;
+
+      actAs(client, seat).useItem!('pastis');
+      // Arming it is free. What a Pastis costs is carrying contraband past the
+      // Cacheo and the Redada, not capacity — the design's only pure upside
+      // card, paid for entirely in police risk.
+      expect(G(client).players[seat]!.intox).toBe(before);
+      expect(G(client).players[seat]!.pastisArmed).toBe(true);
+
+      drinkAndReveal(client, seat);
+      const player = G(client).players[seat]!;
+      expect(player.roundVP).toBe(ALCOHOL.cana!.vp * 2);
+      expect(player.intox).toBe(before + ALCOHOL.cana!.intox);
+      // Spent on that drink and no other: the second cana pays face value.
+      expect(player.pastisArmed).toBe(false);
+    });
+
     it('porro ends the turn without drawing or withdrawing (AC3, AC5)', () => {
       const client = makeClient(3, (g) => {
         g.players[g.turnSeatID]!.items = ['porro'];
@@ -492,18 +515,66 @@ describe('magaluf gameDef', () => {
       expect(jump.die).toBe(DEFAULT_SETTINGS.balconyDie);
     });
 
-    it('forfeits the round pool whatever the die says (AC11)', () => {
+    it('forfeits the round pool only when the roll fails (AC11)', () => {
       const runs = jumpRuns();
       const outcomes = new Set(runs.map((r) => r.jump!.survived));
       // Both outcomes have to actually occur, or this proves only one branch.
       expect(outcomes.size).toBe(2);
 
       for (const { client, jump } of runs) {
-        expect(jump!.lostVP).toBeGreaterThan(0);
-        // The forfeit invariant: nothing from the round survives, so the only
-        // VP a jumper can end the night with is the legend bonus.
-        expect(G(client).players['0']!.bankedVP).toBe(jump!.legendVP);
-        expect(G(client).players['0']!.roundVP).toBe(0);
+        const player = G(client).players['0']!;
+        // The pool was on the table in every run, so each branch is asserting
+        // against a real stake rather than against zero.
+        expect(jump!.poolVP).toBeGreaterThan(0);
+        expect(player.roundVP).toBe(0);
+
+        if (jump!.survived) {
+          // The night survives with the player: banked at the day's rate, with
+          // the legend bonus on top and the items still in their pocket.
+          expect(jump!.lostVP).toBe(0);
+          expect(jump!.bankedVP).toBe(jump!.poolVP); // Friday is x1
+          expect(player.bankedVP).toBe(jump!.bankedVP + jump!.legendVP);
+        } else {
+          expect(jump!.lostVP).toBe(jump!.poolVP);
+          expect(jump!.bankedVP).toBe(0);
+          expect(player.bankedVP).toBe(0);
+          expect(player.items).toEqual([]);
+        }
+      }
+    });
+
+    it('leaves a survivor holding the items they went up with', () => {
+      // A Kebab rather than contraband: the police cannot take it, so the only
+      // thing in the game that can empty this pocket is a Chungo card drawn by
+      // seat 0 -- which the filter below excludes rather than hopes against.
+      const runs = SEEDS.map((seed) => {
+        const client = makeClient(
+          3,
+          (g) => {
+            g.limit = 0;
+            g.settings = { ...g.settings, balconyDie: VARIED_DIE };
+            g.players['0']!.items = ['kebab'];
+          },
+          seed,
+        );
+        play(client, drinkToMinimum('0'), (g) => g.day !== 0 || g.finished);
+        return { client, jump: G(client).jumps.find((j) => j.seatID === '0') };
+      }).filter((run) => {
+        if (run.jump === undefined) return false;
+        return !G(run.client).log.some(
+          (e) =>
+            e.params?.actor === '0' &&
+            typeof e.params?.descriptionKey === 'string' &&
+            e.params.descriptionKey.startsWith('magaluf.event.chungo'),
+        );
+      });
+
+      const survivors = runs.filter((r) => r.jump!.survived);
+      expect(survivors.length).toBeGreaterThan(0);
+      for (const { client } of survivors) {
+        expect(G(client).players['0']!.items).toContain('kebab');
+      }
+      for (const { client } of runs.filter((r) => !r.jump!.survived)) {
         expect(G(client).players['0']!.items).toEqual([]);
       }
     });
@@ -514,7 +585,11 @@ describe('magaluf gameDef', () => {
       const survivor = runs.find((r) => r.jump!.survived)!;
       expect(survivor).toBeDefined();
       expect(G(survivor.client).players['0']!.status).not.toBe('dead');
-      expect(G(survivor.client).players['0']!.bankedVP).toBe(3 + survivor.jump!.d);
+      expect(survivor.jump!.legendVP).toBe(3 + survivor.jump!.d);
+      // The bonus is on top of the night, which the survivor now keeps.
+      expect(G(survivor.client).players['0']!.bankedVP).toBe(
+        survivor.jump!.bankedVP + 3 + survivor.jump!.d,
+      );
       expect(G(survivor.client).players['0']!.resaca).toBe(4);
 
       const dead = runs.find((r) => !r.jump!.survived)!;

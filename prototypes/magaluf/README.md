@@ -52,7 +52,7 @@ npx vitest run --root prototypes/magaluf
 ```
 
 25 tests covering the rules that are easy to break silently: Resaca as the
-morning floor, the jump costing the round pool on both outcomes, arrest
+morning floor, the jump costing the round pool only when the roll fails, arrest
 cancelling the limit check, the Aguafiestas boundary, Farlopa halving only
 its own extra draw, reveal timing, determinism under a fixed seed, and the
 three interactions the design actually rests on.

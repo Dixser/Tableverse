@@ -3,9 +3,10 @@
  *
  * Going over the Drinking Limit is not instant death. You go up to the
  * balcony, and the only question is whether you clear the terrace and land in
- * the pool. Either way you forfeit the night's unbanked VP and your items —
- * you are in a swimming pool with a fractured pelvis and the night is over.
- * The roll only decides whether your weekend continues.
+ * the pool. **The roll is the entire penalty.** Reach the pool and the night
+ * is yours — the round pool banks at the day's rate, the items stay in your
+ * pocket, and the Leyenda bonus goes on top. Hit the concrete and you lose the
+ * night, the items and the rest of the weekend.
  *
  * **The roll is a die, because this is a tabletop game.** One sentence:
  * *roll a dN and survive if you beat how far over the limit you went.*
@@ -47,11 +48,13 @@ export function legendBonus(d: number): number {
 }
 
 /**
- * Expected value of jumping at a given `d`, ignoring the round VP forfeited.
+ * Expected value of the Leyenda bonus alone at a given `d`.
  *
- * The design requires this to stay far below a typical round's unbanked haul
- * at every `d`, so no player should ever aim to go over. On a d6 it peaks at
- * ~3.3 VP against a median round pool near 39.
+ * This is no longer the expected value of the gamble: since only the concrete
+ * forfeits the pool, what a jumper actually risks is
+ * `poolChance × (pool × dayMultiplier)` against a certain `pool × multiplier`
+ * for stopping under the limit. The bonus is the sweetener on top, and on a d6
+ * it peaks at ~3.3 VP — small enough that the pool still decides the call.
  */
 export function jumpExpectedValue(d: number, settings: MagalufSettings): number {
   return poolChance(d, settings) * legendBonus(d);
