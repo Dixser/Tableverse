@@ -281,7 +281,13 @@ export function ChatPanel({ roomID, sessionToken, gameLog, playerNames }: ChatPa
         aria-label={t('chat.title')}
         onClick={() => setCollapsed(false)}
       >
-        {t('chat.title')}
+        {/* Icon, not the "Chat" label: collapsed or not, this button floats
+            over the board, so its footprint is exactly how much of the game
+            it can hide -- a labelled pill was wide enough to sit on top of
+            a game's own action bar. The accessible name still comes from
+            aria-label above. Paired with RoomShell's mobile bottom gutter,
+            which keeps the page's last row of content out from under it. */}
+        <span aria-hidden="true">💬</span>
         {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}
       </button>
     );
