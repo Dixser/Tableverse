@@ -37,8 +37,20 @@ Round-robin among players still partying in the current phase. On your turn:
 
 | Action | Effect |
 |---|---|
-| **Beber** / Drink | Draw 1 Alcohol card → gain its Intoxication and VP → draw 1 Event card and resolve it |
+| **Beber** / Drink | Turn over 1 Alcohol card and gain its Intoxication and VP. The Event card is drawn but stays **face-down** |
+| **Revelar evento** / Reveal event | Turn the Event over and read it to the table. Ends the turn |
 | **Retirarse** / Withdraw | Out for this phase. Aguafiestas penalty applies if you drank too little |
+
+**Drinking is deliberately two steps, because at a table it is two decks.**
+You flip the drink, everybody updates their numbers, and only then does
+somebody turn the event over and read it out. Doing both in one action asked
+players to absorb two cards at once and hold the arithmetic in their heads.
+While an event is face-down its drawer may do nothing else, and nobody else
+may turn it over.
+
+This changes nothing about *what* is drawn or in what order, so it has no
+balance effect and the simulator was deliberately not changed for it — only
+where the game pauses.
 
 Using an item is a **free action**, maximum one per turn, and can be combined
 with either choice. Two items are exceptions and are described in §8.

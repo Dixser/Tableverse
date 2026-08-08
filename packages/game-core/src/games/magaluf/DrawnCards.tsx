@@ -7,6 +7,8 @@ import styles from './DrawnCards.module.css';
 export interface DrawnCardsProps {
   lastDraw: LastDraw | null;
   drawerName: string | null;
+  /** True while an event card has been drawn but not yet turned over. */
+  eventPending: boolean;
 }
 
 /**
@@ -16,7 +18,7 @@ export interface DrawnCardsProps {
  * player and a Chupito de la casa chains a second for the same seat, so the
  * last log entry is not reliably the draw that caused them.
  */
-export function DrawnCards({ lastDraw, drawerName }: DrawnCardsProps) {
+export function DrawnCards({ lastDraw, drawerName, eventPending }: DrawnCardsProps) {
   const { t } = useTranslation();
   if (!lastDraw) {
     return (
@@ -35,7 +37,16 @@ export function DrawnCards({ lastDraw, drawerName }: DrawnCardsProps) {
       </span>
       <div className={styles.cards}>
         {card && <CardTile kind="alcohol" id={card.id} intox={card.intox} vp={card.vp} />}
-        {lastDraw.event && <CardTile kind="event" id={lastDraw.event} />}
+        {lastDraw.event ? (
+          <CardTile kind="event" id={lastDraw.event} />
+        ) : (
+          // Face-down, so the table can see an event is coming before it lands.
+          eventPending && (
+            <div className={styles.facedown} data-testid="event-facedown">
+              {t('magaluf.board.eventFaceDown')}
+            </div>
+          )
+        )}
       </div>
     </div>
   );

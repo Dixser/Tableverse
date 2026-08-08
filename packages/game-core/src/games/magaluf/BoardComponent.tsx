@@ -46,8 +46,14 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
   const nameFor = (seatID: string) =>
     playerNames?.[seatID] ?? t('room.seatLabel', { seatNumber: Number(seatID) + 1 });
 
+  const owesReveal = playerID != null && G.pendingEvent?.seatID === playerID;
   const myTurn =
-    isActive && playerID != null && G.turnSeatID === playerID && G.roundConfirm === null;
+    isActive &&
+    playerID != null &&
+    G.roundConfirm === null &&
+    // Either it is your turn, or you owe a reveal -- which is only ever true on
+    // your own turn anyway, but stating both keeps the two ideas separate.
+    (G.turnSeatID === playerID || owesReveal);
   const me = playerID != null ? G.players[playerID] : undefined;
 
   return (
@@ -63,6 +69,7 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
       <DrawnCards
         lastDraw={G.lastDraw}
         drawerName={G.lastDraw ? nameFor(G.lastDraw.seatID) : null}
+        eventPending={G.pendingEvent != null}
       />
 
       <div className={styles.players}>
@@ -88,7 +95,9 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
       {myTurn && me && (
         <ActionBar
           player={me}
+          eventPending={owesReveal}
           onDrink={() => moves.drink?.()}
+          onReveal={() => moves.revealEvent?.()}
           onWithdraw={() => moves.withdraw?.()}
           onUseItem={(item: ItemId) => moves.useItem?.(item)}
         />

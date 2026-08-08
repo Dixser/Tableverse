@@ -31,6 +31,7 @@ function makeG(overrides: Partial<MagalufG> = {}): MagalufG {
     players: Object.fromEntries(seats.map((id) => [id, player()])),
     withdrawCounter: 0,
     lastDraw: null,
+    pendingEvent: null,
     pendingAdvance: null,
     roundConfirm: null,
     hostPlayerID: null,
@@ -171,6 +172,54 @@ describe('MagalufBoard', () => {
     it('renders an alcohol card whose event was skipped', () => {
       renderBoard(makeG({ lastDraw: { seatID: '0', alcohol: 'cana', event: null } }));
       expect(screen.getByTestId('card-cana')).toBeInTheDocument();
+      expect(screen.queryByTestId('event-facedown')).toBeNull();
+    });
+
+    it('shows the event face-down while it is still owed', () => {
+      renderBoard(
+        makeG({
+          lastDraw: { seatID: '0', alcohol: 'pinta', event: null },
+          pendingEvent: { seatID: '0', endsTurn: true },
+        }),
+      );
+      expect(screen.getByTestId('card-pinta')).toBeInTheDocument();
+      expect(screen.getByTestId('event-facedown')).toBeInTheDocument();
+    });
+  });
+
+  describe('the event reveal step', () => {
+    const pendingG = (seatID = '0') =>
+      makeG({
+        lastDraw: { seatID, alcohol: 'pinta', event: null },
+        pendingEvent: { seatID, endsTurn: true },
+      });
+
+    it('offers only the reveal while an event is owed', () => {
+      renderBoard(pendingG('0'), '0');
+      expect(screen.getByTestId('reveal-event')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'TEST_drink' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'TEST_withdraw' })).toBeNull();
+    });
+
+    it('calls revealEvent', () => {
+      const moves = { revealEvent: vi.fn() };
+      render(
+        <MagalufBoard
+          G={pendingG('0')}
+          ctx={makeCtx()}
+          moves={moves as never}
+          playerID="0"
+          isActive
+          playerNames={NAMES}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('reveal-event'));
+      expect(moves.revealEvent).toHaveBeenCalledOnce();
+    });
+
+    it('offers nothing to a seat that does not owe the reveal', () => {
+      renderBoard(pendingG('0'), '1');
+      expect(screen.queryByTestId('action-bar')).toBeNull();
     });
   });
 

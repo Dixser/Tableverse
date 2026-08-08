@@ -71,6 +71,11 @@ function play(
     const g = G(client);
     if (g.finished || stop(g)) return;
 
+    if (g.pendingEvent) {
+      actAs(client, g.pendingEvent.seatID).revealEvent!();
+      continue;
+    }
+
     if (g.roundConfirm) {
       const waitingOn = g.roundConfirm.pendingSeatIDs.find(
         (id) => !g.roundConfirm!.confirmedSeatIDs.includes(id),
@@ -86,6 +91,13 @@ function play(
   throw new Error('play() did not terminate');
 }
 
+/** Drinks and immediately turns the event over, the way the old single move did. */
+function drinkAndReveal(client: TestClient, seat: string): void {
+  actAs(client, seat).drink!();
+  const pending = G(client).pendingEvent;
+  if (pending) actAs(client, pending.seatID).revealEvent!();
+}
+
 /** Plays until a gate opens, leaving it un-confirmed for the test to inspect. */
 function playToGate(
   client: TestClient,
@@ -94,6 +106,10 @@ function playToGate(
   for (let guard = 0; guard < 6000; guard++) {
     const g = G(client);
     if (g.finished || g.roundConfirm) return;
+    if (g.pendingEvent) {
+      actAs(client, g.pendingEvent.seatID).revealEvent!();
+      continue;
+    }
     const seat = g.turnSeatID;
     actAs(client, seat)[choose(g, seat)]!();
   }
@@ -157,42 +173,89 @@ describe('magaluf gameDef', () => {
   });
 
   describe('drinking', () => {
-    it('applies intoxication and VP then resolves exactly one event (AC2)', () => {
+    it('applies the drink, then stops with the event still face-down (AC2)', () => {
       const client = makeClient(3, (g) => stack(g, ['pinta'], ['foto']));
       const seat = G(client).turnSeatID;
       actAs(client, seat).drink!();
 
-      const player = G(client).players[seat]!;
-      expect(player.intox).toBe(2);
-      expect(player.roundVP).toBe(2 + 2); // pinta 2 VP + foto 2 VP
-      expect(player.drinksThisPhase).toBe(1);
+      const afterDrink = G(client).players[seat]!;
+      expect(afterDrink.intox).toBe(2);
+      expect(afterDrink.roundVP).toBe(2); // the pinta only -- the foto has not landed
+      expect(afterDrink.drinksThisPhase).toBe(1);
+      expect(G(client).pendingEvent).toEqual({ seatID: seat, endsTurn: true });
+      // The turn has NOT moved on: the drawer still owes the reveal.
+      expect(G(client).turnSeatID).toBe(seat);
+
+      actAs(client, seat).revealEvent!();
+      expect(G(client).players[seat]!.roundVP).toBe(2 + 2); // pinta + foto
+      expect(G(client).pendingEvent).toBeNull();
       expect(G(client).turnSeatID).not.toBe(seat);
+    });
+
+    it('refuses every other move while an event is face-down', () => {
+      const client = makeClient(3, (g) => {
+        stack(g, ['pinta', 'pinta'], ['foto', 'foto']);
+        g.players[g.turnSeatID]!.items = ['kebab'];
+      });
+      const seat = G(client).turnSeatID;
+      actAs(client, seat).drink!();
+      const held = G(client);
+
+      actAs(client, seat).drink!();
+      actAs(client, seat).withdraw!();
+      actAs(client, seat).useItem!('kebab');
+      expect(G(client)).toEqual(held);
+    });
+
+    it('only the seat that drew may turn the event over', () => {
+      const client = makeClient(3, (g) => stack(g, ['pinta'], ['foto']));
+      const seat = G(client).turnSeatID;
+      actAs(client, seat).drink!();
+      const held = G(client);
+
+      const other = G(client).activeSeatIDs.find((id) => id !== seat)!;
+      actAs(client, other).revealEvent!();
+      expect(G(client)).toEqual(held);
+    });
+
+    it('rejects a reveal when no event is owed', () => {
+      const client = makeClient(3);
+      const before = G(client);
+      actAs(client, G(client).turnSeatID).revealEvent!();
+      expect(G(client)).toEqual(before);
     });
 
     it('auto-withdraws a player who reaches the phase drink cap (AC9)', () => {
       const client = makeClient(3);
       const cap = PHASE_RULES.tardeo.maxDrinks;
       const seat = G(client).turnSeatID;
+      // The cap is only enforced once the event is turned over, so wait for a
+      // settled state rather than catching the player mid-draw.
       play(client, (g, s) => (s === seat ? 'drink' : 'withdraw'), (g) =>
-        g.players[seat]!.drinksThisPhase >= cap || g.phase !== 0,
+        (g.pendingEvent === null && g.players[seat]!.drinksThisPhase >= cap) || g.phase !== 0,
       );
       const player = G(client).players[seat]!;
       if (G(client).phase === 0) expect(player.status).not.toBe('partying');
     });
 
-    it('records the draw in lastDraw for the board to reveal', () => {
+    it('puts the drink on the table before the event, then fills it in', () => {
       const client = makeClient(3, (g) => stack(g, ['pinta'], ['foto']));
       const seat = G(client).turnSeatID;
       expect(G(client).lastDraw).toBeNull();
 
       actAs(client, seat).drink!();
+      // The drink is readable while the event is still face-down -- the whole
+      // point of splitting the two.
+      expect(G(client).lastDraw).toEqual({ seatID: seat, alcohol: 'pinta', event: null });
+
+      actAs(client, seat).revealEvent!();
       expect(G(client).lastDraw).toEqual({ seatID: seat, alcohol: 'pinta', event: 'foto' });
     });
 
     it('keeps lastDraw on the draw that caused a ronda, not its knock-on drinks', () => {
       const client = makeClient(3, (g) => stack(g, ['pinta', 'cana', 'cana', 'cana'], ['ronda']));
       const seat = G(client).turnSeatID;
-      actAs(client, seat).drink!();
+      drinkAndReveal(client, seat);
 
       expect(G(client).lastDraw).toEqual({ seatID: seat, alcohol: 'pinta', event: 'ronda' });
       // The ronda really did pour for everyone; it just did not claim the reveal.
@@ -214,7 +277,7 @@ describe('magaluf gameDef', () => {
     it('counts a drink nobody chose toward the phase total', () => {
       const client = makeClient(3, (g) => stack(g, ['cana', 'cana'], ['chupitoCasa']));
       const seat = G(client).turnSeatID;
-      actAs(client, seat).drink!();
+      drinkAndReveal(client, seat);
       expect(G(client).players[seat]!.drinksThisPhase).toBe(2);
     });
   });
@@ -258,9 +321,14 @@ describe('magaluf gameDef', () => {
 
       expect(G(client).players[seat]!.intox).toBe(1);
       expect(G(client).players[seat]!.drinksThisPhase).toBe(1);
+      // The extra draw owes its event like any other, but resolving it must not
+      // hand the turn on -- the player still has their own action to take.
+      expect(G(client).pendingEvent).toEqual({ seatID: seat, endsTurn: false });
+
+      actAs(client, seat).revealEvent!();
       expect(G(client).turnSeatID).toBe(seat); // the extra turn did not consume it
 
-      actAs(client, seat).drink!();
+      drinkAndReveal(client, seat);
       expect(G(client).players[seat]!.intox).toBe(4);
     });
 
@@ -490,7 +558,7 @@ describe('magaluf gameDef', () => {
         stack(g, ['cana'], ['redada']);
       });
       const seat = G(client).turnSeatID;
-      actAs(client, seat).drink!();
+      drinkAndReveal(client, seat);
 
       const player = G(client).players[seat]!;
       expect(player.status).toBe('arrested');
@@ -507,7 +575,7 @@ describe('magaluf gameDef', () => {
     it('does nothing when nobody holds contraband (AC14)', () => {
       const client = makeClient(3, (g) => stack(g, ['cana'], ['redada']));
       const seat = G(client).turnSeatID;
-      actAs(client, seat).drink!();
+      drinkAndReveal(client, seat);
       expect(G(client).players[seat]!.status).toBe('partying');
     });
 
@@ -517,7 +585,7 @@ describe('magaluf gameDef', () => {
         stack(g, ['cana'], ['redada']);
       });
       const seat = G(client).turnSeatID;
-      actAs(client, seat).drink!();
+      drinkAndReveal(client, seat);
       expect(G(client).players[seat]!.bankedVP).toBe(1); // the cana only, no -2
     });
   });
@@ -658,7 +726,7 @@ describe('magaluf gameDef', () => {
     it('consumes a skipNextTurn flag exactly once', () => {
       const client = makeClient(3, (g) => stack(g, ['cana'], ['perdido']));
       const seat = G(client).turnSeatID;
-      actAs(client, seat).drink!();
+      drinkAndReveal(client, seat);
       expect(G(client).players[seat]!.skipNextTurn).toBe(true);
 
       // Everyone else acts; the flag should be spent when the rotation reaches

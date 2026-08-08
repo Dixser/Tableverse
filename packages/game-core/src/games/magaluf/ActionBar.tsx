@@ -5,7 +5,10 @@ import styles from './ActionBar.module.css';
 
 export interface ActionBarProps {
   player: MagalufPlayer;
+  /** True while this player owes an event reveal. */
+  eventPending: boolean;
   onDrink: () => void;
+  onReveal: () => void;
   onWithdraw: () => void;
   onUseItem: (item: ItemId) => void;
 }
@@ -16,11 +19,30 @@ export interface ActionBarProps {
  * There is no hand to manage and nothing to select first, which is why this
  * game needs neither @dnd-kit nor feature 031's hand sorting.
  */
-export function ActionBar({ player, onDrink, onWithdraw, onUseItem }: ActionBarProps) {
+export function ActionBar({
+  player,
+  eventPending,
+  onDrink,
+  onReveal,
+  onWithdraw,
+  onUseItem,
+}: ActionBarProps) {
   const { t } = useTranslation();
   // One item per turn. Disabled rather than hidden so the cost of having
   // already used one is visible instead of the buttons silently vanishing.
   const itemsSpent = player.itemUsedThisTurn;
+
+  // While an event is face-down there is exactly one thing to do, and showing
+  // the other buttons greyed out would only invite clicking them.
+  if (eventPending) {
+    return (
+      <div className={styles.bar} data-testid="action-bar">
+        <button type="button" className={styles.drink} data-testid="reveal-event" onClick={onReveal}>
+          {t('magaluf.board.revealEvent')}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.bar} data-testid="action-bar">

@@ -49,13 +49,23 @@ one of:
 
 | Move | Effect |
 |---|---|
-| `drink` | Draw 1 Alcohol card → apply its Intoxication and VP → draw 1 Event card and resolve it. Ends the turn. |
+| `drink` | Turn over 1 Alcohol card and apply its Intoxication and VP. Draws an Event card but leaves it **face-down**. Does *not* end the turn. |
+| `revealEvent` | Turn the Event card over and resolve it. Ends the turn (except after a Farlopa's extra draw). |
 | `withdraw` | Leave this phase. Applies the Aguafiestas penalty if below the drink minimum. Ends the turn. |
 | `useItem(item)` | A free action, **max one per turn**. Does *not* end the turn, with two exceptions below. |
 
+**Drinking is two steps, because at a table it is two decks.** You flip the
+drink, everyone updates their numbers, and only then does somebody turn the
+event over and read it out. Resolving both in one action asked players to
+absorb two cards at once and do the arithmetic in their heads. While an event
+is face-down its drawer may do **nothing else** — not drink again, not
+withdraw, not use an item — and no other seat may turn it over.
+
 `useItem` exceptions: **Porro** ends the turn without drawing anything (that
-is its whole effect), and **Farlopa** ends the turn only if its extra draw
-takes the player to the phase drink cap.
+is its whole effect), and **Farlopa**'s extra draw also leaves an event
+face-down; revealing that one does *not* end the turn, because the player
+still has their own action to take — unless the extra drink took them to the
+phase drink cap.
 
 Because item use does not end the turn, `turn` must **not** use
 `minMoves`/`maxMoves`. Moves call `events.endTurn()` explicitly.

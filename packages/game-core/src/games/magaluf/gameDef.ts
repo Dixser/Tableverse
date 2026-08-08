@@ -141,6 +141,7 @@ function startPhase(G: MagalufG, rng: Rng, phaseIndex: number): void {
   G.withdrawCounter = 0;
   // Nothing on the table when a new venue opens.
   G.lastDraw = null;
+  G.pendingEvent = null;
 
   if (G.settings.limitRevealAt === PHASE_IDS[phaseIndex]) G.limitRevealed = true;
 
@@ -351,26 +352,48 @@ function finishTurn(G: MagalufG, rng: Rng): HandOver {
 // Drinking
 // ---------------------------------------------------------------------------
 
+/**
+ * Turns the alcohol card face-up and applies it — and stops there.
+ *
+ * The event card is drawn but left face-down (`G.pendingEvent`) for a separate
+ * `revealEvent` move, because that is what happens at a table: you flip the
+ * drink, everyone updates their numbers, and only then does somebody turn the
+ * event over and read it out. Resolving both in one action asked players to
+ * absorb two cards at once and track the arithmetic in their heads.
+ *
+ * Returns false only when there was no card left to draw at all.
+ */
 function takeDrink(
   G: MagalufG,
   rng: Rng,
   seatID: string,
-  options: { halveIntox?: boolean; drawEventCard?: boolean } = {},
-): void {
+  options: { halveIntox?: boolean; drawsEvent?: boolean; endsTurn?: boolean } = {},
+): boolean {
   const card = drawAlcohol(G, rng);
-  if (!card) return;
+  if (!card) return false;
   consumeAlcohol(G, seatID, card, { halveIntox: options.halveIntox });
 
-  let drawnEvent: EventId | null = null;
-  if (options.drawEventCard !== false) {
-    drawnEvent = drawEvent(G, rng);
-    if (drawnEvent) resolveEvent(G, seatID, drawnEvent, rng);
-  }
+  // Set here rather than after the event, so the drink is on the table for
+  // everyone to read while the event is still face-down. A Ronda's knock-on
+  // drinks cannot overwrite it: those go through consumeAlcohol, never here.
+  G.lastDraw = { seatID, alcohol: card.id, event: null };
 
-  // Written after the event resolves so the pair lands together, and written
-  // last so a Ronda's knock-on drinks do not overwrite the draw that caused
-  // them: those go through consumeAlcohol, never through here.
-  G.lastDraw = { seatID, alcohol: card.id, event: drawnEvent };
+  if (options.drawsEvent !== false) {
+    G.pendingEvent = { seatID, endsTurn: options.endsTurn ?? true };
+  }
+  return true;
+}
+
+/** Turns the pending event face-up and resolves it. */
+function revealPendingEvent(G: MagalufG, rng: Rng): void {
+  const pending = G.pendingEvent;
+  if (!pending) return;
+  G.pendingEvent = null;
+
+  const eventId = drawEvent(G, rng);
+  if (!eventId) return;
+  if (G.lastDraw) G.lastDraw = { ...G.lastDraw, event: eventId };
+  resolveEvent(G, pending.seatID, eventId as EventId, rng);
 }
 
 /** Returns true when using the item consumed the player's turn. */
@@ -399,13 +422,16 @@ function applyItem(G: MagalufG, rng: Rng, seatID: string, item: ItemId): boolean
       return true;
     case 'farlopa':
       player.resaca += ITEM_EFFECTS.farlopaResaca;
+      // endsTurn: false -- the extra drink still owes an event reveal, but once
+      // that is turned over the player has their own action left to take.
       takeDrink(G, rng, seatID, {
         halveIntox: true,
-        drawEventCard: ITEM_EFFECTS.farlopaDrawsEvent,
+        drawsEvent: ITEM_EFFECTS.farlopaDrawsEvent,
+        endsTurn: false,
       });
-      // The extra turn is spent; the player still has their own action, unless
-      // that extra drink just took them to closing time.
-      return player.drinksThisPhase >= phaseRules(G).maxDrinks;
+      // Never ends the turn here: either an event is pending and revealing it
+      // decides, or nothing was drawn and the player simply carries on.
+      return false;
   }
 }
 
@@ -426,6 +452,10 @@ function canAct(G: MagalufG, playerID: string): boolean {
     // A wait blocks every party move. Without this a click already in flight
     // when the venue closed could land a drink into the next one.
     G.roundConfirm === null &&
+    // So does a face-down event: the only thing you may do while one is owed
+    // is turn it over. Otherwise a player could drink again, or leave, without
+    // ever finding out what the first drink brought with it.
+    G.pendingEvent === null &&
     G.turnSeatID === playerID &&
     G.players[playerID]?.status === 'partying'
   );
@@ -441,8 +471,30 @@ function handOver(handOver: HandOver, events: MoveCtx['events']): void {
 function drink({ G, playerID, random, events }: MoveCtx): typeof INVALID_MOVE | void {
   if (!canAct(G, playerID)) return INVALID_MOVE;
   const rng = fromBoardgameRandom(random);
-  takeDrink(G, rng, playerID);
-  handOver(finishTurn(G, rng), events);
+
+  // Stops with the event still face-down. The turn is handed on by
+  // revealEvent, not here -- unless there was no card to draw at all.
+  if (!takeDrink(G, rng, playerID)) handOver(finishTurn(G, rng), events);
+}
+
+/**
+ * Turns the face-down event over and resolves it.
+ *
+ * Only the seat that drew it may do this, and it is the only move available to
+ * them until they do -- so the table always sees the drink land before the
+ * event that came with it.
+ */
+function revealEvent({ G, playerID, random, events }: MoveCtx): typeof INVALID_MOVE | void {
+  const pending = G.pendingEvent;
+  if (G.finished || !pending || pending.seatID !== playerID) return INVALID_MOVE;
+
+  const rng = fromBoardgameRandom(random);
+  revealPendingEvent(G, rng);
+
+  // A drink hands the turn on; a Farlopa's extra draw does not, unless the
+  // event it brought pushed the player to closing time.
+  const atCap = G.players[playerID]!.drinksThisPhase >= phaseRules(G).maxDrinks;
+  if (pending.endsTurn || atCap) handOver(finishTurn(G, rng), events);
 }
 
 function withdraw({ G, playerID, random, events }: MoveCtx): typeof INVALID_MOVE | void {
@@ -576,6 +628,7 @@ export const magalufGameDef: Game<MagalufG, Record<string, unknown>, MagalufSetu
       players,
       withdrawCounter: 0,
       lastDraw: null,
+      pendingEvent: null,
       pendingAdvance: null,
       roundConfirm: null,
       hostPlayerID: setupData?.hostPlayerID ?? null,
@@ -596,7 +649,7 @@ export const magalufGameDef: Game<MagalufG, Record<string, unknown>, MagalufSetu
     party: {
       start: true,
       turn: { order: turnOrder },
-      moves: { drink, withdraw, useItem },
+      moves: { drink, revealEvent, withdraw, useItem },
       onBegin: ({ G, events }) => {
         // A venue nobody can attend -- everyone arrested, or dead -- closes on
         // arrival and opens another gate. Bouncing straight back keeps that

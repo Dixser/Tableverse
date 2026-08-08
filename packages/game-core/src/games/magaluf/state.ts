@@ -83,6 +83,24 @@ export type PendingAdvance =
   | { kind: 'phase'; next: number }
   | { kind: 'day'; next: number };
 
+/**
+ * An event card drawn but not yet turned over.
+ *
+ * At a table you flip the alcohol card, everyone updates their numbers, and
+ * only then do you turn the event and read it out. Resolving both in one
+ * action asked players to absorb two cards at once, so the reveal is its own
+ * step — the same cards in the same order, just with somewhere to breathe.
+ */
+export interface PendingEvent {
+  /** Who owes the reveal. Always the seat that just drew. */
+  seatID: string;
+  /**
+   * Whether resolving it also hands the turn on. A drink does; the extra draw
+   * a Farlopa buys does not, because that player still has their own action.
+   */
+  endsTurn: boolean;
+}
+
 export interface MagalufG extends RoundConfirmG {
   /** Seats claimed by a real user at match start; the platform always creates maxPlayers engine seats. */
   activeSeatIDs: string[];
@@ -102,6 +120,8 @@ export interface MagalufG extends RoundConfirmG {
   withdrawCounter: number;
   /** Most recent draw, for the board's reveal. Cleared at each phase start. */
   lastDraw: LastDraw | null;
+  /** Non-null while a drawn event card is still face-down. */
+  pendingEvent: PendingEvent | null;
   /** Non-null only while a round-confirm wait is holding a transition open. */
   pendingAdvance: PendingAdvance | null;
   /** Every jump resolved this match, oldest first. Drives the board's balcony moment. */

@@ -620,7 +620,9 @@
       "balconyContinue": "Continuar",
       "balconySkip": "Omitir el resto",
       "balconyTarget": "Tira 1d{{die}} · necesitas más de {{over}}",
-      "balconyRolled": "Sale un {{roll}}"
+      "balconyRolled": "Sale un {{roll}}",
+      "revealEvent": "Revelar evento",
+      "eventFaceDown": "Evento boca abajo"
     }
   }
 }

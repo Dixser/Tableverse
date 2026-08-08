@@ -66,6 +66,8 @@ void i18n.use(initReactI18next).init({
             balconyConcreteBody: 'TEST_concrete_body {{name}}',
             balconyContinue: 'TEST_continue',
             balconySkip: 'TEST_skip',
+            revealEvent: 'TEST_reveal_event',
+            eventFaceDown: 'TEST_face_down',
           },
         },
       },

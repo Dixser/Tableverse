@@ -27,3 +27,22 @@
   gap: var(--space-2);
   flex-wrap: wrap;
 }
+
+/* The event card, drawn but not yet turned over. Deliberately reads as a card
+   back rather than an empty slot: something is coming. */
+.facedown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 8rem;
+  padding: var(--space-2);
+  border-radius: var(--radius);
+  border: 1px dashed var(--color-border);
+  background: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--color-text) 10%, var(--color-surface)) 0 6px,
+    var(--color-surface) 6px 12px
+  );
+  font-size: var(--font-size-sm);
+  opacity: 0.85;
+}

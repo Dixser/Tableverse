@@ -620,7 +620,9 @@
       "balconyContinue": "Continue",
       "balconySkip": "Skip the rest",
       "balconyTarget": "Roll 1d{{die}} · you need more than {{over}}",
-      "balconyRolled": "It comes up {{roll}}"
+      "balconyRolled": "It comes up {{roll}}",
+      "revealEvent": "Reveal event",
+      "eventFaceDown": "Event face-down"
     }
   }
 }
