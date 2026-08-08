@@ -1,24 +1,41 @@
 /**
- * Magaluf — turn, phase, day and weekend orchestration.
+ * Magaluf — turn, venue, day and weekend orchestration.
  *
- * There is deliberately **no boardgame.io phase machinery**. `G.day` and
- * `G.phase` are plain numbers and every transition happens inside the move
- * that causes it, the same way Cahoots keeps its whole turn in one move.
- * Nine sub-rounds modelled as engine phases would buy nothing and would fight
- * the framework over who owns the seat rotation.
+ * **Naming, because two things are called a phase.** `G.phase` is the *venue*
+ * — Tardeo, Noche, After. A boardgame.io phase is either `party` or `confirm`.
+ * They are not the same axis and the code never conflates them.
  *
- * The framework owns only that rotation, and even then it just reads
- * `G.turnSeatID`: the move works out who is next (skipping the dead, the
- * withdrawn, the arrested and anyone who got lost) and writes it down, so the
- * `TurnOrderConfig` never has to re-derive the phase state.
+ * Feature 032 shipped with no boardgame.io phase machinery at all: every
+ * transition happened inside the move that caused it. **Feature 033 reversed
+ * that**, because the round-confirm gates between venues and between days
+ * need every seat able to act at once, and this game has a real round-robin
+ * turn order in which only the current seat may move. The Mind sidesteps that
+ * by being turn-less; Love Letter, which has turn order like this game, uses a
+ * dedicated phase with `activePlayers: ALL` for its wait. This follows Love
+ * Letter.
+ *
+ * Within the `party` phase the framework still owns only the seat rotation,
+ * and even then it just reads `G.turnSeatID`: the move works out who is next
+ * (skipping the dead, the withdrawn, the arrested and anyone who got lost) and
+ * writes it down, so the `TurnOrderConfig` never re-derives venue state.
  *
  * Item use does not end a turn, so `minMoves`/`maxMoves` cannot be used —
- * moves call `events.endTurn()` explicitly.
+ * moves hand over explicitly, via `events.endTurn()` or `events.setPhase()`.
  */
 
 import type { Ctx, Game, TurnOrderConfig } from 'boardgame.io';
 import type { GameoverResult } from '../../types.js';
-import { INVALID_MOVE } from '../../vendor.js';
+import {
+  beginRoundConfirm,
+  confirmRoundReadyMove,
+  forceAdvanceRoundMove,
+  isRoundConfirmComplete,
+} from '../../roundConfirm.js';
+// ActivePlayers/INVALID_MOVE come from the local shim, never from
+// 'boardgame.io/core' directly: packages/server is a real Node process that
+// imports this file through gamesCatalog, and that subpath fails under Node
+// ESM resolution. See vendor.ts.
+import { ActivePlayers, INVALID_MOVE } from '../../vendor.js';
 import type { EventId, ItemId } from './cards.js';
 import { DAY_IDS, ITEM_IDS, PHASE_IDS } from './cards.js';
 import { ITEM_EFFECTS, LIMIT_DECKS, PHASE_RULES } from './constants.js';
@@ -28,11 +45,12 @@ import type { Rng, BoardgameRandom } from './rng.js';
 import { fromBoardgameRandom } from './rng.js';
 import type { MagalufSettings } from './settings.js';
 import { clampSettings, dayMultipliers } from './settings.js';
-import type { MagalufG, MagalufPlayer } from './state.js';
+import type { MagalufG, MagalufPlayer, PendingAdvance } from './state.js';
 import {
   addIntox,
   bankRound,
   buildDeck,
+  confirmableSeats,
   consumeAlcohol,
   drawAlcohol,
   drawEvent,
@@ -51,6 +69,8 @@ export type { MagalufSettings } from './settings.js';
 export interface MagalufSetupData extends Partial<MagalufSettings> {
   /** Seats actually claimed when the match was started. */
   claimedSeatIDs?: string[];
+  /** The host's own seat, if any — see RoundConfirmG.hostPlayerID. */
+  hostPlayerID?: string | null;
 }
 
 /** What playerView leaves behind when the limit is still face-down. */
@@ -170,10 +190,39 @@ function awardLastStanding(G: MagalufG): void {
   }
 }
 
+/**
+ * A venue closes. Nothing is dealt here any more — the transition is recorded
+ * and handed to a round-confirm wait, so the table regroups before the next
+ * venue opens. The night is resolved first when this was the After, so the
+ * balconing rolls are already in `G.jumps` by the time the banner appears and
+ * the board can play them inside the gate.
+ */
 function endPhase(G: MagalufG, rng: Rng): void {
   awardLastStanding(G);
-  if (G.phase < PHASE_IDS.length - 1) startPhase(G, rng, G.phase + 1);
-  else resolveNight(G, rng);
+
+  if (G.phase < PHASE_IDS.length - 1) {
+    holdFor(G, { kind: 'phase', next: G.phase + 1 });
+    return;
+  }
+
+  resolveNight(G, rng);
+}
+
+function holdFor(G: MagalufG, pending: PendingAdvance): void {
+  G.pendingAdvance = pending;
+  beginRoundConfirm(G, confirmableSeats(G));
+  log(G, 'awaitingTable');
+}
+
+/** Runs the transition a completed wait was holding open. */
+function performPendingAdvance(G: MagalufG, rng: Rng): void {
+  const pending = G.pendingAdvance;
+  G.pendingAdvance = null;
+  G.roundConfirm = null;
+  if (!pending) return;
+
+  if (pending.kind === 'phase') startPhase(G, rng, pending.next);
+  else startDay(G, rng, pending.next);
 }
 
 function startDay(G: MagalufG, rng: Rng, day: number): void {
@@ -262,14 +311,20 @@ function resolveNight(G: MagalufG, rng: Rng): void {
     return;
   }
 
-  startDay(G, rng, G.day + 1);
+  // No gate after the final night — the match is over and the gameover banner
+  // is what everyone is waiting to read.
+  holdFor(G, { kind: 'day', next: G.day + 1 });
 }
 
 /**
- * Closing time, then either hand on the turn or close out the phase.
- * Returns nothing — callers follow it with `events.endTurn()`.
+ * Closing time, then work out how the move should hand over.
+ *
+ * Returns what the caller must do, rather than doing it: `events` are only
+ * available inside a move, and this runs from three of them.
  */
-function finishTurn(G: MagalufG, rng: Rng): void {
+type HandOver = 'turn' | 'confirm' | 'finished';
+
+function finishTurn(G: MagalufG, rng: Rng): HandOver {
   const rules = phaseRules(G);
   for (const id of G.activeSeatIDs) {
     const player = G.players[id]!;
@@ -278,8 +333,14 @@ function finishTurn(G: MagalufG, rng: Rng): void {
     }
   }
 
-  if (partying(G).length === 0) endPhase(G, rng);
-  else advanceTurn(G);
+  if (partying(G).length > 0) {
+    advanceTurn(G);
+    return 'turn';
+  }
+
+  endPhase(G, rng);
+  if (G.finished) return 'finished';
+  return 'confirm';
 }
 
 // ---------------------------------------------------------------------------
@@ -352,23 +413,32 @@ interface MoveCtx {
   G: MagalufG;
   playerID: string;
   random: BoardgameRandom;
-  events: { endTurn(): void };
+  events: { endTurn(): void; setPhase(phase: string): void };
 }
 
 function canAct(G: MagalufG, playerID: string): boolean {
   return (
     !G.finished &&
+    // A wait blocks every party move. Without this a click already in flight
+    // when the venue closed could land a drink into the next one.
+    G.roundConfirm === null &&
     G.turnSeatID === playerID &&
     G.players[playerID]?.status === 'partying'
   );
+}
+
+/** Every party move ends the same way: hand on the turn, or open the gate. */
+function handOver(handOver: HandOver, events: MoveCtx['events']): void {
+  if (handOver === 'turn') events.endTurn();
+  else if (handOver === 'confirm') events.setPhase('confirm');
+  // 'finished' needs nothing: the top-level endIf ends the match.
 }
 
 function drink({ G, playerID, random, events }: MoveCtx): typeof INVALID_MOVE | void {
   if (!canAct(G, playerID)) return INVALID_MOVE;
   const rng = fromBoardgameRandom(random);
   takeDrink(G, rng, playerID);
-  finishTurn(G, rng);
-  events.endTurn();
+  handOver(finishTurn(G, rng), events);
 }
 
 function withdraw({ G, playerID, random, events }: MoveCtx): typeof INVALID_MOVE | void {
@@ -383,8 +453,7 @@ function withdraw({ G, playerID, random, events }: MoveCtx): typeof INVALID_MOVE
   }
   leavePhase(G, playerID, 'withdrew');
 
-  finishTurn(G, rng);
-  events.endTurn();
+  handOver(finishTurn(G, rng), events);
 }
 
 function useItem({ G, playerID, random, events }: MoveCtx, item: ItemId): typeof INVALID_MOVE | void {
@@ -396,12 +465,30 @@ function useItem({ G, playerID, random, events }: MoveCtx, item: ItemId): typeof
 
   player.itemUsedThisTurn = true;
   const rng = fromBoardgameRandom(random);
-  const endsTurn = applyItem(G, rng, playerID, item);
+  if (applyItem(G, rng, playerID, item)) handOver(finishTurn(G, rng), events);
+}
 
-  if (endsTurn) {
-    finishTurn(G, rng);
-    events.endTurn();
-  }
+// --- Round-confirm moves ---------------------------------------------------
+//
+// client: false on both. The completion handler deals a whole new venue --
+// fresh decks for everyone -- and boardgame.io's optimistic client-side dry
+// run would otherwise predict that deal locally against a G the server is
+// about to shuffle differently. Same reason The Mind marks its own pair.
+
+function confirmRoundReady(context: {
+  G: MagalufG;
+  playerID: string;
+}): typeof INVALID_MOVE | void {
+  if (context.G.finished) return INVALID_MOVE;
+  return confirmRoundReadyMove(context);
+}
+
+function forceAdvanceRound(context: {
+  G: MagalufG;
+  playerID: string;
+}): typeof INVALID_MOVE | void {
+  if (context.G.finished) return INVALID_MOVE;
+  return forceAdvanceRoundMove(context);
 }
 
 // ---------------------------------------------------------------------------
@@ -472,6 +559,9 @@ export const magalufGameDef: Game<MagalufG, Record<string, unknown>, MagalufSetu
       players,
       withdrawCounter: 0,
       lastDraw: null,
+      pendingAdvance: null,
+      roundConfirm: null,
+      hostPlayerID: setupData?.hostPlayerID ?? null,
       jumps: [],
       log: [],
       finished: false,
@@ -483,11 +573,33 @@ export const magalufGameDef: Game<MagalufG, Record<string, unknown>, MagalufSetu
 
   validateSetupData: (setupData, numPlayers) => validateMagalufSetupData(setupData, numPlayers),
 
-  // No minMoves/maxMoves: using an item is a free action that must not end the
-  // turn, so the moves call events.endTurn() themselves.
-  turn: { order: turnOrder },
+  phases: {
+    // The weekend itself. No minMoves/maxMoves: using an item is a free action
+    // that must not end the turn, so the moves hand over explicitly.
+    party: {
+      start: true,
+      turn: { order: turnOrder },
+      moves: { drink, withdraw, useItem },
+      onBegin: ({ G, events }) => {
+        // A venue nobody can attend -- everyone arrested, or dead -- closes on
+        // arrival and opens another gate. Bouncing straight back keeps that
+        // from stranding the table in a phase where nothing is playable.
+        if (G.roundConfirm) events.setPhase('confirm');
+      },
+    },
 
-  moves: { drink, withdraw, useItem },
+    // Everybody regroups. ActivePlayers.ALL because a confirm has to be
+    // callable by every seat, not just whichever one happened to be up.
+    confirm: {
+      turn: { activePlayers: ActivePlayers.ALL },
+      moves: { confirmRoundReady, forceAdvanceRound },
+      endIf: ({ G }) => isRoundConfirmComplete(G.roundConfirm),
+      onEnd: ({ G, random }) => {
+        performPendingAdvance(G, fromBoardgameRandom(random));
+      },
+      next: 'party',
+    },
+  },
 
   endIf: ({ G }) => matchGameoverResult(G),
 

@@ -575,7 +575,8 @@
       "survived": "{{actor}} survives the night and banks {{vp}} VP.",
       "sleptInCell": "{{actor}} sleeps it off in a cell.",
       "piscina": "{{actor}} lands in the pool! {{d}} over the limit: +{{vp}} VP for the legend.",
-      "cemento": "{{actor}} does not reach the pool. {{d}} over the limit."
+      "cemento": "{{actor}} does not reach the pool. {{d}} over the limit.",
+      "awaitingTable": "Waiting for everyone to be ready…"
     }
   }
 }

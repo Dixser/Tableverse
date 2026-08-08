@@ -7,6 +7,7 @@
  */
 
 import type { GameLogEntry, SoundCue } from '../../types.js';
+import type { RoundConfirmG } from '../../roundConfirm.js';
 import type { AlcoholCard, EventId, ItemId, PhaseId } from './cards.js';
 import { ALCOHOL, CONTRABAND, PHASE_IDS } from './cards.js';
 import type { PhaseRules } from './constants.js';
@@ -67,7 +68,19 @@ export interface LastDraw {
   event: EventId | null;
 }
 
-export interface MagalufG {
+/**
+ * What a round-confirm wait is holding open.
+ *
+ * Stored rather than re-derived from `G.phase` when the wait completes: the
+ * transition already knew whether it was opening the next venue or starting
+ * the next day, and reconstructing that afterwards would be a second source
+ * of truth for a question that had already been answered.
+ */
+export type PendingAdvance =
+  | { kind: 'phase'; next: number }
+  | { kind: 'day'; next: number };
+
+export interface MagalufG extends RoundConfirmG {
   /** Seats claimed by a real user at match start; the platform always creates maxPlayers engine seats. */
   activeSeatIDs: string[];
   settings: MagalufSettings;
@@ -86,6 +99,8 @@ export interface MagalufG {
   withdrawCounter: number;
   /** Most recent draw, for the board's reveal. Cleared at each phase start. */
   lastDraw: LastDraw | null;
+  /** Non-null only while a round-confirm wait is holding a transition open. */
+  pendingAdvance: PendingAdvance | null;
   /** Every jump resolved this match, oldest first. Drives the board's balcony moment. */
   jumps: JumpRecord[];
   log: GameLogEntry[];
@@ -122,6 +137,18 @@ export function phaseRules(G: MagalufG): PhaseRules {
 
 export function partying(G: MagalufG): string[] {
   return G.activeSeatIDs.filter((id) => G.players[id]?.status === 'partying');
+}
+
+/**
+ * Seats a round-confirm wait is allowed to wait on.
+ *
+ * The dead are excluded deliberately. Their weekend is over, so holding the
+ * table open until an eliminated player who has wandered off clicks a button
+ * would punish the living for someone else's death. They still see the banner;
+ * they are simply not counted.
+ */
+export function confirmableSeats(G: MagalufG): string[] {
+  return G.activeSeatIDs.filter((id) => G.players[id]?.status !== 'dead');
 }
 
 export function log(

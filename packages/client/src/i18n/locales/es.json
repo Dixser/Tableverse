@@ -575,7 +575,8 @@
       "survived": "{{actor}} sobrevive la noche y guarda {{vp}} PV.",
       "sleptInCell": "{{actor}} duerme la mona en el calabozo.",
       "piscina": "¡{{actor}} cae en la piscina! {{d}} por encima del límite: +{{vp}} PV de leyenda.",
-      "cemento": "{{actor}} no llega a la piscina. {{d}} por encima del límite."
+      "cemento": "{{actor}} no llega a la piscina. {{d}} por encima del límite.",
+      "awaitingTable": "Esperando a que todos estén listos…"
     }
   }
 }

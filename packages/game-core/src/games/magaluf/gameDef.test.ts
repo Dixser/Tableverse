@@ -50,20 +50,49 @@ function G(client: TestClient): MagalufG {
   return client.store.getState().G;
 }
 
-/** Drives the table until `stop` is true, or the weekend ends. */
+/**
+ * Drives the table until `stop` is true, or the weekend ends.
+ *
+ * Clears round-confirm gates automatically. Tests that care about the gate
+ * itself drive it by hand instead; everything else wants to look through it at
+ * the game underneath.
+ */
 function play(
   client: TestClient,
   choose: (g: MagalufG, seat: string) => 'drink' | 'withdraw',
   stop: (g: MagalufG) => boolean = () => false,
 ): void {
-  for (let guard = 0; guard < 4000; guard++) {
+  for (let guard = 0; guard < 6000; guard++) {
     const g = G(client);
     if (g.finished || stop(g)) return;
+
+    if (g.roundConfirm) {
+      const waitingOn = g.roundConfirm.pendingSeatIDs.find(
+        (id) => !g.roundConfirm!.confirmedSeatIDs.includes(id),
+      );
+      if (waitingOn === undefined) throw new Error('a complete wait did not advance');
+      actAs(client, waitingOn).confirmRoundReady!();
+      continue;
+    }
+
     const seat = g.turnSeatID;
-    const move = choose(g, seat);
-    actAs(client, seat)[move]!();
+    actAs(client, seat)[choose(g, seat)]!();
   }
   throw new Error('play() did not terminate');
+}
+
+/** Plays until a gate opens, leaving it un-confirmed for the test to inspect. */
+function playToGate(
+  client: TestClient,
+  choose: (g: MagalufG, seat: string) => 'drink' | 'withdraw' = alwaysWithdraw,
+): void {
+  for (let guard = 0; guard < 6000; guard++) {
+    const g = G(client);
+    if (g.finished || g.roundConfirm) return;
+    const seat = g.turnSeatID;
+    actAs(client, seat)[choose(g, seat)]!();
+  }
+  throw new Error('playToGate() did not reach a gate');
 }
 
 const alwaysWithdraw = () => 'withdraw' as const;
@@ -583,6 +612,137 @@ describe('magaluf gameDef', () => {
       const notUp = G(client).activeSeatIDs.find((id) => id !== G(client).turnSeatID)!;
       const before = G(client);
       actAs(client, notUp).drink!();
+      expect(G(client)).toEqual(before);
+    });
+  });
+
+  describe('round-confirm gates', () => {
+    it('holds a closing venue open instead of dealing the next one (AC24)', () => {
+      const client = makeClient(3);
+      playToGate(client);
+
+      const g = G(client);
+      expect(g.roundConfirm).not.toBeNull();
+      expect(g.pendingAdvance).toEqual({ kind: 'phase', next: 1 });
+      // Still standing in the Tardeo: nothing has been dealt.
+      expect(g.phase).toBe(0);
+    });
+
+    it('deals the next venue once every pending seat confirms (AC27)', () => {
+      const client = makeClient(3);
+      playToGate(client);
+      for (const id of G(client).roundConfirm!.pendingSeatIDs) {
+        actAs(client, id).confirmRoundReady!();
+      }
+
+      const g = G(client);
+      expect(g.roundConfirm).toBeNull();
+      expect(g.pendingAdvance).toBeNull();
+      expect(g.phase).toBe(1);
+      expect(g.players[g.turnSeatID]!.status).toBe('partying');
+    });
+
+    it('records the balconing rolls before opening the day gate (AC25)', () => {
+      // Limit 0 makes any drink fatal, so the night is guaranteed to produce a
+      // jump the gate must already be able to show.
+      const client = makeClient(3, (g) => {
+        g.limit = 0;
+        g.settings = { ...g.settings, basePoolChance: 1, poolDecay: 0 };
+      });
+      playToGate(client, (g, s) =>
+        s === '0' && g.players[s]!.drinksThisPhase < 1 ? 'drink' : 'withdraw',
+      );
+      // Walk through the venue gates to reach the end of the night.
+      let guard = 0;
+      while (G(client).pendingAdvance?.kind !== 'day' && ++guard < 200) {
+        const g = G(client);
+        if (g.roundConfirm) {
+          const waiting = g.roundConfirm.pendingSeatIDs.find(
+            (id) => !g.roundConfirm!.confirmedSeatIDs.includes(id),
+          );
+          if (waiting) actAs(client, waiting).confirmRoundReady!();
+          continue;
+        }
+        actAs(client, g.turnSeatID).withdraw!();
+      }
+
+      const g = G(client);
+      expect(g.pendingAdvance).toEqual({ kind: 'day', next: 1 });
+      expect(g.jumps.length).toBeGreaterThan(0);
+      expect(g.roundConfirm).not.toBeNull();
+    });
+
+    it('does not wait on a dead seat (AC26)', () => {
+      // Seat 0 alone starts the day already over a limit of 3 and cannot survive.
+      const client = makeClient(3, (g) => {
+        g.limit = 3;
+        g.players['0']!.resaca = 9;
+        g.players['0']!.intox = 9;
+        g.settings = { ...g.settings, basePoolChance: 0, poolDecay: 0 };
+      });
+
+      let guard = 0;
+      while (G(client).players['0']!.status !== 'dead' && ++guard < 400) {
+        const g = G(client);
+        if (g.roundConfirm) {
+          const waiting = g.roundConfirm.pendingSeatIDs.find(
+            (id) => !g.roundConfirm!.confirmedSeatIDs.includes(id),
+          );
+          if (waiting === undefined) break;
+          actAs(client, waiting).confirmRoundReady!();
+          continue;
+        }
+        actAs(client, g.turnSeatID).withdraw!();
+      }
+
+      expect(G(client).players['0']!.status).toBe('dead');
+      const wait = G(client).roundConfirm;
+      expect(wait).not.toBeNull();
+      expect(wait!.pendingSeatIDs).not.toContain('0');
+      expect(wait!.pendingSeatIDs).toEqual(expect.arrayContaining(['1', '2']));
+
+      // And the dead seat cannot confirm its way in either.
+      const before = G(client);
+      actAs(client, '0').confirmRoundReady!();
+      expect(G(client)).toEqual(before);
+    });
+
+    it('lets the host force past a seat that has not confirmed (AC28)', () => {
+      const client = makeClient(3, (g) => {
+        g.hostPlayerID = '0';
+      });
+      playToGate(client);
+      expect(G(client).phase).toBe(0);
+
+      actAs(client, '0').forceAdvanceRound!();
+
+      expect(G(client).roundConfirm).toBeNull();
+      expect(G(client).phase).toBe(1);
+    });
+
+    it('refuses a force-advance from anyone but the host seat (AC28)', () => {
+      const client = makeClient(3, (g) => {
+        g.hostPlayerID = '0';
+      });
+      playToGate(client);
+      const before = G(client);
+
+      actAs(client, '1').forceAdvanceRound!();
+      expect(G(client)).toEqual(before);
+    });
+
+    it('rejects every party move while a wait is open (AC29)', () => {
+      const client = makeClient(3, (g) => {
+        g.players['0']!.items = ['kebab'];
+      });
+      playToGate(client);
+      const before = G(client);
+
+      for (const seat of G(client).activeSeatIDs) {
+        actAs(client, seat).drink!();
+        actAs(client, seat).withdraw!();
+        actAs(client, seat).useItem!('kebab');
+      }
       expect(G(client)).toEqual(before);
     });
   });

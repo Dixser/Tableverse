@@ -56,9 +56,22 @@ function keysFromAPlayedMatch(): Set<string> {
         store: { getState: () => { G: MagalufG } };
       };
 
-      for (let guard = 0; guard < 3000; guard++) {
+      for (let guard = 0; guard < 6000; guard++) {
         const G = client.store.getState().G;
         if (G.finished) break;
+
+        // Gates have to be cleared or the weekend stalls at the first venue
+        // change and most of the key surface is never reached.
+        if (G.roundConfirm) {
+          const waiting = G.roundConfirm.pendingSeatIDs.find(
+            (id) => !G.roundConfirm!.confirmedSeatIDs.includes(id),
+          );
+          if (waiting === undefined) break;
+          client.updatePlayerID(waiting);
+          client.moves.confirmRoundReady!();
+          continue;
+        }
+
         client.updatePlayerID(G.turnSeatID);
         client.moves[move]!();
       }
