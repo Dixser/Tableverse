@@ -552,10 +552,12 @@
       "kebabEvent": "Kebab — consigues un Kebab.",
       "aguaEvent": "Botellín — consigues una Botella de agua.",
       "redbullEvent": "Red Bull — consigues un Red Bull.",
-      "camello": "Camello — consigues un objeto ilegal.",
       "cacheo": "Cacheo — todo el que lleve algo ilegal lo tira y pierde 3 PV.",
       "redada": "Redada — todo el que lleve algo ilegal pasa la noche en el calabozo.",
-      "nada": "No pasa nada — sigue la fiesta."
+      "nada": "No pasa nada — sigue la fiesta.",
+      "camelloPorro": "Camello — consigues un Porro.",
+      "camelloPastis": "Camello — consigues Pastis.",
+      "camelloFarlopa": "Camello — consigues Farlopa."
     },
     "log": {
       "dayStart": "Empieza el día:",
@@ -616,7 +618,9 @@
       "balconyPoolBody": "{{name}} sobrevive. Leyenda de Magaluf: +{{vp}} PV.",
       "balconyConcreteBody": "Se acabó el fin de semana de {{name}}.",
       "balconyContinue": "Continuar",
-      "balconySkip": "Omitir el resto"
+      "balconySkip": "Omitir el resto",
+      "balconyTarget": "Tira 1d{{die}} · necesitas más de {{over}}",
+      "balconyRolled": "Sale un {{roll}}"
     }
   }
 }

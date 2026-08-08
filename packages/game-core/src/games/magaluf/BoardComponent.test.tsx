@@ -266,11 +266,11 @@ describe('MagalufBoard', () => {
 
     it('shows a risk badge matching poolChance for a seat over the limit (AC16)', () => {
       const G = makeG({ limit: 20, limitRevealed: true });
-      G.players['0']!.intox = 22; // d = 2 -> 0.70 - 0.12 = 58%
+      G.players['0']!.intox = 22; // d = 2 on a d6 -> 4/6 = 67%
       G.players['1']!.intox = 19; // under, no badge
       renderBoard(G);
 
-      expect(screen.getByTestId('risk-0')).toHaveTextContent('58');
+      expect(screen.getByTestId('risk-0')).toHaveTextContent('67');
       expect(screen.queryByTestId('risk-1')).toBeNull();
     });
   });
@@ -281,6 +281,8 @@ describe('MagalufBoard', () => {
       seatID: '1',
       d: 2,
       limit: 20,
+      roll: 5,
+      die: 6,
       survived: true,
       legendVP: 5,
       lostVP: 12,
@@ -309,7 +311,7 @@ describe('MagalufBoard', () => {
       );
 
       expect(screen.getByTestId('balcony-overlay')).toBeInTheDocument();
-      expect(screen.getByTestId('balcony-odds')).toHaveTextContent('58');
+      expect(screen.getByTestId('balcony-odds')).toHaveTextContent('67');
       expect(screen.queryByTestId('balcony-outcome')).toBeNull();
     });
 

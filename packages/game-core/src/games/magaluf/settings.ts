@@ -19,7 +19,7 @@
 
 import type { JSONSchema } from '../../types.js';
 import type { PhaseId } from './cards.js';
-import { BALCONING, DAY_VP_MULTIPLIER } from './constants.js';
+import { BALCONY_DICE, DAY_VP_MULTIPLIER, DEFAULT_BALCONY_DIE } from './constants.js';
 
 export type LimitRevealAt = PhaseId | 'never';
 
@@ -32,8 +32,12 @@ export const LIMIT_REVEAL_OPTIONS: readonly LimitRevealAt[] = [
 
 export interface MagalufSettings {
   limitRevealAt: LimitRevealAt;
-  basePoolChance: number;
-  poolDecay: number;
+  /**
+   * Faces on the balcony die. Replaces the old basePoolChance/poolDecay pair:
+   * a continuous probability has no physical form, and this game has to be
+   * playable with cardboard and a die.
+   */
+  balconyDie: number;
   /** Shifts every day's limit deck by the same amount. */
   limitShift: number;
   saturdayMultiplier: number;
@@ -46,9 +50,7 @@ interface NumericRange {
   fallback: number;
 }
 
-const RANGES: Record<keyof Omit<MagalufSettings, 'limitRevealAt'>, NumericRange> = {
-  basePoolChance: { min: 0.1, max: 1, fallback: BALCONING.basePoolChance },
-  poolDecay: { min: 0, max: 0.5, fallback: BALCONING.poolDecay },
+const RANGES: Record<keyof Omit<MagalufSettings, 'limitRevealAt' | 'balconyDie'>, NumericRange> = {
   limitShift: { min: -10, max: 10, fallback: 0 },
   saturdayMultiplier: { min: 1, max: 3, fallback: DAY_VP_MULTIPLIER[1]! },
   sundayMultiplier: { min: 1, max: 4, fallback: DAY_VP_MULTIPLIER[2]! },
@@ -56,8 +58,7 @@ const RANGES: Record<keyof Omit<MagalufSettings, 'limitRevealAt'>, NumericRange>
 
 export const DEFAULT_SETTINGS: MagalufSettings = {
   limitRevealAt: 'after',
-  basePoolChance: RANGES.basePoolChance.fallback,
-  poolDecay: RANGES.poolDecay.fallback,
+  balconyDie: DEFAULT_BALCONY_DIE,
   limitShift: 0,
   saturdayMultiplier: RANGES.saturdayMultiplier.fallback,
   sundayMultiplier: RANGES.sundayMultiplier.fallback,
@@ -74,12 +75,17 @@ function clampNumber(raw: unknown, range: NumericRange): number {
 
 export function clampSettings(raw: Partial<MagalufSettings> | undefined): MagalufSettings {
   const revealAt = raw?.limitRevealAt;
+  const die = raw?.balconyDie;
   return {
     limitRevealAt: LIMIT_REVEAL_OPTIONS.includes(revealAt as LimitRevealAt)
       ? (revealAt as LimitRevealAt)
       : DEFAULT_SETTINGS.limitRevealAt,
-    basePoolChance: clampNumber(raw?.basePoolChance, RANGES.basePoolChance),
-    poolDecay: clampNumber(raw?.poolDecay, RANGES.poolDecay),
+    // A die that is not one of the real ones is not clamped to the nearest --
+    // there is no such thing as a d7 on the table, so an unknown value falls
+    // back to the standard die.
+    balconyDie: BALCONY_DICE.includes(die as (typeof BALCONY_DICE)[number])
+      ? (die as number)
+      : DEFAULT_BALCONY_DIE,
     limitShift: Math.round(clampNumber(raw?.limitShift, RANGES.limitShift)),
     saturdayMultiplier: clampNumber(raw?.saturdayMultiplier, RANGES.saturdayMultiplier),
     sundayMultiplier: clampNumber(raw?.sundayMultiplier, RANGES.sundayMultiplier),
@@ -100,19 +106,14 @@ export const magalufSettingsSchema: JSONSchema = {
       default: DEFAULT_SETTINGS.limitRevealAt,
       title: 'Reveal the drinking limit at',
     },
-    basePoolChance: {
+    // An enum, not a number: a die has a fixed set of real shapes, and this
+    // also takes two unbounded inputs out of a form the platform does not
+    // range-check.
+    balconyDie: {
       type: 'number',
-      default: DEFAULT_SETTINGS.basePoolChance,
-      minimum: RANGES.basePoolChance.min,
-      maximum: RANGES.basePoolChance.max,
-      title: 'Balconing: survival chance at 1 over (0.1-1)',
-    },
-    poolDecay: {
-      type: 'number',
-      default: DEFAULT_SETTINGS.poolDecay,
-      minimum: RANGES.poolDecay.min,
-      maximum: RANGES.poolDecay.max,
-      title: 'Balconing: survival lost per extra point (0-0.5)',
+      enum: [...BALCONY_DICE],
+      default: DEFAULT_SETTINGS.balconyDie,
+      title: 'Balconing die (survive by rolling above how far over you went)',
     },
     limitShift: {
       type: 'number',

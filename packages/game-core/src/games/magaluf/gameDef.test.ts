@@ -7,6 +7,7 @@ import { PHASE_RULES } from './constants.js';
 import { HIDDEN_LIMIT, magalufGameDef, type MagalufG } from './gameDef.js';
 import { magalufModule } from './index.js';
 import { clampSettings, DEFAULT_SETTINGS } from './settings.js';
+import { poolChance } from './balconing.js';
 import { bankRound, newPlayer } from './state.js';
 
 function phaseMinimum(g: MagalufG): number {
@@ -27,10 +28,14 @@ function actAs(
   return client.moves;
 }
 
-function makeClient(numPlayers = 3, overrides: (G: MagalufG) => void = () => {}) {
+function makeClient(
+  numPlayers = 3,
+  overrides: (G: MagalufG) => void = () => {},
+  seed = 'magaluf-test-seed',
+) {
   const game = {
     ...magalufGameDef,
-    seed: 'magaluf-test-seed',
+    seed,
     setup: (ctx: Parameters<NonNullable<typeof magalufGameDef.setup>>[0], setupData?: unknown) => {
       const G = magalufGameDef.setup!(ctx, setupData as never) as MagalufG;
       overrides(G);
@@ -123,10 +128,11 @@ describe('magaluf gameDef', () => {
     });
 
     it('ends the weekend early when every seat is dead (AC1)', () => {
-      // A limit below zero means everyone is over it on the very first night.
+      // A limit below zero means everyone is over it on the very first night,
+      // and a one-faced die can never beat it -- certain death, no seed-hunting.
       const client = makeClient(3, (g) => {
         g.limit = -5;
-        g.settings = { ...g.settings, basePoolChance: 0 };
+        g.settings = { ...g.settings, balconyDie: 1 };
       });
       play(client, alwaysWithdraw);
       const g = G(client);
@@ -368,17 +374,63 @@ describe('magaluf gameDef', () => {
     const drinkToMinimum = (seat: string) => (g: MagalufG, s: string) =>
       s === seat && g.players[s]!.drinksThisPhase < phaseMinimum(g) ? 'drink' : 'withdraw';
 
-    it('forfeits the round pool on both outcomes (AC11)', () => {
-      for (const basePoolChance of [1, 0]) {
-        const client = makeClient(3, (g) => {
-          g.limit = 0;
-          g.settings = { ...g.settings, basePoolChance, poolDecay: 0 };
-        });
-        play(client, drinkToMinimum('0'), (g) => g.day !== 0 || g.finished);
+    const SEEDS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
 
-        const jump = G(client).jumps.find((j) => j.seatID === '0');
-        expect(jump).toBeDefined();
-        expect(jump!.survived).toBe(basePoolChance === 1);
+    /**
+     * Plays seat 0 over a limit of 0 on each seed and returns what happened.
+     *
+     * A d20 rather than the default d6: drinking each venue's minimum against
+     * a limit of zero lands around 15 over, which a d6 can never beat, so on
+     * the standard die every run would die and a test needing both outcomes
+     * would silently only ever prove one.
+     */
+    const VARIED_DIE = 20;
+
+    function jumpRuns() {
+      return SEEDS.map((seed) => {
+        const client = makeClient(
+          3,
+          (g) => {
+            g.limit = 0;
+            g.settings = { ...g.settings, balconyDie: VARIED_DIE };
+          },
+          seed,
+        );
+        play(client, drinkToMinimum('0'), (g) => g.day !== 0 || g.finished);
+        return { client, jump: G(client).jumps.find((j) => j.seatID === '0') };
+      }).filter((run) => run.jump !== undefined);
+    }
+
+    /**
+     * The core rule, and a better assertion than the old one: rather than
+     * forcing an outcome with a probability, check that the outcome always
+     * agrees with the die. A physical roll can be inspected; a 46% cannot.
+     */
+    it('survives exactly when the roll beats how far over you went', () => {
+      const runs = jumpRuns();
+      expect(runs.length).toBeGreaterThan(0);
+      for (const { jump } of runs) {
+        expect(jump!.survived).toBe(jump!.roll > jump!.d);
+        expect(jump!.roll).toBeGreaterThanOrEqual(1);
+        expect(jump!.roll).toBeLessThanOrEqual(jump!.die);
+        expect(jump!.die).toBe(VARIED_DIE);
+      }
+    });
+
+    it('records the die a match was actually played with', () => {
+      const client = makeClient(3, (g) => { g.limit = 0; });
+      play(client, drinkToMinimum('0'), (g) => g.day !== 0 || g.finished);
+      const jump = G(client).jumps.find((j) => j.seatID === '0')!;
+      expect(jump.die).toBe(DEFAULT_SETTINGS.balconyDie);
+    });
+
+    it('forfeits the round pool whatever the die says (AC11)', () => {
+      const runs = jumpRuns();
+      const outcomes = new Set(runs.map((r) => r.jump!.survived));
+      // Both outcomes have to actually occur, or this proves only one branch.
+      expect(outcomes.size).toBe(2);
+
+      for (const { client, jump } of runs) {
         expect(jump!.lostVP).toBeGreaterThan(0);
         // The forfeit invariant: nothing from the round survives, so the only
         // VP a jumper can end the night with is the legend bonus.
@@ -389,24 +441,27 @@ describe('magaluf gameDef', () => {
     });
 
     it('pays the legend bonus and resaca to a survivor, kills the rest (AC12)', () => {
-      const survivor = makeClient(3, (g) => {
-        g.limit = 0;
-        g.settings = { ...g.settings, basePoolChance: 1, poolDecay: 0 };
-      });
-      play(survivor, drinkToMinimum('0'), (g) => g.day !== 0 || g.finished);
-      const survivorJump = G(survivor).jumps.find((j) => j.seatID === '0')!;
-      expect(G(survivor).players['0']!.status).not.toBe('dead');
-      expect(G(survivor).players['0']!.bankedVP).toBe(3 + survivorJump.d);
-      expect(G(survivor).players['0']!.resaca).toBe(4);
+      const runs = jumpRuns();
 
-      const dead = makeClient(3, (g) => {
-        g.limit = 0;
-        g.settings = { ...g.settings, basePoolChance: 0, poolDecay: 0 };
-      });
-      play(dead, drinkToMinimum('0'), (g) => g.day !== 0 || g.finished);
-      expect(G(dead).players['0']!.status).toBe('dead');
-      expect(G(dead).jumps[0]!.legendVP).toBe(0);
-      expect(G(dead).players['0']!.resaca).toBe(0);
+      const survivor = runs.find((r) => r.jump!.survived)!;
+      expect(survivor).toBeDefined();
+      expect(G(survivor.client).players['0']!.status).not.toBe('dead');
+      expect(G(survivor.client).players['0']!.bankedVP).toBe(3 + survivor.jump!.d);
+      expect(G(survivor.client).players['0']!.resaca).toBe(4);
+
+      const dead = runs.find((r) => !r.jump!.survived)!;
+      expect(dead).toBeDefined();
+      expect(G(dead.client).players['0']!.status).toBe('dead');
+      expect(dead.jump!.legendVP).toBe(0);
+      expect(G(dead.client).players['0']!.resaca).toBe(0);
+    });
+
+    it('is unsurvivable once you are as far over as the die has faces', () => {
+      // d >= faces means no roll can beat it -- the "no way back" zone.
+      for (let d = 1; d <= 8; d++) {
+        const certain = poolChance(d, { ...DEFAULT_SETTINGS, balconyDie: 6 });
+        expect(certain).toBe(d >= 6 ? 0 : (6 - d) / 6);
+      }
     });
 
     it('never triggers at or exactly on the limit (AC13)', () => {
@@ -534,14 +589,10 @@ describe('magaluf gameDef', () => {
   describe('settings clamping (AC18)', () => {
     it('clamps out-of-range numbers rather than letting them reach game logic', () => {
       const wild = clampSettings({
-        basePoolChance: 500,
-        poolDecay: -3,
         limitShift: 999,
         saturdayMultiplier: 0,
         sundayMultiplier: 99,
       } as never);
-      expect(wild.basePoolChance).toBe(1);
-      expect(wild.poolDecay).toBe(0);
       expect(wild.limitShift).toBe(10);
       expect(wild.saturdayMultiplier).toBe(1);
       expect(wild.sundayMultiplier).toBe(4);
@@ -549,13 +600,22 @@ describe('magaluf gameDef', () => {
 
     it('falls back to the tuned default for a non-finite or missing value', () => {
       const broken = clampSettings({
-        basePoolChance: Number.NaN,
-        poolDecay: 'nope',
+        limitShift: Number.NaN,
+        saturdayMultiplier: 'nope',
         limitRevealAt: 'brunch',
       } as never);
-      expect(broken.basePoolChance).toBe(DEFAULT_SETTINGS.basePoolChance);
-      expect(broken.poolDecay).toBe(DEFAULT_SETTINGS.poolDecay);
+      expect(broken.limitShift).toBe(DEFAULT_SETTINGS.limitShift);
+      expect(broken.saturdayMultiplier).toBe(DEFAULT_SETTINGS.saturdayMultiplier);
       expect(broken.limitRevealAt).toBe(DEFAULT_SETTINGS.limitRevealAt);
+    });
+
+    it('refuses a die that does not exist rather than clamping to the nearest', () => {
+      // There is no d7 on the table, so it falls back to the standard die
+      // instead of quietly becoming a d6-ish approximation.
+      expect(clampSettings({ balconyDie: 7 } as never).balconyDie).toBe(6);
+      expect(clampSettings({ balconyDie: 0 } as never).balconyDie).toBe(6);
+      expect(clampSettings({ balconyDie: 20 } as never).balconyDie).toBe(20);
+      expect(clampSettings({ balconyDie: 4 } as never).balconyDie).toBe(4);
     });
 
     // setup is called directly here rather than through Client, which takes no
@@ -564,10 +624,10 @@ describe('magaluf gameDef', () => {
       const fakeRandom = { Number: () => 0.5, Shuffle: <T>(deck: T[]) => deck };
       const g = magalufGameDef.setup!(
         { ctx: { numPlayers: 3 }, random: fakeRandom } as never,
-        { basePoolChance: 42, limitShift: -2 } as never,
+        { balconyDie: 42, limitShift: -2 } as never,
       ) as MagalufG;
 
-      expect(g.settings.basePoolChance).toBe(1); // clamped down from 42
+      expect(g.settings.balconyDie).toBe(6); // 42 is not a die, so it falls back
       expect(g.settings.limitShift).toBe(-2);
       expect([24, 25, 26, 27]).toContain(g.limit); // Friday deck, shifted -2
     });

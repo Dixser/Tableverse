@@ -96,9 +96,14 @@ export const defaultConfig: Config = {
 
   dayVPMultiplier: [1, 1.5, 2.25],
 
+  // The balcony roll is a DIE, because this has to be playable on a table.
+  // `base = (N-1)/N` and `decay = 1/N` collapse to exactly `(N - d)/N`, which
+  // is the chance of rolling above `d` on a dN -- so these two numbers are not
+  // free parameters, they are a d6 written the long way. Sweep another die with
+  // `--die 4`; the shipped module names it `balconyDie`.
   balconing: {
-    basePoolChance: 0.7,
-    decay: 0.12,
+    basePoolChance: 5 / 6,
+    decay: 1 / 6,
     legendBase: 3,
     resaca: 4,
   },
@@ -151,7 +156,9 @@ export const defaultConfig: Config = {
         kebabEvent: 2,
         aguaEvent: 2,
         redbullEvent: 2,
-        camello: 5,
+        camelloPorro: 2,
+        camelloPastis: 2,
+        camelloFarlopa: 1,
         cacheo: 1,
         nada: 4,
       },
@@ -195,7 +202,9 @@ export const defaultConfig: Config = {
         ambulancia: 1,
         kebabEvent: 2,
         aguaEvent: 1,
-        camello: 7,
+        camelloPorro: 2,
+        camelloPastis: 3,
+        camelloFarlopa: 2,
         cacheo: 1,
         redada: 1,
         nada: 1,
@@ -240,7 +249,9 @@ export const defaultConfig: Config = {
         vomitona: 2,
         ambulancia: 2,
         kebabEvent: 1,
-        camello: 8,
+        camelloPorro: 2,
+        camelloPastis: 2,
+        camelloFarlopa: 4,
         cacheo: 1,
         redada: 2,
       },

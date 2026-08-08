@@ -18,7 +18,7 @@ void i18n.use(initReactI18next).init({
         room: { seatLabel: 'TEST_seat_{{seatNumber}}' },
         magaluf: {
           alcohol: { pinta: 'TEST_pint', cana: 'TEST_small_beer', pecera: 'TEST_fishbowl' },
-          event: { foto: 'TEST_photo', redada: 'TEST_raid', terraza: 'TEST_terrace' },
+          event: { foto: 'TEST_photo', redada: 'TEST_raid', terraza: 'TEST_terrace', camelloFarlopa: 'TEST_dealer_coke' },
           item: {
             kebab: 'TEST_kebab',
             botella: 'TEST_water',
@@ -56,6 +56,8 @@ void i18n.use(initReactI18next).init({
             balconyBody: 'TEST_balcony_body {{name}} {{over}}',
             balconyNumbers: 'TEST_balcony_numbers {{intox}} {{limit}}',
             balconyOdds: 'TEST_odds {{percent}}',
+            balconyTarget: 'TEST_target d{{die}} over {{over}}',
+            balconyRolled: 'TEST_rolled {{roll}} d{{die}}',
             balconyLost: 'TEST_lost {{vp}}',
             balconyJump: 'TEST_jump',
             balconyPool: 'TEST_pool',

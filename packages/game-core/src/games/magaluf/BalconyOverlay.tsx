@@ -55,6 +55,11 @@ export function BalconyOverlay({
             <p className={styles.odds} data-testid="balcony-odds">
               {t('magaluf.board.balconyOdds', { percent })}
             </p>
+            {/* The rule, spelled out, because it is the whole tension: beat
+                the number you went over by. */}
+            <p className={styles.numbers} data-testid="balcony-target">
+              {t('magaluf.board.balconyTarget', { die: jump.die, over: jump.d })}
+            </p>
             {jump.lostVP > 0 && (
               <p className={styles.lost}>
                 {t('magaluf.board.balconyLost', { vp: jump.lostVP })}
@@ -71,6 +76,9 @@ export function BalconyOverlay({
           </>
         ) : (
           <>
+            <p className={styles.odds} data-testid="balcony-roll">
+              {t('magaluf.board.balconyRolled', { roll: jump.roll, die: jump.die })}
+            </p>
             <p
               className={jump.survived ? styles.pool : styles.concrete}
               data-testid="balcony-outcome"

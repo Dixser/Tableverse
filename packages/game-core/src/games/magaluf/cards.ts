@@ -112,7 +112,14 @@ export type EventId =
   | 'kebabEvent'
   | 'aguaEvent'
   | 'redbullEvent'
-  | 'camello'
+  // One card per item the dealer can hand over, rather than one card that
+  // rolls between three. At a real table the odds of getting a joint versus a
+  // gram have to be the number of cards in the deck, not a die nobody would
+  // think to roll -- and it buys a mix that can differ per venue, which a
+  // single random pick could never express.
+  | 'camelloPorro'
+  | 'camelloPastis'
+  | 'camelloFarlopa'
   | 'cacheo'
   | 'redada'
   | 'nada';
@@ -131,6 +138,8 @@ export interface EventCard {
   relief?: number;
   /** The drawing player loses every item they hold. */
   losesItems?: boolean;
+  /** The item this card hands over. Printed on the card, never rolled for. */
+  givesItem?: ItemId;
 }
 
 /**
@@ -176,10 +185,12 @@ export const EVENTS: Record<EventId, EventCard> = {
   ronda: { id: 'ronda' },
   vomitona: { id: 'vomitona', relief: 4, resaca: 3 },
   ambulancia: { id: 'ambulancia', relief: 5, resaca: 4 },
-  kebabEvent: { id: 'kebabEvent' },
-  aguaEvent: { id: 'aguaEvent' },
-  redbullEvent: { id: 'redbullEvent' },
-  camello: { id: 'camello' },
+  kebabEvent: { id: 'kebabEvent', givesItem: 'kebab' },
+  aguaEvent: { id: 'aguaEvent', givesItem: 'botella' },
+  redbullEvent: { id: 'redbullEvent', givesItem: 'redbull' },
+  camelloPorro: { id: 'camelloPorro', givesItem: 'porro' },
+  camelloPastis: { id: 'camelloPastis', givesItem: 'pastis' },
+  camelloFarlopa: { id: 'camelloFarlopa', givesItem: 'farlopa' },
   cacheo: { id: 'cacheo', vp: -3 },
   redada: { id: 'redada' },
   nada: { id: 'nada' },

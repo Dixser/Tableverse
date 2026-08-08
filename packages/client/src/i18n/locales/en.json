@@ -552,10 +552,12 @@
       "kebabEvent": "Kebab — you get a Kebab.",
       "aguaEvent": "Bottle of water — you get a Water bottle.",
       "redbullEvent": "Red Bull — you get a Red Bull.",
-      "camello": "Dealer — you get a contraband item.",
       "cacheo": "Stop-and-search — everyone holding contraband discards it and loses 3 VP.",
       "redada": "Police raid — everyone holding contraband spends the night in a cell.",
-      "nada": "Nothing happens — the party goes on."
+      "nada": "Nothing happens — the party goes on.",
+      "camelloPorro": "Dealer — you get a Joint.",
+      "camelloPastis": "Dealer — you get MDMA.",
+      "camelloFarlopa": "Dealer — you get Cocaine."
     },
     "log": {
       "dayStart": "A new day begins:",
@@ -616,7 +618,9 @@
       "balconyPoolBody": "{{name}} survives. Legend of Magaluf: +{{vp}} VP.",
       "balconyConcreteBody": "{{name}}’s weekend is over.",
       "balconyContinue": "Continue",
-      "balconySkip": "Skip the rest"
+      "balconySkip": "Skip the rest",
+      "balconyTarget": "Roll 1d{{die}} · you need more than {{over}}",
+      "balconyRolled": "It comes up {{roll}}"
     }
   }
 }

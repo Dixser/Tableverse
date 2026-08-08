@@ -12,8 +12,8 @@
  * Redada banked your VP and cancelled your limit check for free.
  */
 
-import type { EventCard, EventId, ItemId } from './cards.js';
-import { CONTRABAND, EVENTS } from './cards.js';
+import type { EventCard, EventId } from './cards.js';
+import { EVENTS } from './cards.js';
 import type { Rng } from './rng.js';
 import { dayMultipliers } from './settings.js';
 import type { MagalufG } from './state.js';
@@ -39,6 +39,10 @@ function applyCardEffects(G: MagalufG, seatID: string, card: EventCard): void {
   if (card.relief) addIntox(player, -card.relief);
   if (card.resaca) player.resaca += card.resaca;
   if (card.losesItems) player.items = [];
+  if (card.givesItem) {
+    player.items.push(card.givesItem);
+    log(G, 'gotItem', { actor: seatID, descriptionKey: `magaluf.item.${card.givesItem}` }, 'success');
+  }
 }
 
 export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng: Rng): void {
@@ -104,25 +108,6 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
       break;
     }
 
-    case 'kebabEvent':
-      giveItem(G, seatID, 'kebab');
-      break;
-
-    case 'aguaEvent':
-      giveItem(G, seatID, 'botella');
-      break;
-
-    case 'redbullEvent':
-      giveItem(G, seatID, 'redbull');
-      break;
-
-    case 'camello': {
-      // Random rather than a player choice: choosing needs a pending-decision
-      // stage, deferred per spec.md's non-goals.
-      giveItem(G, seatID, CONTRABAND[rng.int(CONTRABAND.length)]!);
-      break;
-    }
-
     case 'cacheo': {
       for (const id of partying(G)) {
         const target = G.players[id]!;
@@ -151,7 +136,3 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
   }
 }
 
-function giveItem(G: MagalufG, seatID: string, item: ItemId): void {
-  G.players[seatID]!.items.push(item);
-  log(G, 'gotItem', { actor: seatID, descriptionKey: `magaluf.item.${item}` }, 'success');
-}

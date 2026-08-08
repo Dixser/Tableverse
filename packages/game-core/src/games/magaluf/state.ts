@@ -48,6 +48,9 @@ export interface JumpRecord {
   d: number;
   /** The limit that applied that night — by display time G.limit has moved on. */
   limit: number;
+  /** What the die showed, and how many faces it had. Shown on the board. */
+  roll: number;
+  die: number;
   survived: boolean;
   legendVP: number;
   /** Unbanked VP forfeited by jumping. */

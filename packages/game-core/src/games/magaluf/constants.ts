@@ -45,15 +45,26 @@ export const LIMIT_DECKS: Record<string, number[]> = {
 export const DAY_VP_MULTIPLIER = [1, 1.5, 2.25];
 
 export const BALCONING = {
-  /** P(survive) at d = 1. The primary lethality dial. */
-  basePoolChance: 0.7,
-  /** How much survival drops per extra point over the limit. */
-  poolDecay: 0.12,
   /** Legend bonus is `legendBase + d`, banked only if you survive. */
   legendBase: 3,
   /** Resaca taken by a player who survives the jump. */
   resaca: 4,
 } as const;
+
+/**
+ * How many faces the balcony die has. The whole survival curve, in one
+ * physical object: you survive by rolling strictly higher than how far over
+ * the limit you went, so a dN gives `(N − d) / N` and becomes impossible at
+ * `d = N`.
+ *
+ * d6 is the default on evidence: at 8,000 simulated games it kills 48.8% of
+ * the players who go over and leaves 33.3% of the table dead by Monday, which
+ * is within noise of the hand-tuned continuous curve it replaces. d4 is the
+ * nastier table (40.5% dead by Monday); d10 and above stop being lethal
+ * enough to earn the theme.
+ */
+export const BALCONY_DICE = [4, 6, 8, 10, 12, 20] as const;
+export const DEFAULT_BALCONY_DIE = 6;
 
 export const ITEM_EFFECTS = {
   kebabRelief: 3,
@@ -100,7 +111,12 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       kebabEvent: 2,
       aguaEvent: 2,
       redbullEvent: 2,
-      camello: 5,
+      // The dealer's mix shifts across the weekend: mostly joints in the
+      // daylight, mostly powder by the After. A single card that rolled
+      // between three items could never express that; card counts can.
+      camelloPorro: 2,
+      camelloPastis: 2,
+      camelloFarlopa: 1,
       cacheo: 1,
       nada: 4,
     },
@@ -141,7 +157,9 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       ambulancia: 1,
       kebabEvent: 2,
       aguaEvent: 1,
-      camello: 7,
+      camelloPorro: 2,
+      camelloPastis: 3,
+      camelloFarlopa: 2,
       cacheo: 1,
       redada: 1,
       nada: 1,
@@ -186,7 +204,9 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       vomitona: 2,
       ambulancia: 2,
       kebabEvent: 1,
-      camello: 8,
+      camelloPorro: 2,
+      camelloPastis: 2,
+      camelloFarlopa: 4,
       cacheo: 1,
       redada: 2,
     },

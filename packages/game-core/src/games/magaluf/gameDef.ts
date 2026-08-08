@@ -229,8 +229,10 @@ function startDay(G: MagalufG, rng: Rng, day: number): void {
   G.day = day;
   G.limitRevealed = false;
 
+  // Shuffle the day's four limit cards and turn one face-down, exactly as a
+  // table would. Not an index into an array with a random number.
   const deck = LIMIT_DECKS[DAY_IDS[day]!]!;
-  G.limit = deck[rng.int(deck.length)]! + G.settings.limitShift;
+  G.limit = rng.shuffle(deck)[0]! + G.settings.limitShift;
 
   for (const id of G.activeSeatIDs) {
     const player = G.players[id]!;
@@ -265,6 +267,8 @@ function jump(G: MagalufG, rng: Rng, seatID: string): void {
     seatID,
     d,
     limit: G.limit,
+    roll: outcome.roll,
+    die: G.settings.balconyDie,
     survived: outcome.survived,
     legendVP: outcome.legendVP,
     lostVP,
@@ -273,10 +277,10 @@ function jump(G: MagalufG, rng: Rng, seatID: string): void {
   if (outcome.survived) {
     player.bankedVP += outcome.legendVP;
     player.resaca += outcome.resaca;
-    log(G, 'piscina', { actor: seatID, d, vp: outcome.legendVP }, 'special');
+    log(G, 'piscina', { actor: seatID, d, roll: outcome.roll, vp: outcome.legendVP }, 'special');
   } else {
     player.status = 'dead';
-    log(G, 'cemento', { actor: seatID, d }, 'failure');
+    log(G, 'cemento', { actor: seatID, d, roll: outcome.roll }, 'failure');
   }
 }
 

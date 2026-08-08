@@ -354,10 +354,16 @@ function checks(report: Report, config: Config): Check[] {
       pass: report.weekendDeathRate >= 0.25,
     },
     {
+      // Was ">= 50%", which no longer means anything now the roll is a die.
+      // The achievable values are quantised by the object: a d6 gives 48.9%
+      // and a d4 gives 63.7%, with nothing in between. Demanding a specific
+      // percentage point asks for a precision a physical die cannot deliver,
+      // so the target is what it was always really trying to say -- the roll
+      // should be about a coin-flip with your life.
       label: 'Over-limit players who die',
       actual: pct(report.overLimitDeathRate),
-      target: '>= 50%',
-      pass: report.overLimitDeathRate >= 0.5,
+      target: '45-60%',
+      pass: report.overLimitDeathRate >= 0.45 && report.overLimitDeathRate <= 0.6,
     },
     {
       label: 'Games with at least one death',
@@ -521,6 +527,13 @@ function parseArgs(argv: string[]): { games: number; players: number; seed: numb
     else if (arg === '--players') players = Number(argv[++i]);
     else if (arg === '--seed') seed = Number(argv[++i]);
     else if (arg === '--set') sets.push(argv[++i]!);
+    else if (arg === '--die') {
+      // Convenience for the one sweep that matters: a dN survival curve is
+      // base (N-1)/N with decay 1/N.
+      const faces = Number(argv[++i]);
+      sets.push(`balconing.basePoolChance=${(faces - 1) / faces}`);
+      sets.push(`balconing.decay=${1 / faces}`);
+    }
   }
   return { games, players, seed, sets };
 }
