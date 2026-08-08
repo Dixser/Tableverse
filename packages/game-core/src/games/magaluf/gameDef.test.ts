@@ -775,7 +775,6 @@ describe('magaluf gameDef', () => {
       // jump the gate must already be able to show.
       const client = makeClient(3, (g) => {
         g.limit = 0;
-        g.settings = { ...g.settings, basePoolChance: 1, poolDecay: 0 };
       });
       playToGate(client, (g, s) =>
         s === '0' && g.players[s]!.drinksThisPhase < 1 ? 'drink' : 'withdraw',
@@ -806,7 +805,6 @@ describe('magaluf gameDef', () => {
         g.limit = 3;
         g.players['0']!.resaca = 9;
         g.players['0']!.intox = 9;
-        g.settings = { ...g.settings, basePoolChance: 0, poolDecay: 0 };
       });
 
       let guard = 0;
@@ -890,10 +888,9 @@ describe('magaluf gameDef', () => {
 
   describe('gameover standings (AC35)', () => {
     it('returns every seat best-first, marking the dead', () => {
-      // A limit of 0 and a certain-death curve guarantees casualties to mark.
+      // A limit of 0 makes every drink a jump, guaranteeing casualties to mark.
       const client = makeClient(3, (g) => {
         g.limit = 0;
-        g.settings = { ...g.settings, basePoolChance: 0, poolDecay: 0 };
       });
       play(client, (g, s) => (s === '0' && g.players[s]!.drinksThisPhase < 1 ? 'drink' : 'withdraw'));
 

@@ -9,7 +9,20 @@ import {
 } from './useJumpQueue.js';
 
 function jump(seatID: string, d = 2, survived = true): JumpRecord {
-  return { day: 0, seatID, d, limit: 20, survived, legendVP: survived ? 3 + d : 0, lostVP: 10 };
+  // The roll is kept consistent with `survived` (a jump is survived by rolling
+  // strictly above how far over the limit you went) so a record never
+  // contradicts itself, even though the queue itself only shuffles records.
+  return {
+    day: 0,
+    seatID,
+    d,
+    limit: 20,
+    roll: survived ? d + 1 : d,
+    die: 6,
+    survived,
+    legendVP: survived ? 3 + d : 0,
+    lostVP: 10,
+  };
 }
 
 describe('jump queue', () => {
