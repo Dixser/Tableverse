@@ -37,6 +37,50 @@ export interface ChatPanelProps {
 const PLAYER_ID_PARAM_KEYS = new Set(['actor', 'target', 'opponent', 'player', 'winners']);
 
 /**
+ * Param keys holding a score, in whatever a game calls its points. Rendered in
+ * the same gold everywhere, so a reader scanning the feed can find "what did
+ * this cost me" without reading the sentence.
+ *
+ * Same convention as PLAYER_ID_PARAM_KEYS: the platform knows the param's
+ * semantic role, not which game sent it.
+ */
+const SCORE_PARAM_KEYS = new Set(['vp', 'score', 'points']);
+
+/**
+ * Param keys holding a cost — a number where going UP is the bad direction.
+ * Coloured by what the number does to you rather than by its sign, so a
+ * Magaluf drink that adds intoxication reads red and a glass of water reads
+ * green, which is the opposite of what a plain accounting convention would do.
+ *
+ * Same platform/game split as the two sets above: the platform knows what
+ * "cost" means, not which game sent it.
+ */
+const COST_PARAM_KEYS = new Set(['intox', 'damage']);
+
+/**
+ * A ranked list of seats, plus the value each was ranked on — e.g. Magaluf's
+ * Rey del guiri, which pays whoever drank most. Both are comma-joined and
+ * positionally paired; `ranking` is zipped into `Alice 4 · Bob 3` at render
+ * time and `rankingValues` is consumed rather than printed.
+ *
+ * Zipped here rather than in the engine because only the client can turn a
+ * seat ID into a name, and formatted here rather than in the translation
+ * string because the row length depends on how many people are at the table.
+ */
+const RANKING_PARAM_KEY = 'ranking';
+const RANKING_VALUES_PARAM_KEY = 'rankingValues';
+
+/**
+ * Player names come from users, and with `escapeValue: false` (see i18n.ts)
+ * an interpolated value is spliced into the translated string before `Trans`
+ * parses it for tags. A name containing `<` would therefore be parsed as
+ * markup, so the angle brackets are dropped before the name is wrapped.
+ */
+function tagSafe(value: string): string {
+  return value.replace(/[<>]/g, '');
+}
+
+/**
  * A log entry's well-known `color`/`colorA`/`colorB` params (see e.g.
  * cahoots' cardPlayed and goalCompleted log entries) are never printed as
  * their raw value -- each names which of a fixed palette the matching
@@ -82,6 +126,21 @@ function colorTagComponents(params: Record<string, string | number> | undefined)
     const cls = typeof raw === 'string' ? KNOWN_LOG_COLORS[raw] : undefined;
     if (cls) components[key] = <strong className={cls} />;
   }
+  // `<player>` and `<vp>` are never written in a translation string. They are
+  // injected around the resolved value by resolveLogParams below, so a log
+  // line gets a bold name and a gold score without every game's strings (and
+  // every future one's) having to remember to mark them up.
+  components.player = <strong className={styles.player} />;
+  components.vp = <strong className={styles.vp} />;
+  // One tag per cost param rather than a shared `<cost>`, so an entry carrying
+  // two of them can colour each by its own sign.
+  for (const key of COST_PARAM_KEYS) {
+    const raw = params?.[key];
+    if (raw === undefined) continue;
+    components[key] = (
+      <strong className={Number(raw) > 0 ? styles.costUp : styles.costDown} />
+    );
+  }
   return components;
 }
 
@@ -100,13 +159,31 @@ function resolveLogParams(
 ): Record<string, string | number> | undefined {
   if (!params) return params;
   const resolved: Record<string, string | number> = { ...params };
+  const name = (id: string) => tagSafe(seatLabel(id, playerNames, t));
+
   for (const key of Object.keys(params)) {
     if (PLAYER_ID_PARAM_KEYS.has(key)) {
       const value = String(params[key]);
+      // Each name is wrapped individually so a `winners` list bolds the names
+      // and leaves the separators alone.
       resolved[key] = value
         .split(',')
-        .map((id) => seatLabel(id, playerNames, t))
+        .map((id) => `<player>${name(id)}</player>`)
         .join(', ');
+    } else if (SCORE_PARAM_KEYS.has(key)) {
+      resolved[key] = `<vp>${String(params[key])}</vp>`;
+    } else if (COST_PARAM_KEYS.has(key)) {
+      resolved[key] = `<${key}>${String(params[key])}</${key}>`;
+    } else if (key === RANKING_PARAM_KEY) {
+      const seats = String(params[key]).split(',').filter(Boolean);
+      const values = String(params[RANKING_VALUES_PARAM_KEY] ?? '').split(',');
+      resolved[key] = seats
+        .map((id, index) => {
+          const value = values[index];
+          const label = `<player>${name(id)}</player>`;
+          return value === undefined || value === '' ? label : `${label} ${tagSafe(value)}`;
+        })
+        .join(' · ');
     } else if ((COLOR_VALUE_PARAM_KEYS as readonly string[]).includes(key)) {
       // The tag's styling is looked up separately (colorTagComponents,
       // from the RAW value) -- this only turns the value itself into the

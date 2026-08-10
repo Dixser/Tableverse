@@ -79,6 +79,23 @@ export interface LastDraw {
   seatID: string;
   alcohol: string;
   event: EventId | null;
+  /**
+   * What the event actually worked out to, for cards whose printed text is a
+   * rule rather than a number — "+1 VP per drink this phase" does not tell you
+   * what you got, and "whoever drank most" does not tell you who that was.
+   *
+   * An i18n key plus params rather than text, for the same reason the log is:
+   * the engine runs on the server and must not hold display strings. Seat IDs
+   * in `params` are resolved to names by the board, exactly as the chat feed
+   * resolves the same keys.
+   */
+  outcome: EventOutcome | null;
+}
+
+/** A resolved event result, shaped like a log entry because it is one. */
+export interface EventOutcome {
+  key: string;
+  params?: Record<string, string | number>;
 }
 
 /**
@@ -220,6 +237,47 @@ export function log(
   if (params) entry.params = params;
   if (sound) entry.sound = sound;
   G.log.push(entry);
+}
+
+/**
+ * Logs an event's worked-out result AND pins it to the drawn card.
+ *
+ * One call rather than two because the two must never disagree: the card on
+ * the table and the line in the feed are the same sentence, and a card that
+ * said one thing while the log said another would be worse than either alone.
+ */
+export function logOutcome(
+  G: MagalufG,
+  key: string,
+  params?: Record<string, string | number>,
+  sound?: SoundCue,
+): void {
+  log(G, key, params, sound);
+  if (G.lastDraw) {
+    const outcome: EventOutcome = { key: `magaluf.log.${key}` };
+    if (params) outcome.params = params;
+    G.lastDraw = { ...G.lastDraw, outcome };
+  }
+}
+
+/** Seats ranked by a public number, highest first; ties broken by seat order. */
+export function rankSeats(
+  G: MagalufG,
+  value: (player: MagalufPlayer) => number,
+): { seatID: string; value: number }[] {
+  return G.activeSeatIDs
+    .map((seatID) => ({ seatID, value: value(G.players[seatID]!) }))
+    .sort((a, b) => b.value - a.value || Number(a.seatID) - Number(b.seatID));
+}
+
+/** A ranking as the two parallel params the chat feed zips into a leaderboard. */
+export function rankingParams(
+  ranked: { seatID: string; value: number }[],
+): { ranking: string; rankingValues: string } {
+  return {
+    ranking: ranked.map((r) => r.seatID).join(','),
+    rankingValues: ranked.map((r) => r.value).join(','),
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getGameModule, type BoardProps } from '@tableverse/game-core';
 import { boardComponents } from '../boardRegistry.js';
@@ -28,6 +29,16 @@ export function GameMount({ selectedGameID, boardProps, playerNames }: GameMount
   // and RoundConfirmBanner off the very same state: the banners and their
   // cues are the visual and audible halves of one moment.
   useGameSounds(boardProps);
+  // A board that ends on a reveal of its own (Magaluf's balconing roll) can
+  // hold the banner until it has played it -- see BoardProps.onRevealPending.
+  // Stateful here rather than derived, because the chrome cannot know what a
+  // given game still owes its viewer.
+  const [revealPending, setRevealPending] = useState(false);
+  // Stable identity: the board effect that calls this has it in a dependency
+  // array, and a new function each render would re-fire it every render.
+  const onRevealPending = useCallback((pending: boolean) => {
+    setRevealPending(pending);
+  }, []);
   if (!selectedGameID) {
     return <div>{t('gameMount.noGameSelected')}</div>;
   }
@@ -42,11 +53,13 @@ export function GameMount({ selectedGameID, boardProps, playerNames }: GameMount
   const G = boardProps.G as { roundConfirm?: unknown; hostPlayerID?: unknown };
   return (
     <div data-testid="game-mount">
-      <GameoverBanner
-        gameover={boardProps.ctx.gameover}
-        playerID={boardProps.playerID}
-        playerNames={playerNames}
-      />
+      {!revealPending && (
+        <GameoverBanner
+          gameover={boardProps.ctx.gameover}
+          playerID={boardProps.playerID}
+          playerNames={playerNames}
+        />
+      )}
       <RoundConfirmBanner
         roundConfirm={G.roundConfirm}
         hostPlayerID={G.hostPlayerID}
@@ -55,7 +68,11 @@ export function GameMount({ selectedGameID, boardProps, playerNames }: GameMount
         onConfirm={() => boardProps.moves.confirmRoundReady?.()}
         onForceAdvance={() => boardProps.moves.forceAdvanceRound?.()}
       />
-      <BoardComponent {...boardProps} playerNames={playerNames} />
+      <BoardComponent
+        {...boardProps}
+        playerNames={playerNames}
+        onRevealPending={onRevealPending}
+      />
     </div>
   );
 }

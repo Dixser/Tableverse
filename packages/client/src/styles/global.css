@@ -10,6 +10,11 @@
   --color-success: #3ddc84;
   --color-warning: #e0a63a;
   --color-danger: #e0543a;
+  /* Scores, wherever a game shows one it wants read as a score. Unlike the
+     four above it varies by theme: --color-warning is a fine gold on the dark
+     surface and washes out to roughly 2:1 on white, which is unreadable for
+     the small italic text in the chat feed. */
+  --color-gold: #e8b93c;
 
   /* Spacing scale */
   --space-1: 0.25rem;
@@ -45,6 +50,7 @@
     --color-border: #d7dbe0;
     --color-text: #1a1d21;
     --color-text-muted: #5f6368;
+    --color-gold: #8a6100;
   }
 }
 
@@ -55,6 +61,7 @@
   --color-border: #d7dbe0;
   --color-text: #1a1d21;
   --color-text-muted: #5f6368;
+  --color-gold: #8a6100;
 }
 
 :root[data-theme='dark'] {
@@ -63,6 +70,7 @@
   --color-border: #2c3138;
   --color-text: #e8eaed;
   --color-text-muted: #9aa0a6;
+  --color-gold: #e8b93c;
 }
 
 *,

@@ -163,9 +163,138 @@ describe('MagalufBoard', () => {
     });
   });
 
+  /**
+   * The board half of the balcony fix. The engine resolves the weekend's last
+   * jump inside the same move that sets `finished`, so `endIf` fires on the
+   * tick the die lands -- without this signal the chrome announces the winner
+   * over the top of the roll that decides them.
+   */
+  describe('holding the gameover banner during a jump', () => {
+    const jump = (overrides: Partial<JumpRecord> = {}): JumpRecord => ({
+      day: 2,
+      seatID: '0',
+      d: 3,
+      limit: 22,
+      roll: 5,
+      die: 6,
+      survived: true,
+      legendVP: 6,
+      poolVP: 40,
+      lostVP: 0,
+      bankedVP: 90,
+      ...overrides,
+    });
+
+    /**
+     * Mounts with the jumps that already existed, then lands new ones.
+     *
+     * The split matters: `useJumpQueue`'s watermark starts at whatever was
+     * already in `G.jumps`, so a board mounted with a jump present treats it
+     * as history. A jump is only ever shown to someone who was already
+     * watching when it landed -- which is the case this fix is about.
+     */
+    function renderWithJumps(present: JumpRecord[], landing: JumpRecord[] = []) {
+      const onRevealPending = vi.fn();
+      const board = (jumps: JumpRecord[]) => (
+        <MagalufBoard
+          G={makeG({ jumps })}
+          ctx={makeCtx()}
+          moves={{} as never}
+          playerID="0"
+          isActive
+          playerNames={NAMES}
+          onRevealPending={onRevealPending}
+        />
+      );
+      const result = render(board(present));
+      if (landing.length > 0) result.rerender(board([...present, ...landing]));
+      return { ...result, onRevealPending };
+    }
+
+    it('reports pending while a jump is still unwatched', () => {
+      const { onRevealPending } = renderWithJumps([], [jump()]);
+      expect(onRevealPending).toHaveBeenLastCalledWith(true);
+      expect(screen.getByTestId('balcony-overlay')).toBeInTheDocument();
+    });
+
+    it('reports nothing pending when there is no jump to show', () => {
+      const { onRevealPending } = renderWithJumps([]);
+      expect(onRevealPending).toHaveBeenLastCalledWith(false);
+    });
+
+    /** The overlay is two steps: press to jump, then read the die and move on. */
+    const playOutOneJump = () => {
+      fireEvent.click(screen.getByTestId('balcony-jump'));
+      fireEvent.click(screen.getByTestId('balcony-continue'));
+    };
+
+    it('releases once the viewer dismisses the last jump', () => {
+      const { onRevealPending } = renderWithJumps([], [jump()]);
+      playOutOneJump();
+      expect(onRevealPending).toHaveBeenLastCalledWith(false);
+      expect(screen.queryByTestId('balcony-overlay')).toBeNull();
+    });
+
+    it('stays held between two jumps rather than flickering the banner on', () => {
+      const { onRevealPending } = renderWithJumps(
+        [],
+        [jump({ seatID: '0' }), jump({ seatID: '1' })],
+      );
+      onRevealPending.mockClear();
+
+      playOutOneJump();
+      // Still one to go, so the chrome must never have been told to release.
+      expect(onRevealPending).not.toHaveBeenCalledWith(false);
+      expect(screen.getByTestId('balcony-overlay')).toBeInTheDocument();
+    });
+
+    it('releases when the viewer skips the rest', () => {
+      const { onRevealPending } = renderWithJumps(
+        [],
+        [jump({ seatID: '0' }), jump({ seatID: '1' })],
+      );
+      fireEvent.click(screen.getByTestId('balcony-skip'));
+      expect(onRevealPending).toHaveBeenLastCalledWith(false);
+      expect(screen.queryByTestId('balcony-overlay')).toBeNull();
+    });
+
+    it('reports nothing pending to a viewer who arrived after the jump', () => {
+      // The watermark starts at the number of jumps already there, so a late
+      // joiner has no reveal owed and gets the result straight away rather
+      // than being walked through a weekend they did not watch.
+      const { onRevealPending } = renderWithJumps([jump()]);
+      expect(screen.queryByTestId('balcony-overlay')).toBeNull();
+      expect(onRevealPending).toHaveBeenLastCalledWith(false);
+    });
+  });
+
+  describe('colour coding', () => {
+    it('tags the phase chip with the venue, so the colour cannot drift from it', () => {
+      for (const [phase, id] of [[0, 'tardeo'], [1, 'noche'], [2, 'after']] as const) {
+        const { unmount } = renderBoard(makeG({ phase }));
+        expect(screen.getByTestId('phase-chip')).toHaveAttribute('data-phase', id);
+        unmount();
+      }
+    });
+
+    it('colours a drink by what it does to you, not by the sign of the number', () => {
+      // Pinta adds intoxication; agua is the only card that takes it away.
+      const { unmount } = renderBoard(
+        makeG({ lastDraw: { seatID: '0', alcohol: 'pinta', event: null, outcome: null } }),
+      );
+      const up = screen.getByTestId('card-pinta').querySelector('span[class*="intox"]')!;
+      expect(up.className).toContain('intoxUp');
+      unmount();
+
+      renderBoard(makeG({ lastDraw: { seatID: '0', alcohol: 'agua', event: null, outcome: null } }));
+      const down = screen.getByTestId('card-agua').querySelector('span[class*="intox"]')!;
+      expect(down.className).toContain('intoxDown');
+    });
+  });
+
   describe('the draw reveal', () => {
     it('renders the alcohol card and its event (AC6)', () => {
-      renderBoard(makeG({ lastDraw: { seatID: '1', alcohol: 'pinta', event: 'foto' } }));
+      renderBoard(makeG({ lastDraw: { seatID: '1', alcohol: 'pinta', event: 'foto', outcome: null } }));
       expect(screen.getByTestId('drawn-cards')).toBeInTheDocument();
       expect(screen.getByTestId('card-pinta')).toHaveTextContent('TEST_pint');
       expect(screen.getByTestId('card-foto')).toHaveTextContent('TEST_photo');
@@ -179,15 +308,88 @@ describe('MagalufBoard', () => {
     });
 
     it('renders an alcohol card whose event was skipped', () => {
-      renderBoard(makeG({ lastDraw: { seatID: '0', alcohol: 'cana', event: null } }));
+      renderBoard(makeG({ lastDraw: { seatID: '0', alcohol: 'cana', event: null, outcome: null } }));
       expect(screen.getByTestId('card-cana')).toBeInTheDocument();
       expect(screen.queryByTestId('event-facedown')).toBeNull();
+    });
+
+    it('prints a worked-out result under the cards, with seats resolved to names', () => {
+      renderBoard(
+        makeG({
+          lastDraw: {
+            seatID: '1',
+            alcohol: 'pinta',
+            event: 'foto',
+            outcome: {
+              key: 'magaluf.log.barraLibreResult',
+              params: { actor: '1', vp: 3, n: 3 },
+            },
+          },
+        }),
+      );
+      expect(screen.getByTestId('event-outcome')).toHaveTextContent('TEST_open_bar Bob 3 3');
+    });
+
+    it('resolves a list of winners to names', () => {
+      renderBoard(
+        makeG({
+          lastDraw: {
+            seatID: '0',
+            alcohol: 'pinta',
+            event: 'reyGuiri',
+            outcome: {
+              key: 'magaluf.log.reyGuiriResult',
+              params: { winners: '0,2', n: 4, vp: 3 },
+            },
+          },
+        }),
+      );
+      // The full standings are a second log entry, rendered by the feed only:
+      // the card has room for the answer, not the table.
+      expect(screen.getByTestId('event-outcome')).toHaveTextContent('TEST_king Alice, Carol 4 3');
+    });
+
+    it('qualifies names two seats are both using, as the chat feed does', () => {
+      const G = makeG({
+        lastDraw: {
+          seatID: '0',
+          alcohol: 'pinta',
+          event: 'reyGuiri',
+          outcome: {
+            key: 'magaluf.log.reyGuiriResult',
+            params: { winners: '0,1', n: 4, vp: 3 },
+          },
+        },
+      });
+      render(
+        <MagalufBoard
+          G={G}
+          ctx={makeCtx()}
+          moves={{} as never}
+          playerID="0"
+          isActive
+          // Two people at the table have picked the same name -- "Alice, Alice"
+          // names nobody.
+          playerNames={{ '0': 'Alice', '1': 'Alice', '2': 'Carol' }}
+        />,
+      );
+
+      const outcome = screen.getByTestId('event-outcome');
+      expect(outcome).toHaveTextContent('TEST_seat_1');
+      expect(outcome).toHaveTextContent('TEST_seat_2');
+    });
+
+    it('renders no outcome line for a card that is just its own numbers', () => {
+      renderBoard(
+        makeG({ lastDraw: { seatID: '0', alcohol: 'pinta', event: 'foto', outcome: null } }),
+      );
+      expect(screen.queryByTestId('event-outcome')).toBeNull();
     });
 
     it('shows the event face-down while it is still owed', () => {
       renderBoard(
         makeG({
-          lastDraw: { seatID: '0', alcohol: 'pinta', event: null },
+          lastDraw: { seatID: '0', alcohol: 'pinta', event: null, outcome: null },
           pendingEvent: { seatID: '0', endsTurn: true },
         }),
       );
@@ -199,7 +401,7 @@ describe('MagalufBoard', () => {
   describe('the event reveal step', () => {
     const pendingG = (seatID = '0') =>
       makeG({
-        lastDraw: { seatID, alcohol: 'pinta', event: null },
+        lastDraw: { seatID, alcohol: 'pinta', event: null, outcome: null },
         pendingEvent: { seatID, endsTurn: true },
       });
 
@@ -237,7 +439,7 @@ describe('MagalufBoard', () => {
     // drink would have set, which is what the engine carries through.
     const choiceG = (seatID = '0') =>
       makeG({
-        lastDraw: { seatID, alcohol: 'pinta', event: 'vomitona' },
+        lastDraw: { seatID, alcohol: 'pinta', event: 'vomitona', outcome: null },
         pendingChoice: { seatID, eventId: 'vomitona', endsTurn: true },
       });
 

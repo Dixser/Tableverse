@@ -21,6 +21,25 @@ export interface BoardProps<G = unknown> {
    * itself, same convention as GameoverBanner's own nameFor.
    */
   playerNames?: Record<string, string>;
+  /**
+   * Lets a board with an end-of-match reveal of its own ask the chrome to
+   * hold the gameover banner back until it has finished playing it.
+   *
+   * Magaluf is why this exists. Its balconing rolls are resolved inside the
+   * move that ends the weekend, so `endIf` fires on the very same tick the
+   * jumps land: the banner announced the winner while the die was still on
+   * screen, which read as though the game had skipped the check. The
+   * standings were right — they are computed after the jumps resolve — but
+   * being shown the answer before the dice is indistinguishable from a bug.
+   *
+   * A signal rather than the chrome reading game state, because only the
+   * board knows what it still has to show, and only this viewer's copy of it
+   * counts: a player who joined after the jump has nothing to wait for.
+   *
+   * Optional, and a no-op for every game without a reveal. A board that calls
+   * it MUST report `false` on unmount, or the banner never appears.
+   */
+  onRevealPending?: (pending: boolean) => void;
 }
 
 export interface JSONSchema {

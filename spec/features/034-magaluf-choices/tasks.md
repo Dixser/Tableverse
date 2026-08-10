@@ -62,3 +62,23 @@
       lever is the drink caps or `earlyExitPenalty`, not the limit deck —
       16/19/22/25/28 came out of playtests and is the point of the feature.
       Needs a human playtest before any further tuning.
+
+- [x] 13. **Hold the gameover banner through the balcony reveal.** Playtest
+      found the winner being announced while the deciding roll was still on
+      screen. New platform-level `BoardProps.onRevealPending`: a board with an
+      end-of-match reveal reports while it still owes one, and `GameMount`
+      gates `GameoverBanner` on it.
+      **Verify:** 10 tests — 6 on the board (pending while unwatched, released
+      on continue/skip, held *between* two jumps, nothing owed to a late
+      joiner) and 4 on the chrome, driven by a stub board rather than Magaluf
+      since the contract is platform-level.
+
+      Confirmed first that the standings themselves were never wrong: across
+      60 seeded matches every Sunday jump produced gameover standings that
+      matched post-jump `bankedVP` exactly. The bug was only that the answer
+      arrived before the dice.
+
+- [ ] 14. **Make the balcony roll a real move.** The die is currently rolled
+      inside the move that ends the day, so pressing "jump" reveals a recorded
+      result rather than causing one. Task 13 hides the symptom; this is the
+      fix. Carried over from `design.md` §14.

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BoardProps } from '../../types.js';
 import type { ItemId } from './cards.js';
@@ -37,6 +38,7 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
   playerID,
   isActive,
   playerNames,
+  onRevealPending,
 }) => {
   const { t } = useTranslation();
 
@@ -45,8 +47,38 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
   const limit = G.limit === HIDDEN_LIMIT ? null : G.limit;
 
   const jumps = useJumpQueue(G.jumps);
-  const nameFor = (seatID: string) =>
-    playerNames?.[seatID] ?? t('room.seatLabel', { seatNumber: Number(seatID) + 1 });
+
+  /**
+   * Hold the gameover banner while this viewer still has a jump to watch.
+   *
+   * The weekend's last balconing roll and `endIf` land on the same tick, so
+   * without this the winner is announced over the top of the die that decides
+   * whether they are the winner. The cleanup reports `false` so the banner
+   * cannot be stranded if the board unmounts mid-reveal.
+   *
+   * Depends on the boolean, not on the jump record: advancing from one jump
+   * straight to another must not flicker the banner on between them.
+   */
+  const revealPending = jumps.current !== null;
+  useEffect(() => {
+    onRevealPending?.(revealPending);
+    return () => onRevealPending?.(false);
+  }, [revealPending, onRevealPending]);
+  /**
+   * Falls back to the seat, and qualifies a name two people are both using.
+   *
+   * The same rule the chat feed applies to the identical seat IDs (see
+   * ChatPanel's `seatLabel`), because the two now render the same sentences:
+   * an event outcome that reads "Alice, Alice, Alice" on the card while the
+   * feed says which seats it meant is worse than either alone.
+   */
+  const nameFor = (seatID: string) => {
+    const seat = t('room.seatLabel', { seatNumber: Number(seatID) + 1 });
+    const name = playerNames?.[seatID];
+    if (!name) return seat;
+    const shared = Object.values(playerNames ?? {}).filter((n) => n === name).length > 1;
+    return shared ? `${name} (${seat})` : name;
+  };
 
   const owesReveal = playerID != null && G.pendingEvent?.seatID === playerID;
   const choice = G.pendingChoice;
@@ -92,6 +124,7 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
         lastDraw={G.lastDraw}
         drawerName={G.lastDraw ? nameFor(G.lastDraw.seatID) : null}
         eventPending={G.pendingEvent != null}
+        nameFor={nameFor}
       />
 
       {/*

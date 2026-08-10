@@ -1,8 +1,54 @@
+/*
+ * Magaluf's own palette, declared once here and inherited by every child
+ * module (custom properties cascade through the DOM, CSS-module class hashing
+ * does not reach them). The alternative -- repeating the literals in
+ * CardTile/IntoxMeter/PhaseHeader -- is what the chat panel has to do for its
+ * copies, and its own comment admits they are "kept in sync by hand".
+ *
+ * Values are picked to sit on both themes: the surface behind them is near
+ * #1e2227 on dark and #ffffff on light, and each of these clears 4.5:1 on
+ * both.
+ */
 .board {
+  /* Intoxication, coloured by what it does to you rather than by sign. Going
+     up is the thing that kills you; coming down is relief. */
+  --magaluf-intox-up: #e0543a;
+  --magaluf-intox-down: #35b866;
+  /* Hangover. Deliberately a deeper violet than the Noche chip below, so the
+     two never read as the same thing if they share a screen. */
+  --magaluf-resaca: #8b5cd6;
+  /* One colour per venue, warming through the night. */
+  --magaluf-tardeo: #e08a2e;
+  --magaluf-noche: #b06bea;
+  --magaluf-after: #e0543a;
+
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   max-width: 500px;
+}
+
+/* Light needs darker inks to clear 4.5:1 on white. Structured exactly like
+   global.css: dark is the base above, the OS branch applies only when the user
+   has made no explicit choice, and an explicit choice always wins. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) .board {
+    --magaluf-intox-up: #c0341a;
+    --magaluf-intox-down: #1d7a41;
+    --magaluf-resaca: #6a34b8;
+    --magaluf-tardeo: #a55c00;
+    --magaluf-noche: #7b2fbd;
+    --magaluf-after: #c0341a;
+  }
+}
+
+:root[data-theme='light'] .board {
+  --magaluf-intox-up: #c0341a;
+  --magaluf-intox-down: #1d7a41;
+  --magaluf-resaca: #6a34b8;
+  --magaluf-tardeo: #a55c00;
+  --magaluf-noche: #7b2fbd;
+  --magaluf-after: #c0341a;
 }
 
 /* Wraps rather than shrinking: at six seats the meters still have to be

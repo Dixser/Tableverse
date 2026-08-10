@@ -428,7 +428,7 @@ function takeDrink(
   // Set here rather than after the event, so the drink is on the table for
   // everyone to read while the event is still face-down. A Ronda's knock-on
   // drinks cannot overwrite it: those go through consumeAlcohol, never here.
-  G.lastDraw = { seatID, alcohol: card.id, event: null };
+  G.lastDraw = { seatID, alcohol: card.id, event: null, outcome: null };
 
   if (options.drawsEvent !== false) {
     G.pendingEvent = { seatID, endsTurn: options.endsTurn ?? true };

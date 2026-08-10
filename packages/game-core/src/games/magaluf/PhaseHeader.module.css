@@ -19,6 +19,27 @@
   white-space: nowrap;
 }
 
+/* Keyed off a data attribute rather than three classes, so the phase id in
+   the DOM and the colour cannot drift apart. */
+.phase {
+  font-weight: 600;
+  color: var(--phase-color);
+  border-color: var(--phase-color);
+  background: color-mix(in srgb, var(--phase-color) 12%, transparent);
+}
+
+.phase[data-phase='tardeo'] {
+  --phase-color: var(--magaluf-tardeo);
+}
+
+.phase[data-phase='noche'] {
+  --phase-color: var(--magaluf-noche);
+}
+
+.phase[data-phase='after'] {
+  --phase-color: var(--magaluf-after);
+}
+
 .limit {
   border-color: var(--color-accent);
   font-variant-numeric: tabular-nums;

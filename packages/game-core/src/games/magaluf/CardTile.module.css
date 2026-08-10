@@ -26,8 +26,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-.intox {
-  color: var(--color-danger, #c0392b);
+.intoxUp {
+  color: var(--magaluf-intox-up);
+}
+
+/* Zero counts as "not costing you anything", so it reads with the relief. */
+.intoxDown {
+  color: var(--magaluf-intox-down);
 }
 
 .vp {

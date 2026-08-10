@@ -29,7 +29,10 @@ import {
   hasContraband,
   leavePhase,
   log,
+  logOutcome,
   partying,
+  rankingParams,
+  rankSeats,
 } from './state.js';
 
 /**
@@ -113,32 +116,64 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
 
   switch (eventId) {
     // --- Retargeted away from the drawing player -------------------------
+    // Each of these four is printed as a rule rather than a number, so each
+    // reports what the rule actually came to — see `logOutcome`.
     case 'karaoke': {
       const top = drunkestSeat(G);
-      gainVP(player, top === seatID ? (card.vp ?? 0) * 2 : (card.vp ?? 0));
+      const doubled = top === seatID;
+      const vp = doubled ? (card.vp ?? 0) * 2 : (card.vp ?? 0);
+      gainVP(player, vp);
+      logOutcome(
+        G,
+        doubled ? 'karaokeDrunkest' : 'karaokeResult',
+        { actor: seatID, vp },
+        'success',
+      );
       break;
     }
 
     case 'reyGuiri': {
-      const most = Math.max(...G.activeSeatIDs.map((id) => G.players[id]!.drinksThisPhase));
+      const ranked = rankSeats(G, (p) => p.drinksThisPhase);
+      const most = ranked[0]?.value ?? 0;
       if (most > 0) {
-        for (const id of G.activeSeatIDs) {
-          if (G.players[id]!.drinksThisPhase === most) gainVP(G.players[id]!, card.vp ?? 0);
-        }
+        const winners = ranked.filter((r) => r.value === most);
+        for (const { seatID: id } of winners) gainVP(G.players[id]!, card.vp ?? 0);
+        // Two entries, not one. The result is what the card shows -- short
+        // enough to sit under a tile -- and the standings are a second line
+        // that only the feed renders, where there is room for the whole table
+        // and somewhere to scroll back to it.
+        logOutcome(
+          G,
+          'reyGuiriResult',
+          { winners: winners.map((w) => w.seatID).join(','), n: most, vp: card.vp ?? 0 },
+          'success',
+        );
+        log(G, 'reyGuiriRanking', rankingParams(ranked));
+      } else {
+        // Nobody has drunk anything yet, so there is no king. Worth saying:
+        // otherwise the card looks like it failed to resolve.
+        logOutcome(G, 'reyGuiriNobody');
       }
       break;
     }
 
-    case 'barraLibre':
-      gainVP(player, player.drinksThisPhase);
+    case 'barraLibre': {
+      const vp = player.drinksThisPhase;
+      gainVP(player, vp);
+      logOutcome(G, 'barraLibreResult', { actor: seatID, vp, n: vp }, 'success');
       break;
+    }
 
     case 'ambulancia': {
       const victimID = drunkestSeat(G);
       if (victimID) {
         const victim = G.players[victimID]!;
+        // Read before the relief lands: the number that got them picked is the
+        // one they were carrying, not the one they leave with.
+        const intox = victim.intox;
         addIntox(victim, -(card.relief ?? 0));
         addResaca(victim, card.resaca ?? 0);
+        logOutcome(G, 'ambulanciaResult', { actor: victimID, n: intox }, 'failure');
         leavePhase(G, victimID, 'ambulance');
       }
       break;

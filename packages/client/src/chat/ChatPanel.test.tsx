@@ -163,6 +163,10 @@ describe('ChatPanel', () => {
     expect(row.className).not.toContain(styles.logRowElimination);
   });
 
+  // The name is its own <strong> since the styling pass, so these read the row
+  // rather than looking for one element holding the whole sentence.
+  const logRow = () => screen.getByRole('listitem');
+
   it('resolves a player-ID-shaped param (e.g. "actor") to the claimed seat name via playerNames', () => {
     i18n.addResource('en', 'translation', 'test.log.actorEvent', '{{actor}} did something');
     mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
@@ -176,7 +180,7 @@ describe('ChatPanel', () => {
       />,
     );
 
-    expect(screen.getByText('Alice did something')).toBeInTheDocument();
+    expect(logRow()).toHaveTextContent('Alice did something');
   });
 
   it('falls back to the seat label for a player-ID param with no synced name yet', () => {
@@ -191,7 +195,132 @@ describe('ChatPanel', () => {
       />,
     );
 
-    expect(screen.getByText(`${i18n.t('room.seatLabel', { seatNumber: 1 })} did something`)).toBeInTheDocument();
+    expect(logRow()).toHaveTextContent(`${i18n.t('room.seatLabel', { seatNumber: 1 })} did something`);
+  });
+
+  it('renders a resolved player name bold, without touching the rest of the line', () => {
+    i18n.addResource('en', 'translation', 'test.log.actorEvent', '{{actor}} did something');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[{ key: 'test.log.actorEvent', params: { actor: '0' } }]}
+        playerNames={{ '0': 'Alice' }}
+      />,
+    );
+
+    const name = screen.getByText('Alice');
+    expect(name.tagName).toBe('STRONG');
+    expect(name.className).toContain(styles.player);
+  });
+
+  it('renders a score param in gold', () => {
+    i18n.addResource('en', 'translation', 'test.log.scored', '{{actor}} banks {{vp}} VP');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[{ key: 'test.log.scored', params: { actor: '0', vp: 12 } }]}
+        playerNames={{ '0': 'Alice' }}
+      />,
+    );
+
+    const score = screen.getByText('12');
+    expect(score.tagName).toBe('STRONG');
+    expect(score.className).toContain(styles.vp);
+    expect(logRow()).toHaveTextContent('Alice banks 12 VP');
+  });
+
+  it('bolds each name in a winners list and leaves the separators plain', () => {
+    i18n.addResource('en', 'translation', 'test.log.won', '{{winners}} win');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[{ key: 'test.log.won', params: { winners: '0,1' } }]}
+        playerNames={{ '0': 'Alice', '1': 'Bob' }}
+      />,
+    );
+
+    expect(screen.getByText('Alice').tagName).toBe('STRONG');
+    expect(screen.getByText('Bob').tagName).toBe('STRONG');
+    expect(logRow()).toHaveTextContent('Alice, Bob win');
+  });
+
+  it('colours a cost param by direction, not by sign', () => {
+    i18n.addResource('en', 'translation', 'test.log.drank', 'drinks {{intox}}');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    // Going up is the bad direction, so a gain is red and a relief is green --
+    // the opposite of the usual accounting convention, and deliberately so.
+    const { unmount } = render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[{ key: 'test.log.drank', params: { intox: 3 } }]}
+      />,
+    );
+    expect(screen.getByText('3').className).toContain(styles.costUp);
+    unmount();
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[{ key: 'test.log.drank', params: { intox: -1 } }]}
+      />,
+    );
+    expect(screen.getByText('-1').className).toContain(styles.costDown);
+  });
+
+  it('zips a ranking into a leaderboard of names and their values', () => {
+    i18n.addResource('en', 'translation', 'test.log.ranking', 'standings — {{ranking}}');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[
+          {
+            key: 'test.log.ranking',
+            params: { ranking: '1,2,0', rankingValues: '5,3,2' },
+          },
+        ]}
+        playerNames={{ '0': 'Alice', '1': 'Bob', '2': 'Carol' }}
+      />,
+    );
+
+    // Engine order is preserved -- ranking is already sorted, and re-sorting
+    // here would be the client second-guessing the rules.
+    expect(logRow()).toHaveTextContent('standings — Bob 5 · Carol 3 · Alice 2');
+    // rankingValues is consumed by the zip, never printed on its own.
+    expect(logRow().textContent).not.toContain('5,3,2');
+  });
+
+  it('never lets a display name containing markup become markup', () => {
+    i18n.addResource('en', 'translation', 'test.log.actorEvent', '{{actor}} did something');
+    mockUseChat.mockReturnValue({ messages: [], sendMessage: vi.fn() });
+
+    render(
+      <ChatPanel
+        roomID="room-1"
+        sessionToken="tok"
+        gameLog={[{ key: 'test.log.actorEvent', params: { actor: '0' } }]}
+        playerNames={{ '0': '<b>Mallory</b>' }}
+      />,
+    );
+
+    // The angle brackets are dropped, so the name renders as one bold run of
+    // text rather than injecting a tag into the parsed string.
+    expect(logRow()).toHaveTextContent('bMallory/b did something');
+    expect(logRow().querySelector('b')).toBeNull();
   });
 
   it('leaves non-player-ID params (e.g. a card rank) untouched', () => {

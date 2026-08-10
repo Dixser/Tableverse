@@ -152,6 +152,58 @@
   color: rgb(178, 34, 34);
 }
 
+/* Injected by ChatPanel around every resolved player name and score param --
+   no translation string writes these tags. The log rows are italic and muted
+   by design, so these two are the only things in a row that are not, which is
+   what makes a name and a number findable while skimming. */
+.player {
+  font-weight: 700;
+  font-style: normal;
+  color: var(--color-text);
+}
+
+.vp {
+  font-weight: 700;
+  font-style: normal;
+  color: var(--color-gold);
+}
+
+/* A cost, coloured by direction rather than by sign -- up is the bad way.
+   Literal values rather than the board's --magaluf-* custom properties: the
+   feed is platform chrome and renders outside any game's DOM subtree, the
+   same reason the four log colours above are duplicated here. */
+.costUp,
+.costDown {
+  font-weight: 700;
+  font-style: normal;
+}
+
+.costUp {
+  color: #e0543a;
+}
+
+.costDown {
+  color: #35b866;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) .costUp {
+    color: #c0341a;
+  }
+
+  :root:not([data-theme]) .costDown {
+    color: #1d7a41;
+  }
+}
+
+:root[data-theme='light'] .costUp {
+  color: #c0341a;
+}
+
+:root[data-theme='light'] .costDown {
+  color: #1d7a41;
+}
+
 .colorGreen {
   color: rgb(33, 140, 64);
 }

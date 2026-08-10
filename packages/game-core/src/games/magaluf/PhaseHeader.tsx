@@ -19,7 +19,15 @@ export function PhaseHeader({ day, phase, dayMultiplier, limitShift, limit }: Ph
   return (
     <header className={styles.header}>
       <span className={styles.chip}>{t(`magaluf.day.${DAY_IDS[day]}`)}</span>
-      <span className={styles.chip}>{t(`magaluf.phase.${PHASE_IDS[phase]}`)}</span>
+      {/* One colour per venue, warming through the night, so the phase is
+          readable at a glance rather than by reading the word. */}
+      <span
+        className={`${styles.chip} ${styles.phase}`}
+        data-phase={PHASE_IDS[phase]}
+        data-testid="phase-chip"
+      >
+        {t(`magaluf.phase.${PHASE_IDS[phase]}`)}
+      </span>
       <span className={styles.chip}>
         {t('magaluf.board.dayMultiplier', { multiplier: dayMultiplier })}
       </span>

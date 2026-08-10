@@ -532,6 +532,17 @@ is the thing feature 034 exists to keep.
   already rolled by then. In the real module the roll should be a distinct
   step so the reveal is genuinely live.
 
+  This bit the shipped module in playtesting. Because the roll happens inside
+  the move that ends the weekend, `endIf` fires on the same tick, and the
+  gameover banner announced the winner over the top of the die deciding
+  whether they were the winner. The standings were never wrong — `resolveNight`
+  resolves every jump before it sets `finished` — but being shown the answer
+  before the dice is indistinguishable from the check being skipped.
+
+  Fixed on the presentation side for now (`BoardProps.onRevealPending` holds
+  the banner until the viewer has played the jump out). Making the roll a real
+  move is still the honest fix and still open.
+
 ## 15. Notes for the port
 
 The engine was written against boardgame.io's constraints so the move to

@@ -305,10 +305,21 @@ describe('magaluf gameDef', () => {
       actAs(client, seat).drink!();
       // The drink is readable while the event is still face-down -- the whole
       // point of splitting the two.
-      expect(G(client).lastDraw).toEqual({ seatID: seat, alcohol: 'pinta', event: null });
+      expect(G(client).lastDraw).toEqual({
+        seatID: seat,
+        alcohol: 'pinta',
+        event: null,
+        outcome: null,
+      });
 
       actAs(client, seat).revealEvent!();
-      expect(G(client).lastDraw).toEqual({ seatID: seat, alcohol: 'pinta', event: 'foto' });
+      // Foto is just its own numbers, so there is no worked-out result to pin.
+      expect(G(client).lastDraw).toEqual({
+        seatID: seat,
+        alcohol: 'pinta',
+        event: 'foto',
+        outcome: null,
+      });
     });
 
     it('keeps lastDraw on the draw that caused a ronda, not its knock-on drinks', () => {
@@ -316,7 +327,12 @@ describe('magaluf gameDef', () => {
       const seat = G(client).turnSeatID;
       drinkAndReveal(client, seat);
 
-      expect(G(client).lastDraw).toEqual({ seatID: seat, alcohol: 'pinta', event: 'ronda' });
+      expect(G(client).lastDraw).toEqual({
+        seatID: seat,
+        alcohol: 'pinta',
+        event: 'ronda',
+        outcome: null,
+      });
       // The ronda really did pour for everyone; it just did not claim the reveal.
       for (const id of G(client).activeSeatIDs) {
         expect(G(client).players[id]!.drinksThisPhase).toBeGreaterThan(0);
@@ -598,6 +614,117 @@ describe('magaluf gameDef', () => {
    * established one step earlier: the drawer owes an answer, and until it comes
    * nobody has any other move.
    */
+  /**
+   * Four cards are printed as a rule rather than a number — "+1 VP per drink",
+   * "whoever drank most". Each has to report what the rule actually came to,
+   * in the feed and on the card, or the table is doing the arithmetic in their
+   * heads to find out what just happened.
+   */
+  describe('worked-out event results', () => {
+    /** Draws a stacked event and returns the outcome pinned to the card. */
+    function drawEventCard(eventId: EventId, setup: (g: MagalufG) => void = () => {}) {
+      const client = makeClient(3, (g) => {
+        stack(g, Array<string>(8).fill('cana'), [eventId]);
+        setup(g);
+      });
+      const seat = G(client).turnSeatID;
+      drinkAndReveal(client, seat);
+      return { client, seat, outcome: G(client).lastDraw?.outcome };
+    }
+
+    const lastEntry = (client: TestClient, key: string) =>
+      [...G(client).log].reverse().find((e) => e.key === `magaluf.log.${key}`);
+
+    it('reports what Barra libre actually paid', () => {
+      const { client, seat, outcome } = drawEventCard('barraLibre', (g) => {
+        g.players[g.turnSeatID]!.drinksThisPhase = 2;
+      });
+      // 2 already had, plus the drink that turned the card over.
+      expect(G(client).players[seat]!.drinksThisPhase).toBe(3);
+      expect(outcome).toEqual({
+        key: 'magaluf.log.barraLibreResult',
+        params: { actor: seat, vp: 3, n: 3 },
+      });
+      expect(lastEntry(client, 'barraLibreResult')?.params).toEqual(outcome!.params);
+    });
+
+    it('says when Karaoke doubled, and when it did not', () => {
+      const doubled = drawEventCard('karaoke', (g) => {
+        g.players[g.turnSeatID]!.intox = 30;
+      });
+      expect(doubled.outcome?.key).toBe('magaluf.log.karaokeDrunkest');
+      expect(doubled.outcome?.params?.vp).toBe(4);
+
+      const plain = drawEventCard('karaoke', (g) => {
+        // Somebody else is further gone, so no double.
+        for (const id of g.activeSeatIDs) g.players[id]!.intox = id === g.turnSeatID ? 0 : 30;
+      });
+      expect(plain.outcome?.key).toBe('magaluf.log.karaokeResult');
+      expect(plain.outcome?.params?.vp).toBe(2);
+    });
+
+    it('names the Rey del guiri and ranks the whole table behind them', () => {
+      const { client, outcome } = drawEventCard('reyGuiri', (g) => {
+        g.players['0']!.drinksThisPhase = 1;
+        g.players['1']!.drinksThisPhase = 5;
+        g.players['2']!.drinksThisPhase = 3;
+      });
+
+      // Seat 0 opens, so its own drink takes it to 2 -- still behind both.
+      expect(outcome?.key).toBe('magaluf.log.reyGuiriResult');
+      expect(outcome?.params?.winners).toBe('1');
+      expect(outcome?.params?.n).toBe(5);
+      expect(G(client).players['1']!.roundVP).toBeGreaterThan(0);
+
+      // The standings ride as their own entry, so the card can stay short and
+      // the feed still gets the whole table, highest first.
+      expect(lastEntry(client, 'reyGuiriRanking')?.params).toEqual({
+        ranking: '1,2,0',
+        rankingValues: '5,3,2',
+      });
+    });
+
+    it('joins tied kings rather than picking one by seat order', () => {
+      const { outcome } = drawEventCard('reyGuiri', (g) => {
+        for (const id of g.activeSeatIDs) g.players[id]!.drinksThisPhase = 4;
+      });
+      // Seat 0's own drink puts it one ahead of the other two.
+      expect(outcome?.params?.winners).toBe('0');
+
+      const tied = drawEventCard('reyGuiri', (g) => {
+        g.players['0']!.drinksThisPhase = 3;
+        g.players['1']!.drinksThisPhase = 4;
+        g.players['2']!.drinksThisPhase = 4;
+      });
+      expect(tied.outcome?.params?.winners).toBe('0,1,2');
+    });
+
+    it('records who the ambulance took and how far gone they were', () => {
+      const { client, outcome } = drawEventCard('ambulancia', (g) => {
+        g.players['1']!.intox = 40;
+      });
+      expect(outcome?.key).toBe('magaluf.log.ambulanciaResult');
+      expect(outcome?.params?.actor).toBe('1');
+      // The number that got them picked, not the one they leave with.
+      expect(outcome?.params?.n).toBe(40);
+      expect(G(client).players['1']!.intox).toBe(35);
+    });
+
+    it('leaves the outcome empty for a card that is just its own numbers', () => {
+      const { outcome } = drawEventCard('insolacion');
+      expect(outcome).toBeNull();
+    });
+
+    it('clears the outcome with the rest of the table at a new venue', () => {
+      const client = makeClient(3, (g) => stack(g, Array<string>(8).fill('cana'), ['barraLibre']));
+      drinkAndReveal(client, G(client).turnSeatID);
+      expect(G(client).lastDraw?.outcome).not.toBeNull();
+
+      play(client, alwaysWithdraw, (g) => g.phase === 1 && g.roundConfirm === null);
+      expect(G(client).lastDraw).toBeNull();
+    });
+  });
+
   describe('event cards with options', () => {
     /** Draws a stacked choice card and stops with the question on the table. */
     function drawChoice(eventId: EventId, setup: (g: MagalufG) => void = () => {}) {

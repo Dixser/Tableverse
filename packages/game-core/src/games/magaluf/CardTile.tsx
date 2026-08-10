@@ -23,7 +23,12 @@ export function CardTile({ kind, id, intox, vp }: CardTileProps) {
       <span className={styles.name}>{t(`magaluf.${kind}.${id}`)}</span>
       {intox !== undefined && vp !== undefined && (
         <span className={styles.numbers}>
-          <span className={styles.intox}>{t('magaluf.board.intoxShort', { n: intox })}</span>
+          {/* Coloured by what the number does to you, not by its sign: more
+              intoxication is the thing that kills you, less is relief. Agua is
+              the only card in the deck that goes the good way. */}
+          <span className={intox > 0 ? styles.intoxUp : styles.intoxDown}>
+            {t('magaluf.board.intoxShort', { n: intox })}
+          </span>
           <span className={styles.vp}>{t('magaluf.board.vpShort', { n: vp })}</span>
         </span>
       )}

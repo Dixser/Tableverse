@@ -28,6 +28,15 @@
   flex-wrap: wrap;
 }
 
+/* What a rule-shaped card actually came to — "+1 VP per drink" does not tell
+   you what you got. Gold and bold because it is the number the drawer is
+   looking for, and the same gold the chat feed gives a score. */
+.outcome {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-gold);
+}
+
 /* The event card, drawn but not yet turned over. Deliberately reads as a card
    back rather than an empty slot: something is coming. */
 .facedown {
