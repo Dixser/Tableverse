@@ -18,7 +18,19 @@ void i18n.use(initReactI18next).init({
         room: { seatLabel: 'TEST_seat_{{seatNumber}}' },
         magaluf: {
           alcohol: { pinta: 'TEST_pint', cana: 'TEST_small_beer', pecera: 'TEST_fishbowl' },
-          event: { foto: 'TEST_photo', redada: 'TEST_raid', terraza: 'TEST_terrace', camelloFarlopa: 'TEST_dealer_coke' },
+          event: {
+            foto: 'TEST_photo',
+            redada: 'TEST_raid',
+            terraza: 'TEST_terrace',
+            camelloFarlopa: 'TEST_dealer_coke',
+            vomitona: 'TEST_puke',
+          },
+          eventOption: {
+            vomitar: 'TEST_throw_up',
+            aguantar: 'TEST_hold_it_in',
+            subirALaTerraza: 'TEST_go_up',
+            quedarseAbajo: 'TEST_stay_down',
+          },
           item: {
             kebab: 'TEST_kebab',
             botella: 'TEST_water',
@@ -70,6 +82,8 @@ void i18n.use(initReactI18next).init({
             balconySkip: 'TEST_skip',
             revealEvent: 'TEST_reveal_event',
             eventFaceDown: 'TEST_face_down',
+            chooseOption: 'TEST_your_call',
+            waitingChoice: 'TEST_deciding {{name}}',
           },
         },
       },

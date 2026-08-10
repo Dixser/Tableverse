@@ -34,6 +34,11 @@ function expectedCardKeys(): string[] {
   return [
     ...Object.keys(ALCOHOL).map((id) => `magaluf.alcohol.${id}`),
     ...Object.keys(EVENTS).map((id) => `magaluf.event.${id}`),
+    // Every branch of every choice card. A card with an unlabelled option is a
+    // button nobody can read, which is worse than a missing card description.
+    ...Object.values(EVENTS).flatMap((card) =>
+      (card.options ?? []).map((option) => `magaluf.eventOption.${option.id}`),
+    ),
     ...ITEM_IDS.map((id) => `magaluf.item.${id}`),
     ...PHASE_IDS.map((id) => `magaluf.phase.${id}`),
     ...DAY_IDS.map((id) => `magaluf.day.${id}`),
@@ -52,7 +57,7 @@ function keysFromAPlayedMatch(): Set<string> {
         numPlayers: 4,
       }) as unknown as {
         updatePlayerID: (id: string) => void;
-        moves: Record<string, () => void>;
+        moves: Record<string, (...args: unknown[]) => void>;
         store: { getState: () => { G: MagalufG } };
       };
 
@@ -69,6 +74,22 @@ function keysFromAPlayedMatch(): Set<string> {
           if (waiting === undefined) break;
           client.updatePlayerID(waiting);
           client.moves.confirmRoundReady!();
+          continue;
+        }
+
+        // A face-down event and an unanswered choice both block every other
+        // move, so a driver that only ever calls `drink` would spin here until
+        // the guard ran out and prove nothing about the event key surface.
+        if (G.pendingEvent) {
+          client.updatePlayerID(G.pendingEvent.seatID);
+          client.moves.revealEvent!();
+          continue;
+        }
+        if (G.pendingChoice) {
+          client.updatePlayerID(G.pendingChoice.seatID);
+          // Alternate branches by seed so both sides of every card are taken
+          // across the sweep, rather than only ever the first.
+          client.moves.chooseEventOption!(seed.charCodeAt(0) % 2);
           continue;
         }
 

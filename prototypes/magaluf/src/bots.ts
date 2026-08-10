@@ -15,7 +15,7 @@
  *    and would measure nothing.
  */
 
-import type { ItemId } from './cards.ts';
+import type { EventCard, ItemId } from './cards.ts';
 import { ALCOHOL, DAY_IDS, PHASE_IDS } from './cards.ts';
 import type { Config } from './config.ts';
 import type { Action } from './engine.ts';
@@ -132,6 +132,70 @@ export function chooseAction(
     return { type: 'withdraw' };
   }
   return { type: 'drink' };
+}
+
+/**
+ * Picks a branch on a choice card.
+ *
+ * Scores each branch in VP and subtracts what it costs in capacity, using the
+ * same two prices the drinking decision already runs on: intoxication is worth
+ * whatever a point of the day's budget is worth, and Resaca is that again on
+ * every remaining day. Nothing here is keyed to a card id, so adding a branch
+ * needs no bot change — and nothing is keyed to a day, so "Última ronda flips
+ * on Sunday" has to be something the simulator finds rather than something it
+ * was told.
+ */
+export function chooseOption(
+  state: GameState,
+  config: Config,
+  player: PlayerState,
+  policy: Policy,
+  card: EventCard,
+): number {
+  const options = card.options ?? [];
+  if (options.length === 0) return 0;
+
+  const limit = estimatedLimit(state, config, player);
+  const headroom = Math.max(1, limit - player.intox);
+  const daysRemaining = DAY_IDS.length - 1 - state.day;
+  const dayValue = config.dayVPMultiplier[state.day] ?? 1;
+
+  // What one point of capacity is worth in VP terms. Scarce headroom makes
+  // every point dearer, which is what makes "hold it in" correct early and
+  // "throw up" correct when you are nearly out of room.
+  const intoxPrice = (6 / headroom) * (1 + policy.threshold);
+
+  let best = 0;
+  let bestScore = -Infinity;
+
+  options.forEach((option, index) => {
+    let score = (option.vp ?? 0) * dayValue;
+    score += (option.vpAll ?? 0) * dayValue;
+    score -= (option.intox ?? 0) * intoxPrice;
+    score += (option.relief ?? 0) * intoxPrice;
+    // Resaca is paid on every day still to come, so on the last night it is
+    // free and on Friday it is the most expensive thing on the card.
+    score -= (option.resaca ?? 0) * intoxPrice * daysRemaining;
+    if (option.losesItems) score -= player.items.length * 2;
+    if (option.leaves) {
+      // Forfeits the rest of the phase: the drinks still owed and the shot at
+      // Último en Pie that comes with staying.
+      const drinksLeft = Math.max(0, phaseConfig(state, config).maxDrinks - player.drinksThisPhase);
+      score -= drinksLeft * 1.5 + phaseConfig(state, config).lastStandingBonus * 0.5;
+    }
+    if (option.extraDrink) {
+      const gain = meanVP(state, config) * (option.doubles ? 2 : 1) * dayValue;
+      score += gain - meanIntox(state, config) * intoxPrice;
+    }
+    if (option.skips) score -= 2;
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = index;
+    }
+  });
+
+  return best;
 }
 
 function mustKeepDrinking(state: GameState, player: PlayerState, maxDrinks: number): boolean {

@@ -14,7 +14,7 @@ export interface PhaseHeaderProps {
 
 export function PhaseHeader({ day, phase, dayMultiplier, limitShift, limit }: PhaseHeaderProps) {
   const { t } = useTranslation();
-  const band = limitRange(day, limitShift);
+  const band = limitRange(limitShift);
 
   return (
     <header className={styles.header}>
@@ -25,8 +25,8 @@ export function PhaseHeader({ day, phase, dayMultiplier, limitShift, limit }: Ph
       </span>
 
       {limit === null ? (
-        // The band, not the number. Public information either way: the day's
-        // deck is fixed and the shift is a visible room setting.
+        // The band, not the number. Public information either way: the deck is
+        // fixed and the shift is a visible room setting.
         <span className={styles.limitHidden} data-testid="limit-chip-hidden">
           {t('magaluf.board.limitBetween', { min: band.min, max: band.max })}
         </span>

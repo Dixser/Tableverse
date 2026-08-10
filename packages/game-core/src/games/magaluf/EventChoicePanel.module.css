@@ -1,0 +1,46 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-accent);
+  background: var(--color-surface);
+}
+
+.prompt {
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.waiting {
+  color: var(--color-text-muted, var(--color-text));
+  font-style: italic;
+}
+
+.options {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/*
+ * Both branches look identical on purpose. Styling one as the primary action
+ * would be the board telling the player which way to answer, and the whole
+ * point of these cards is that the engine does not have an opinion.
+ */
+.option {
+  flex: 1 1 12rem;
+  font: inherit;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.option:hover {
+  border-color: var(--color-accent);
+}

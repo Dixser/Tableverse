@@ -531,7 +531,7 @@
       "ligueNoche": "Ligue en la pista — +4 PV.",
       "fiestaNoche": "Fiesta de la espuma — +2 PV para todos los que sigan de fiesta.",
       "peleaNoche": "Pelea — +4 PV y +2 de Intoxicación.",
-      "chungoNoche": "Te roban la cartera — pierdes todos tus objetos.",
+      "chungoNoche": "Te roban la cartera — págales, o pierde todo lo que llevas encima.",
       "gorila": "El portero te saca — te retiras de la fase, pero sin penalización.",
       "garrafonEvent": "Te dan garrafón — +3 de Intoxicación.",
       "ligueAfter": "Ligue del after — nadie se acordará. +6 PV.",
@@ -539,7 +539,7 @@
       "peleaAfter": "Pelea con los porteros — +6 PV y +3 de Intoxicación.",
       "chungoAfter": "Despiertas sin nada — pierdes todos tus objetos y 4 PV.",
       "soloVoyAMirar": "Solo voy a mirar — te asomas al balcón un momento. +6 PV.",
-      "terraza": "La terraza del quinto — la mejor fiesta del viaje. +8 PV y +3 de Intoxicación.",
+      "terraza": "La terraza del quinto — la mejor fiesta del viaje. Sube, o quédate abajo tranquilo.",
       "comaEtilico": "Coma etílico — +5 de Intoxicación.",
       "karaoke": "Karaoke — +2 PV, o el doble si eres el más borracho.",
       "barraLibre": "Barra libre — +1 PV por cada copa que llevas en esta fase.",
@@ -547,8 +547,8 @@
       "perdido": "Te pierdes — pierdes tu próximo turno, pero sigues de fiesta.",
       "chupitoCasa": "Chupito de la casa — invita la casa: bebes otra carta de alcohol.",
       "ronda": "Ronda — todos los que sigan de fiesta beben una carta de alcohol.",
-      "vomitona": "Vomitona — −4 de Intoxicación ahora, pero +3 de Resaca para siempre.",
-      "ambulancia": "Ambulancia — el más borracho se retira, −5 de Intoxicación y +4 de Resaca.",
+      "vomitona": "Te sube — échalo fuera, o aguántate.",
+      "ambulancia": "Ambulancia — el más borracho se retira, −5 de Intoxicación y +3 de Resaca.",
       "kebabEvent": "Kebab — consigues un Kebab.",
       "aguaEvent": "Botellín — consigues una Botella de agua.",
       "redbullEvent": "Red Bull — consigues un Red Bull.",
@@ -557,7 +557,30 @@
       "nada": "No pasa nada — sigue la fiesta.",
       "camelloPorro": "Camello — consigues un Porro.",
       "camelloPastis": "Camello — consigues Pastis.",
-      "camelloFarlopa": "Camello — consigues Farlopa."
+      "camelloFarlopa": "Camello — consigues Farlopa.",
+      "ultimaRonda": "Última ronda — te ponen una copa en la mano. Métetela ya, o promételes mañana.",
+      "resacon": "Vas fino — podrías quedarte quieto y dormir un poco, pero cuesta.",
+      "invitacion": "Te deben una — coge el dinero, o coge la comida.",
+      "dobleONada": "Doble o nada — una copa más, y vale el doble.",
+      "saltarLaCola": "Colarte — hay un fiestón empezando en otro sitio, y tendrías que irte ya."
+    },
+    "eventOption": {
+      "vomitar": "Vomitar — −4 de Intoxicación, +3 de Resaca",
+      "aguantar": "Aguantarte — +2 de Intoxicación",
+      "pagarLaCuenta": "Pagarles — −4 PV",
+      "perderTodo": "Perder todo lo que llevas",
+      "subirALaTerraza": "Subir — +8 PV, +3 de Intoxicación",
+      "quedarseAbajo": "Quedarte abajo — +3 PV",
+      "unaMas": "Metértela — +4 de Intoxicación",
+      "mananaLoPago": "Mañana lo pago — +2 de Resaca",
+      "dormirla": "Dormirla un rato — −2 de Resaca, −3 PV",
+      "seguirDeFiesta": "Seguir de fiesta — no pasa nada",
+      "cobrarla": "Cobrarla — +3 PV",
+      "pillarKebab": "Pillar comida — consigues un Kebab",
+      "doblar": "Doblar — bebes otra carta al doble de PV",
+      "pasar": "Pasar — no pasa nada",
+      "colarse": "Irte ya — +7 PV, pero abandonas la fase",
+      "hacerCola": "Quedarte donde estás — no pasa nada"
     },
     "log": {
       "dayStart": "Empieza el día:",
@@ -571,7 +594,8 @@
       "ambulance": "Se llevan a {{actor}} en ambulancia.",
       "bouncer": "El portero echa a {{actor}}.",
       "aguafiestas": "{{actor}} se va pronto y pierde {{vp}} PV por aguafiestas.",
-      "ultimoEnPie": "{{actor}} aguanta hasta el final: +{{vp}} PV.",
+      "ultimoEnPie": "{{actor}} empieza la ronda solo — último en pie: +{{vp}} PV.",
+      "choseOption": "{{actor}} decide:",
       "arrested": "Detienen a {{actor}}: banca sus PV y se le acaba el día.",
       "searched": "Cachean a {{actor}}.",
       "skipped": "{{actor}} se ha perdido y pierde el turno.",
@@ -624,7 +648,9 @@
       "balconyTarget": "Tira 1d{{die}} · necesitas más de {{over}}",
       "balconyRolled": "Sale un {{roll}}",
       "revealEvent": "Revelar evento",
-      "eventFaceDown": "Evento boca abajo"
+      "eventFaceDown": "Evento boca abajo",
+      "chooseOption": "Tú decides:",
+      "waitingChoice": "{{name}} está decidiendo…"
     }
   }
 }

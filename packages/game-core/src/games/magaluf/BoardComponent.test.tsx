@@ -32,6 +32,9 @@ function makeG(overrides: Partial<MagalufG> = {}): MagalufG {
     withdrawCounter: 0,
     lastDraw: null,
     pendingEvent: null,
+    pendingChoice: null,
+    roundAnchor: 0,
+    lastStandingAwarded: false,
     pendingAdvance: null,
     roundConfirm: null,
     hostPlayerID: null,
@@ -55,7 +58,13 @@ function makeCtx(): Ctx {
 }
 
 function renderBoard(G: MagalufG, playerID: string | null = '0', isActive = true) {
-  const moves = { drink: vi.fn(), withdraw: vi.fn(), useItem: vi.fn() };
+  const moves = {
+    drink: vi.fn(),
+    withdraw: vi.fn(),
+    useItem: vi.fn(),
+    revealEvent: vi.fn(),
+    chooseEventOption: vi.fn(),
+  };
   const result = render(
     <MagalufBoard
       G={G}
@@ -223,6 +232,50 @@ describe('MagalufBoard', () => {
     });
   });
 
+  describe('the event choice step', () => {
+    // Vomitona: the flagship two-branch card. `endsTurn` matches what a plain
+    // drink would have set, which is what the engine carries through.
+    const choiceG = (seatID = '0') =>
+      makeG({
+        lastDraw: { seatID, alcohol: 'pinta', event: 'vomitona' },
+        pendingChoice: { seatID, eventId: 'vomitona', endsTurn: true },
+      });
+
+    it('replaces the whole move surface with the branches', () => {
+      renderBoard(choiceG('0'), '0');
+      expect(screen.getByTestId('event-choice')).toBeInTheDocument();
+      expect(screen.getByTestId('choose-vomitar')).toBeInTheDocument();
+      expect(screen.getByTestId('choose-aguantar')).toBeInTheDocument();
+      // Nothing else is playable while a question is owed.
+      expect(screen.queryByTestId('action-bar')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'TEST_drink' })).toBeNull();
+    });
+
+    it('passes the branch index the engine indexes by', () => {
+      const { moves } = renderBoard(choiceG('0'), '0');
+      fireEvent.click(screen.getByTestId('choose-aguantar'));
+      expect(moves.chooseEventOption).toHaveBeenCalledWith(1);
+    });
+
+    it('keeps the drawn card face-up behind the question', () => {
+      renderBoard(choiceG('0'), '0');
+      // The player has to be able to read what they are choosing between.
+      expect(screen.getByTestId('card-pinta')).toBeInTheDocument();
+      expect(screen.queryByTestId('event-facedown')).toBeNull();
+    });
+
+    it('tells the rest of the table who they are waiting on', () => {
+      renderBoard(choiceG('0'), '1');
+      expect(screen.getByTestId('event-choice-waiting')).toHaveTextContent('Alice');
+      expect(screen.queryByTestId('choose-vomitar')).toBeNull();
+    });
+
+    it('shows a spectator the same waiting line rather than nothing', () => {
+      renderBoard(choiceG('0'), null, false);
+      expect(screen.getByTestId('event-choice-waiting')).toBeInTheDocument();
+    });
+  });
+
   describe('player state', () => {
     it('marks the resaca floor only when there is one (AC7)', () => {
       const withResaca = makeG();
@@ -279,18 +332,21 @@ describe('MagalufBoard', () => {
      * since playerView has already replaced both with HIDDEN_LIMIT before the
      * board sees them.
      */
-    it('derives the band from the day, so it carries no information about the draw (AC14)', () => {
+    /**
+     * The band used to widen across the weekend and this asserted that it did.
+     * Since the deck was flattened it must do the opposite: an identical band
+     * every day is what stops the meter rescaling overnight, and it still
+     * carries nothing at all about which card was actually drawn.
+     */
+    it('shows the same public band on every day, and never the draw (AC14)', () => {
       const friday = renderBoard(makeG({ day: 0, limit: HIDDEN_LIMIT }));
       const fridayBand = screen.getByTestId('limit-chip-hidden').textContent;
-      expect(fridayBand).toContain('26');
-      expect(fridayBand).toContain('29');
+      expect(fridayBand).toContain('16');
+      expect(fridayBand).toContain('28');
       friday.unmount();
 
       renderBoard(makeG({ day: 2, limit: HIDDEN_LIMIT }));
-      const sundayBand = screen.getByTestId('limit-chip-hidden').textContent;
-      expect(sundayBand).toContain('14');
-      expect(sundayBand).toContain('26');
-      expect(sundayBand).not.toBe(fridayBand);
+      expect(screen.getByTestId('limit-chip-hidden').textContent).toBe(fridayBand);
     });
 
     it('is unchanged by the players’ own state, so nobody leaks it either (AC14)', () => {

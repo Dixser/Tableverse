@@ -12,6 +12,7 @@ import type { EventId, ItemId } from './cards.ts';
 import { DAY_IDS, ITEMS, PHASE_IDS } from './cards.ts';
 import type { Config } from './config.ts';
 import { resolveJump } from './balconing.ts';
+import type { ChooseOption } from './events.ts';
 import { resolveEvent } from './events.ts';
 import type { Random } from './rng.ts';
 import { createRandom } from './rng.ts';
@@ -79,6 +80,7 @@ export function createGame(config: Config, seed: number, names?: string[]): Game
     turnIndex: 0,
     startPlayer: 0,
     withdrawCounter: 0,
+    lastStandingAwarded: false,
     log: [],
     jumps: [],
     over: false,
@@ -127,7 +129,17 @@ export function legalActions(state: GameState, config: Config): Action[] {
   return actions;
 }
 
-export function applyAction(state: GameState, config: Config, action: Action): GameState {
+/**
+ * `chooseOption` is passed in rather than imported so `bots.ts` keeps owning
+ * every decision a player makes. Omitting it takes the first branch, which is
+ * enough for tests that do not care.
+ */
+export function applyAction(
+  state: GameState,
+  config: Config,
+  action: Action,
+  chooseOption?: ChooseOption,
+): GameState {
   const player = currentPlayer(state);
   if (!player || state.over) return state;
 
@@ -136,7 +148,7 @@ export function applyAction(state: GameState, config: Config, action: Action): G
   withRandom(state, (rng) => {
     switch (action.type) {
       case 'drink':
-        doDrink(state, config, rng, player);
+        doDrink(state, config, rng, player, { chooseOption });
         endTurn(state, config, rng);
         break;
 
@@ -146,7 +158,7 @@ export function applyAction(state: GameState, config: Config, action: Action): G
         break;
 
       case 'useItem': {
-        const endsTurn = useItem(state, config, rng, player, action.item);
+        const endsTurn = useItem(state, config, rng, player, action.item, chooseOption);
         if (endsTurn) endTurn(state, config, rng);
         break;
       }
@@ -173,7 +185,7 @@ function doDrink(
   config: Config,
   rng: Random,
   player: PlayerState,
-  options: { halveIntox?: boolean; drawEventCard?: boolean } = {},
+  options: { halveIntox?: boolean; drawEventCard?: boolean; chooseOption?: ChooseOption } = {},
 ): void {
   const card = drawAlcohol(state, rng);
   if (!card) return;
@@ -185,7 +197,7 @@ function doDrink(
 
   if (options.drawEventCard !== false) {
     const eventId = drawEvent(state, rng);
-    if (eventId) resolveEvent(state, config, rng, player, eventId as EventId);
+    if (eventId) resolveEvent(state, config, rng, player, eventId as EventId, options.chooseOption);
   }
 
   // Attribute the whole drink — card and its event — to the phase it happened
@@ -215,6 +227,7 @@ function useItem(
   rng: Random,
   player: PlayerState,
   item: ItemId,
+  chooseOption?: ChooseOption,
 ): boolean {
   if (!removeItem(player, item)) return false;
   player.itemUsedThisTurn = true;
@@ -250,6 +263,7 @@ function useItem(
       doDrink(state, config, rng, player, {
         halveIntox: true,
         drawEventCard: config.items.farlopaDrawsEvent,
+        chooseOption,
       });
       // The extra turn is spent; the player still has their own action, unless
       // the extra drink just took them to closing time.
@@ -277,13 +291,28 @@ function endTurn(state: GameState, config: Config, rng: Random): void {
     return;
   }
 
-  advanceTurn(state);
+  advanceTurn(state, config);
 }
 
-function advanceTurn(state: GameState): void {
+function advanceTurn(state: GameState, config: Config): void {
   const n = state.players.length;
+  const start = state.turnIndex;
+
+  const take = (idx: number): void => {
+    // A lap is measured from the player who opened the phase. Walking is
+    // always forward, so the round has turned over whenever the next seat's
+    // distance from the anchor is not further along than the current one's —
+    // including the equal case, a solo player handing to themselves.
+    const offset = (i: number) => (i - state.startPlayer + n) % n;
+    const newRound = offset(idx) <= offset(start);
+
+    state.turnIndex = idx;
+    state.players[idx]!.itemUsedThisTurn = false;
+    if (newRound) awardLastStanding(state, config, state.players[idx]!);
+  };
+
   for (let step = 1; step <= n * 2; step++) {
-    const idx = (state.turnIndex + step) % n;
+    const idx = (start + step) % n;
     const p = state.players[idx]!;
     if (p.status !== 'partying') continue;
     if (p.skipNextTurn) {
@@ -291,26 +320,23 @@ function advanceTurn(state: GameState): void {
       log(state, { kind: 'skipped', player: p.id });
       continue;
     }
-    state.turnIndex = idx;
-    p.itemUsedThisTurn = false;
+    take(idx);
     return;
   }
   // Everyone left was skipping; their skips are now cleared, so take the next
   // partying player outright rather than looping forever.
   for (let step = 1; step <= n; step++) {
-    const idx = (state.turnIndex + step) % n;
-    const p = state.players[idx]!;
-    if (p.status === 'partying') {
-      state.turnIndex = idx;
-      p.itemUsedThisTurn = false;
+    const idx = (start + step) % n;
+    if (state.players[idx]!.status === 'partying') {
+      take(idx);
       return;
     }
   }
 }
 
 function endPhase(state: GameState, config: Config, rng: Random): void {
-  awardLastStanding(state, config);
-
+  // Último en Pie is not settled here any more: it is paid the moment somebody
+  // opens a round alone, which happens mid-phase or not at all.
   if (state.phase < PHASE_IDS.length - 1) {
     startPhase(state, config, rng, state.phase + 1);
   } else {
@@ -319,23 +345,27 @@ function endPhase(state: GameState, config: Config, rng: Random): void {
 }
 
 /**
- * The last player to leave takes the bonus — but only if they met the phase's
- * drink minimum. Without that gate you could hold two joints and idle your way
- * to the bonus without drinking anything.
+ * The bonus for opening a round as the only person left in the venue.
+ *
+ * It used to go to whoever left last, which paid for seat position: a table
+ * that all withdraws at the drink minimum leaves in turn order, so the last
+ * player collected for free. Being alone at a *round boundary* has to be
+ * bought with one more solo turn and the intoxication that comes with it.
+ *
+ * The drink-minimum gate survives from the old version for the old reason:
+ * without it you could hold two joints and idle your way to the bonus.
  */
-function awardLastStanding(state: GameState, config: Config): void {
-  const phase = phaseConfig(state, config);
-  const eligible = state.players.filter((p) => p.status === 'withdrawn' || p.status === 'partying');
-  if (eligible.length === 0) return;
+function awardLastStanding(state: GameState, config: Config, player: PlayerState): void {
+  if (state.lastStandingAwarded) return;
+  if (partying(state).length !== 1) return;
 
-  const maxSeq = Math.max(...eligible.map((p) => (p.status === 'partying' ? Infinity : p.withdrawSeq)));
-  for (const p of eligible) {
-    const seq = p.status === 'partying' ? Infinity : p.withdrawSeq;
-    if (seq !== maxSeq) continue;
-    if (p.drinksThisPhase < phase.minDrinks) continue;
-    gainVP(p, phase.lastStandingBonus);
-    log(state, { kind: 'ultimoEnPie', player: p.id, n: phase.lastStandingBonus });
-  }
+  const phase = phaseConfig(state, config);
+  if (player.status !== 'partying') return;
+  if (player.drinksThisPhase < phase.minDrinks) return;
+
+  state.lastStandingAwarded = true;
+  gainVP(player, phase.lastStandingBonus);
+  log(state, { kind: 'ultimoEnPie', player: player.id, n: phase.lastStandingBonus });
 }
 
 function startPhase(state: GameState, config: Config, rng: Random, phaseIndex: number): void {
@@ -347,6 +377,7 @@ function startPhase(state: GameState, config: Config, rng: Random, phaseIndex: n
   state.eventDeck = rng.shuffle(buildDeck<EventId>(phase.events));
   state.eventDiscard = [];
   state.withdrawCounter = 0;
+  state.lastStandingAwarded = false;
 
   if (config.limitRevealAt === PHASE_IDS[phaseIndex]) state.limitRevealed = true;
 
@@ -372,7 +403,7 @@ function startPhase(state: GameState, config: Config, rng: Random, phaseIndex: n
   state.startPlayer = (state.day * PHASE_IDS.length + phaseIndex) % state.players.length;
   state.turnIndex = state.startPlayer;
   if (state.players[state.turnIndex]!.status !== 'partying') {
-    advanceTurn(state);
+    advanceTurn(state, config);
   } else {
     state.players[state.turnIndex]!.itemUsedThisTurn = false;
   }

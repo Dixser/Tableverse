@@ -531,7 +531,7 @@
       "ligueNoche": "Dancefloor hook-up — +4 VP.",
       "fiestaNoche": "Foam party — +2 VP to everyone still partying.",
       "peleaNoche": "Fight — +4 VP and +2 Intoxication.",
-      "chungoNoche": "Pickpocketed — you lose all your items.",
+      "chungoNoche": "Pickpocketed — pay them off, or lose everything you are carrying.",
       "gorila": "Thrown out by the bouncer — you leave the phase, but with no penalty.",
       "garrafonEvent": "Served bootleg — +3 Intoxication.",
       "ligueAfter": "Afterparty hook-up — nobody will remember. +6 VP.",
@@ -539,7 +539,7 @@
       "peleaAfter": "Fight with the bouncers — +6 VP and +3 Intoxication.",
       "chungoAfter": "You wake up with nothing — you lose all your items and 4 VP.",
       "soloVoyAMirar": "Just going to look — you step out onto the balcony for a second. +6 VP.",
-      "terraza": "The fifth-floor terrace — the best party of the trip. +8 VP and +3 Intoxication.",
+      "terraza": "The fifth-floor terrace — the best party of the trip. Go up, or keep it quiet downstairs.",
       "comaEtilico": "Alcohol poisoning — +5 Intoxication.",
       "karaoke": "Karaoke — +2 VP, doubled if you are the most intoxicated.",
       "barraLibre": "Open bar — +1 VP per drink you have had this phase.",
@@ -547,8 +547,8 @@
       "perdido": "You get lost — you miss your next turn but stay in the party.",
       "chupitoCasa": "House shot — on the house: you drink another alcohol card.",
       "ronda": "Round of drinks — everyone still partying drinks an alcohol card.",
-      "vomitona": "Puking — −4 Intoxication now, but +3 Hangover permanently.",
-      "ambulancia": "Ambulance — the most intoxicated player withdraws, −5 Intoxication and +4 Hangover.",
+      "vomitona": "You feel it coming up — let it out, or hold it in.",
+      "ambulancia": "Ambulance — the most intoxicated player withdraws, −5 Intoxication and +3 Hangover.",
       "kebabEvent": "Kebab — you get a Kebab.",
       "aguaEvent": "Bottle of water — you get a Water bottle.",
       "redbullEvent": "Red Bull — you get a Red Bull.",
@@ -557,7 +557,30 @@
       "nada": "Nothing happens — the party goes on.",
       "camelloPorro": "Dealer — you get a Joint.",
       "camelloPastis": "Dealer — you get MDMA.",
-      "camelloFarlopa": "Dealer — you get Cocaine."
+      "camelloFarlopa": "Dealer — you get Cocaine.",
+      "ultimaRonda": "Last round — someone puts a drink in your hand. Sink it now, or promise them tomorrow.",
+      "resacon": "Rough one — you could sit this out and sleep some of it off, at a price.",
+      "invitacion": "You are owed a favour — take the cash, or take the food.",
+      "dobleONada": "Double or nothing — one more drink, worth twice as much.",
+      "saltarLaCola": "Queue-jump — a big night is starting elsewhere, and you would have to go now."
+    },
+    "eventOption": {
+      "vomitar": "Throw up — −4 Intoxication, +3 Hangover",
+      "aguantar": "Hold it in — +2 Intoxication",
+      "pagarLaCuenta": "Pay them off — −4 VP",
+      "perderTodo": "Lose everything you are carrying",
+      "subirALaTerraza": "Go up — +8 VP, +3 Intoxication",
+      "quedarseAbajo": "Stay downstairs — +3 VP",
+      "unaMas": "Sink it — +4 Intoxication",
+      "mananaLoPago": "Pay tomorrow — +2 Hangover",
+      "dormirla": "Sleep some off — −2 Hangover, −3 VP",
+      "seguirDeFiesta": "Keep going — nothing happens",
+      "cobrarla": "Take the cash — +3 VP",
+      "pillarKebab": "Take the food — you get a Kebab",
+      "doblar": "Double it — drink another card at double VP",
+      "pasar": "Pass — nothing happens",
+      "colarse": "Go now — +7 VP, but you leave the phase",
+      "hacerCola": "Stay where you are — nothing happens"
     },
     "log": {
       "dayStart": "A new day begins:",
@@ -571,7 +594,8 @@
       "ambulance": "{{actor}} is taken away by ambulance.",
       "bouncer": "The bouncer throws {{actor}} out.",
       "aguafiestas": "{{actor}} leaves early and loses {{vp}} VP for being a party pooper.",
-      "ultimoEnPie": "{{actor}} is the last one standing: +{{vp}} VP.",
+      "ultimoEnPie": "{{actor}} starts the round alone — last one standing: +{{vp}} VP.",
+      "choseOption": "{{actor}} decides:",
       "arrested": "{{actor}} is arrested: banks their VP, day over.",
       "searched": "{{actor}} is searched.",
       "skipped": "{{actor}} is lost and misses a turn.",
@@ -624,7 +648,9 @@
       "balconyTarget": "Roll 1d{{die}} · you need more than {{over}}",
       "balconyRolled": "It comes up {{roll}}",
       "revealEvent": "Reveal event",
-      "eventFaceDown": "Event face-down"
+      "eventFaceDown": "Event face-down",
+      "chooseOption": "Your call:",
+      "waitingChoice": "{{name}} is deciding…"
     }
   }
 }

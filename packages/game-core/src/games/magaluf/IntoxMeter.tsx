@@ -5,7 +5,6 @@ import styles from './IntoxMeter.module.css';
 export interface IntoxMeterProps {
   intox: number;
   resaca: number;
-  day: number;
   limitShift: number;
   /** The real limit, or null while it is still face-down for this viewer. */
   limit: number | null;
@@ -17,13 +16,15 @@ export interface IntoxMeterProps {
  *
  * The scale comes from `limitScale.ts` and never from `limit`, so the geometry
  * is identical whichever card the day actually drew — see that module for why
- * that matters. While the limit is face-down the bar shows the *band* it could
- * fall in; once known, the band is replaced by a single hard marker.
+ * that matters. It no longer varies by day either, so the bar means the same
+ * thing on Sunday as it did on Friday. While the limit is face-down the bar
+ * shows the *band* it could fall in; once known, the band is replaced by a
+ * single hard marker.
  */
-export function IntoxMeter({ intox, resaca, day, limitShift, limit }: IntoxMeterProps) {
+export function IntoxMeter({ intox, resaca, limitShift, limit }: IntoxMeterProps) {
   const { t } = useTranslation();
-  const pct = (value: number) => `${meterPercent(value, day, limitShift)}%`;
-  const band = limitRange(day, limitShift);
+  const pct = (value: number) => `${meterPercent(value, limitShift)}%`;
+  const band = limitRange(limitShift);
   const over = limit !== null && intox > limit;
 
   return (

@@ -15,7 +15,7 @@
  * Redada banked your VP and cancelled your limit check for free.
  */
 
-import type { EventCard, EventId, ItemId } from './cards.ts';
+import type { EventCard, EventEffects, EventId, ItemId } from './cards.ts';
 import { EVENTS, ITEMS } from './cards.ts';
 import { CAMELLO_POOL } from './config.ts';
 import type { Config } from './config.ts';
@@ -37,15 +37,49 @@ import {
   partying,
 } from './state.ts';
 
-/** Applies a card's data fields to the drawing player. */
-function applyCardEffects(state: GameState, player: PlayerState, card: EventCard): void {
-  if (card.vp) gainVP(player, card.vp);
-  if (card.vpAll) for (const p of partying(state)) gainVP(p, card.vpAll);
-  if (card.intox) addIntox(player, card.intox);
-  if (card.relief) addIntox(player, -card.relief);
-  if (card.resaca) addResaca(player, card.resaca);
-  if (card.losesItems) player.items = [];
+/**
+ * Applies a card's — or one branch's — data fields to the drawing player.
+ *
+ * Takes `EventEffects` rather than `EventCard` so a choice branch runs down
+ * the same path as a plain card.
+ */
+function applyCardEffects(
+  state: GameState,
+  config: Config,
+  rng: Random,
+  player: PlayerState,
+  effects: EventEffects,
+): void {
+  if (effects.vp) gainVP(player, effects.vp);
+  if (effects.vpAll) for (const p of partying(state)) gainVP(p, effects.vpAll);
+  if (effects.intox) addIntox(player, effects.intox);
+  if (effects.relief) addIntox(player, -effects.relief);
+  if (effects.resaca) addResaca(player, effects.resaca);
+  if (effects.losesItems) player.items = [];
+
+  // Arm before pouring, so consumeAlcohol's existing Pastis path does the
+  // doubling rather than a second rule.
+  if (effects.doubles) player.pastisArmed = true;
+  if (effects.extraDrink) {
+    // Never draws an event: an event that drew an event would chain.
+    const drink = drawAlcohol(state, rng);
+    if (drink) consumeAlcohol(state, config, player, drink);
+  }
+  if (effects.skips) player.skipNextTurn = true;
+  if (effects.leaves && player.status === 'partying') leavePhase(state, player, 'bouncer');
 }
+
+/**
+ * Picks a branch on a choice card.
+ *
+ * Passed down from the caller rather than imported, so `bots.ts` keeps owning
+ * every decision a player makes and this module stays rules-only.
+ */
+export type ChooseOption = (
+  state: GameState,
+  player: PlayerState,
+  card: EventCard,
+) => number;
 
 export function resolveEvent(
   state: GameState,
@@ -53,9 +87,20 @@ export function resolveEvent(
   rng: Random,
   actor: PlayerState,
   eventId: EventId,
+  chooseOption?: ChooseOption,
 ): void {
   const card = EVENTS[eventId];
   log(state, { kind: 'event', player: actor.id, event: eventId });
+
+  if (card.options) {
+    const index = chooseOption ? chooseOption(state, actor, card) : 0;
+    const option = card.options[Math.min(Math.max(index, 0), card.options.length - 1)]!;
+    // Invitación is the one branch that hands over an item, and giveItem is
+    // structural rather than a data field, so it is named here.
+    if (option.id === 'pillarKebab') giveItem(actor, 'kebab');
+    applyCardEffects(state, config, rng, actor, option);
+    return;
+  }
 
   switch (eventId) {
     // --- Retargeted away from the drawing player -------------------------
@@ -166,7 +211,7 @@ export function resolveEvent(
 
     // --- Everything else is pure data ------------------------------------
     default:
-      applyCardEffects(state, actor, card);
+      applyCardEffects(state, config, rng, actor, card);
   }
 }
 

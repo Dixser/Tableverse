@@ -458,7 +458,11 @@ describe('the designed dramas', () => {
     const state = createGame(config, 32);
     const player = currentPlayer(state)!;
 
-    const vomitonaResaca = EVENTS.vomitona.resaca!;
+    // The Vomitona is a choice card since feature 034, so its Resaca lives on
+    // the "throw up" branch rather than on the card. Branch 0 is that branch,
+    // which is what applyAction takes when no policy is supplied — so this
+    // still measures the player who chose the relief and pays for it.
+    const vomitonaResaca = EVENTS.vomitona.options![0]!.resaca!;
     applyAction(state, config, { type: 'drink' });
     expect(player.resaca).toBe(vomitonaResaca);
 

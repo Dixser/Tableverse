@@ -38,9 +38,9 @@ import {
 import { ActivePlayers, INVALID_MOVE } from '../../vendor.js';
 import type { EventId, ItemId } from './cards.js';
 import { DAY_IDS, ITEM_IDS, PHASE_IDS } from './cards.js';
-import { ITEM_EFFECTS, LIMIT_DECKS, PHASE_RULES } from './constants.js';
+import { ITEM_EFFECTS, LIMIT_DECK, PHASE_RULES } from './constants.js';
 import { resolveJump } from './balconing.js';
-import { resolveEvent } from './events.js';
+import { eventOptions, resolveEvent, resolveEventOption } from './events.js';
 import type { Rng, BoardgameRandom } from './rng.js';
 import { fromBoardgameRandom } from './rng.js';
 import type { MagalufSettings } from './settings.js';
@@ -48,6 +48,7 @@ import { clampSettings, dayMultipliers } from './settings.js';
 import type { MagalufG, MagalufPlayer, PendingAdvance } from './state.js';
 import {
   addIntox,
+  addResaca,
   bankRound,
   buildDeck,
   confirmableSeats,
@@ -97,30 +98,45 @@ const turnOrder: TurnOrderConfig<MagalufG> = {
  * per seat passed. The second sweep is the guard for a table where every
  * remaining seat was skipping: their flags are cleared by the first sweep, so
  * taking the next partying seat outright terminates instead of looping.
+ *
+ * Also where a round boundary is detected, because this is the only place the
+ * turn ever moves — see `awardLastStanding`.
  */
 function advanceTurn(G: MagalufG): void {
   const seats = G.activeSeatIDs;
   const start = seats.indexOf(G.turnSeatID);
 
+  const take = (index: number): void => {
+    const id = seats[index]!;
+    // A lap is measured from the seat that opened the phase. Walking is always
+    // forward, so the round has turned over whenever the next seat's distance
+    // from the anchor is not further along than the current seat's — including
+    // the equal case, which is a solo player handing to themselves.
+    const offset = (i: number) => (i - G.roundAnchor + seats.length) % seats.length;
+    const newRound = offset(index) <= offset(start);
+
+    G.turnSeatID = id;
+    G.players[id]!.itemUsedThisTurn = false;
+    if (newRound) awardLastStanding(G, id);
+  };
+
   for (let step = 1; step <= seats.length * 2; step++) {
-    const id = seats[(start + step) % seats.length]!;
-    const player = G.players[id]!;
+    const index = (start + step) % seats.length;
+    const player = G.players[seats[index]!]!;
     if (player.status !== 'partying') continue;
     if (player.skipNextTurn) {
       player.skipNextTurn = false;
-      log(G, 'skipped', { actor: id });
+      log(G, 'skipped', { actor: seats[index]! });
       continue;
     }
-    G.turnSeatID = id;
-    player.itemUsedThisTurn = false;
+    take(index);
     return;
   }
 
   for (let step = 1; step <= seats.length; step++) {
-    const id = seats[(start + step) % seats.length]!;
-    if (G.players[id]!.status === 'partying') {
-      G.turnSeatID = id;
-      G.players[id]!.itemUsedThisTurn = false;
+    const index = (start + step) % seats.length;
+    if (G.players[seats[index]!]!.status === 'partying') {
+      take(index);
       return;
     }
   }
@@ -142,6 +158,8 @@ function startPhase(G: MagalufG, rng: Rng, phaseIndex: number): void {
   // Nothing on the table when a new venue opens.
   G.lastDraw = null;
   G.pendingEvent = null;
+  G.pendingChoice = null;
+  G.lastStandingAwarded = false;
 
   if (G.settings.limitRevealAt === PHASE_IDS[phaseIndex]) G.limitRevealed = true;
 
@@ -164,31 +182,45 @@ function startPhase(G: MagalufG, rng: Rng, phaseIndex: number): void {
     return;
   }
 
-  // Rotate who opens each phase across the whole weekend.
+  // Rotate who opens each phase across the whole weekend. The opener is also
+  // the anchor every round boundary in this phase is measured from.
   const opener = (G.day * PHASE_IDS.length + phaseIndex) % G.activeSeatIDs.length;
+  G.roundAnchor = opener;
   G.turnSeatID = G.activeSeatIDs[opener]!;
   if (G.players[G.turnSeatID]!.status !== 'partying') advanceTurn(G);
   else G.players[G.turnSeatID]!.itemUsedThisTurn = false;
 }
 
 /**
- * The last seat to leave takes the bonus — but only if it met the phase's
- * drink minimum. Without that gate a player could hold two Porros and idle
- * their way to the bonus without drinking anything.
+ * The bonus for opening a round as the only person still in the venue.
+ *
+ * It used to go to whoever left last, which turned out to pay for seat
+ * position rather than nerve: when the whole table withdraws at the drink
+ * minimum they leave in turn order, so the last seat collected for free every
+ * time. Being alone at a *round boundary* has to be bought — the second-to-last
+ * player leaves mid-lap, and the survivor has to take one more solo turn, and
+ * the intoxication that comes with it, to reach the start of the next one.
+ * Anyone who wanted to contest it could have drunk one more themselves.
+ *
+ * A table that all hits closing time on the same lap now pays nobody. That is
+ * the rule working: nobody was ever alone to begin with.
+ *
+ * The `minDrinks` gate survives from the old version for the old reason —
+ * without it a player could hold two Porros and idle their way to the bonus
+ * without drinking anything.
  */
-function awardLastStanding(G: MagalufG): void {
-  const rules = phaseRules(G);
-  const eligible = G.activeSeatIDs.filter((id) => G.players[id]!.status === 'withdrawn');
-  if (eligible.length === 0) return;
+function awardLastStanding(G: MagalufG, seatID: string): void {
+  if (G.lastStandingAwarded) return;
+  if (partying(G).length !== 1) return;
 
-  const maxSeq = Math.max(...eligible.map((id) => G.players[id]!.withdrawSeq));
-  for (const id of eligible) {
-    const player = G.players[id]!;
-    if (player.withdrawSeq !== maxSeq) continue;
-    if (player.drinksThisPhase < rules.minDrinks) continue;
-    gainVP(player, rules.lastStandingBonus);
-    log(G, 'ultimoEnPie', { actor: id, vp: rules.lastStandingBonus }, 'success');
-  }
+  const rules = phaseRules(G);
+  const player = G.players[seatID]!;
+  if (player.status !== 'partying') return;
+  if (player.drinksThisPhase < rules.minDrinks) return;
+
+  G.lastStandingAwarded = true;
+  gainVP(player, rules.lastStandingBonus);
+  log(G, 'ultimoEnPie', { actor: seatID, vp: rules.lastStandingBonus }, 'success');
 }
 
 /**
@@ -199,8 +231,8 @@ function awardLastStanding(G: MagalufG): void {
  * the board can play them inside the gate.
  */
 function endPhase(G: MagalufG, rng: Rng): void {
-  awardLastStanding(G);
-
+  // Último en Pie is not settled here any more: it is paid the moment somebody
+  // opens a round alone, which is a thing that happens mid-phase or not at all.
   if (G.phase < PHASE_IDS.length - 1) {
     holdFor(G, { kind: 'phase', next: G.phase + 1 });
     return;
@@ -230,10 +262,9 @@ function startDay(G: MagalufG, rng: Rng, day: number): void {
   G.day = day;
   G.limitRevealed = false;
 
-  // Shuffle the day's four limit cards and turn one face-down, exactly as a
-  // table would. Not an index into an array with a random number.
-  const deck = LIMIT_DECKS[DAY_IDS[day]!]!;
-  G.limit = rng.shuffle(deck)[0]! + G.settings.limitShift;
+  // Shuffle the five limit cards and turn one face-down, exactly as a table
+  // would. Not an index into an array with a random number.
+  G.limit = rng.shuffle(LIMIT_DECK)[0]! + G.settings.limitShift;
 
   for (const id of G.activeSeatIDs) {
     const player = G.players[id]!;
@@ -279,7 +310,7 @@ function jump(G: MagalufG, rng: Rng, seatID: string, multiplier: number): void {
     player.totalIntoxSurvived += player.intox;
     bankedVP = bankRound(G, seatID, multiplier);
     player.bankedVP += outcome.legendVP;
-    player.resaca += outcome.resaca;
+    addResaca(player, outcome.resaca);
     log(G, 'piscina', { actor: seatID, d, roll: outcome.roll, vp: outcome.legendVP }, 'special');
     // The ordinary survivor's line, reused: from here the night reads the same
     // as anybody else's, which is exactly the claim the rule now makes.
@@ -405,7 +436,14 @@ function takeDrink(
   return true;
 }
 
-/** Turns the pending event face-up and resolves it. */
+/**
+ * Turns the pending event face-up.
+ *
+ * Resolves it outright unless the card asks a question, in which case it is
+ * left face-up in `G.pendingChoice` for the drawer to answer. The card is
+ * always in `G.lastDraw` before that happens, so the table can read what is
+ * being decided rather than watching somebody deliberate over a blank.
+ */
 function revealPendingEvent(G: MagalufG, rng: Rng): void {
   const pending = G.pendingEvent;
   if (!pending) return;
@@ -414,7 +452,17 @@ function revealPendingEvent(G: MagalufG, rng: Rng): void {
   const eventId = drawEvent(G, rng);
   if (!eventId) return;
   if (G.lastDraw) G.lastDraw = { ...G.lastDraw, event: eventId };
-  resolveEvent(G, pending.seatID, eventId as EventId, rng);
+
+  const id = eventId as EventId;
+  if (eventOptions(id)) {
+    // Logged here rather than in resolveEventOption, so the log reads "drew
+    // the card, then picked a branch" in the order it happened at the table.
+    log(G, 'event', { actor: pending.seatID, descriptionKey: `magaluf.event.${id}` });
+    G.pendingChoice = { seatID: pending.seatID, eventId: id, endsTurn: pending.endsTurn };
+    return;
+  }
+
+  resolveEvent(G, pending.seatID, id, rng);
 }
 
 /** Returns true when using the item consumed the player's turn. */
@@ -442,7 +490,7 @@ function applyItem(G: MagalufG, rng: Rng, seatID: string, item: ItemId): boolean
       // has its own drink-minimum gate.
       return true;
     case 'farlopa':
-      player.resaca += ITEM_EFFECTS.farlopaResaca;
+      addResaca(player, ITEM_EFFECTS.farlopaResaca);
       // endsTurn: false -- the extra drink still owes an event reveal, but once
       // that is turned over the player has their own action left to take.
       takeDrink(G, rng, seatID, {
@@ -477,6 +525,9 @@ function canAct(G: MagalufG, playerID: string): boolean {
     // is turn it over. Otherwise a player could drink again, or leave, without
     // ever finding out what the first drink brought with it.
     G.pendingEvent === null &&
+    // And so does a face-up one still waiting on its branch. Same argument one
+    // step later: an unanswered question is not a free action.
+    G.pendingChoice === null &&
     G.turnSeatID === playerID &&
     G.players[playerID]?.status === 'partying'
   );
@@ -505,6 +556,33 @@ function drink({ G, playerID, random, events }: MoveCtx): typeof INVALID_MOVE | 
  * them until they do -- so the table always sees the drink land before the
  * event that came with it.
  */
+/**
+ * How a turn ends once the event is finally done with.
+ *
+ * Shared by `revealEvent` and `chooseEventOption` because a choice card
+ * finishes in the second of those: the turn cannot be handed on at reveal time
+ * when the card has not actually happened yet.
+ *
+ * The `atCap` re-check earns its keep here. A drink hands the turn on; a
+ * Farlopa's extra draw does not — but Doble o nada can pour a fourth drink
+ * into a player who had a free action left, and somebody at closing time has
+ * nothing to spend it on.
+ */
+function settleAfterEvent(
+  G: MagalufG,
+  rng: Rng,
+  playerID: string,
+  endsTurn: boolean,
+  events: MoveCtx['events'],
+): void {
+  const player = G.players[playerID]!;
+  const atCap = player.drinksThisPhase >= phaseRules(G).maxDrinks;
+  // A branch that walked the player out of the venue always hands on, whatever
+  // the drink that started it was going to do.
+  const left = player.status !== 'partying';
+  if (endsTurn || atCap || left) handOver(finishTurn(G, rng), events);
+}
+
 function revealEvent({ G, playerID, random, events }: MoveCtx): typeof INVALID_MOVE | void {
   const pending = G.pendingEvent;
   if (G.finished || !pending || pending.seatID !== playerID) return INVALID_MOVE;
@@ -512,10 +590,34 @@ function revealEvent({ G, playerID, random, events }: MoveCtx): typeof INVALID_M
   const rng = fromBoardgameRandom(random);
   revealPendingEvent(G, rng);
 
-  // A drink hands the turn on; a Farlopa's extra draw does not, unless the
-  // event it brought pushed the player to closing time.
-  const atCap = G.players[playerID]!.drinksThisPhase >= phaseRules(G).maxDrinks;
-  if (pending.endsTurn || atCap) handOver(finishTurn(G, rng), events);
+  // A choice card is not finished yet -- chooseEventOption settles the turn.
+  if (G.pendingChoice) return;
+
+  settleAfterEvent(G, rng, playerID, pending.endsTurn, events);
+}
+
+/**
+ * Picks one branch of a face-up choice card.
+ *
+ * Only the seat that drew it may answer, and until they do it is the only move
+ * anyone has -- exactly the contract `revealEvent` already established.
+ */
+function chooseEventOption(
+  { G, playerID, random, events }: MoveCtx,
+  index: number,
+): typeof INVALID_MOVE | void {
+  const pending = G.pendingChoice;
+  if (G.finished || !pending || pending.seatID !== playerID) return INVALID_MOVE;
+
+  const options = eventOptions(pending.eventId);
+  if (!options) return INVALID_MOVE;
+  if (!Number.isInteger(index) || index < 0 || index >= options.length) return INVALID_MOVE;
+
+  G.pendingChoice = null;
+  const rng = fromBoardgameRandom(random);
+  resolveEventOption(G, playerID, options[index]!, rng);
+
+  settleAfterEvent(G, rng, playerID, pending.endsTurn, events);
 }
 
 function withdraw({ G, playerID, random, events }: MoveCtx): typeof INVALID_MOVE | void {
@@ -650,6 +752,9 @@ export const magalufGameDef: Game<MagalufG, Record<string, unknown>, MagalufSetu
       withdrawCounter: 0,
       lastDraw: null,
       pendingEvent: null,
+      pendingChoice: null,
+      roundAnchor: 0,
+      lastStandingAwarded: false,
       pendingAdvance: null,
       roundConfirm: null,
       hostPlayerID: setupData?.hostPlayerID ?? null,
@@ -670,7 +775,7 @@ export const magalufGameDef: Game<MagalufG, Record<string, unknown>, MagalufSetu
     party: {
       start: true,
       turn: { order: turnOrder },
-      moves: { drink, revealEvent, withdraw, useItem },
+      moves: { drink, revealEvent, chooseEventOption, withdraw, useItem },
       onBegin: ({ G, events }) => {
         // A venue nobody can attend -- everyone arrested, or dead -- closes on
         // arrival and opens another gate. Bouncing straight back keeps that

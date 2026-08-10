@@ -20,7 +20,13 @@ export type PlayerStatus = 'partying' | 'withdrawn' | 'arrested' | 'dead';
 export interface MagalufPlayer {
   /** Current intoxication. Resets each morning to `resaca`, not to zero. */
   intox: number;
-  /** Permanent hangover floor. Only ever grows. */
+  /**
+   * Hangover floor: where tomorrow morning's intoxication starts. It used to
+   * only ever grow, which made it the one number in the game nobody could
+   * argue with — you took it from a card you did not choose and carried it to
+   * Sunday. It can now be slept off, so choice cards have something real to
+   * trade against. Still floored at zero.
+   */
   resaca: number;
   bankedVP: number;
   /** Unbanked. Forfeited entirely if you go over the limit. */
@@ -105,6 +111,23 @@ export interface PendingEvent {
   endsTurn: boolean;
 }
 
+/**
+ * An event card turned face-up whose branch the drawer has not picked yet.
+ *
+ * Deliberately the same shape as PendingEvent, one step further along: the
+ * reveal already proved that "the table waits on one seat for one decision"
+ * works with this game's turn order, so a choice is that pattern again rather
+ * than a boardgame.io stage. It also means `canAct` stays a single readable
+ * expression instead of splitting across stage definitions.
+ */
+export interface PendingChoice {
+  /** Who owes the decision. Always the seat that drew the card. */
+  seatID: string;
+  eventId: EventId;
+  /** Carried through from the PendingEvent that produced it. */
+  endsTurn: boolean;
+}
+
 export interface MagalufG extends RoundConfirmG {
   /** Seats claimed by a real user at match start; the platform always creates maxPlayers engine seats. */
   activeSeatIDs: string[];
@@ -126,6 +149,15 @@ export interface MagalufG extends RoundConfirmG {
   lastDraw: LastDraw | null;
   /** Non-null while a drawn event card is still face-down. */
   pendingEvent: PendingEvent | null;
+  /** Non-null while a face-up choice card is waiting on its drawer. */
+  pendingChoice: PendingChoice | null;
+  /**
+   * Index of the seat that opened the current phase. The lap boundary Último
+   * en Pie is measured against — see `advanceTurn`.
+   */
+  roundAnchor: number;
+  /** Último en Pie is paid at most once per phase. */
+  lastStandingAwarded: boolean;
   /** Non-null only while a round-confirm wait is holding a transition open. */
   pendingAdvance: PendingAdvance | null;
   /** Every jump resolved this match, oldest first. Drives the board's balcony moment. */
@@ -240,6 +272,11 @@ export function gainVP(player: MagalufPlayer, amount: number): void {
 
 export function addIntox(player: MagalufPlayer, amount: number): void {
   player.intox = Math.max(0, player.intox + amount);
+}
+
+/** Signed, unlike the `+=` this replaced: negative sleeps some of it off. */
+export function addResaca(player: MagalufPlayer, amount: number): void {
+  player.resaca = Math.max(0, player.resaca + amount);
 }
 
 export function hasContraband(player: MagalufPlayer): boolean {

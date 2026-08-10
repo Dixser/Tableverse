@@ -1,12 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import type { BoardProps } from '../../types.js';
 import type { ItemId } from './cards.js';
+import { eventOptions } from './cards.js';
 import { HIDDEN_LIMIT } from './gameDef.js';
 import { dayMultipliers } from './settings.js';
 import type { MagalufG } from './state.js';
 import { ActionBar } from './ActionBar.js';
 import { BalconyOverlay } from './BalconyOverlay.js';
 import { DrawnCards } from './DrawnCards.js';
+import { EventChoicePanel } from './EventChoicePanel.js';
 import { PhaseHeader } from './PhaseHeader.js';
 import { PlayerPanel } from './PlayerPanel.js';
 import { useJumpQueue } from './useJumpQueue.js';
@@ -47,6 +49,8 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
     playerNames?.[seatID] ?? t('room.seatLabel', { seatNumber: Number(seatID) + 1 });
 
   const owesReveal = playerID != null && G.pendingEvent?.seatID === playerID;
+  const choice = G.pendingChoice;
+  const owesChoice = playerID != null && choice?.seatID === playerID;
   const myTurn =
     isActive &&
     playerID != null &&
@@ -76,7 +80,6 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
               seatID={seatID}
               name={nameFor(seatID)}
               player={player}
-              day={G.day}
               settings={G.settings}
               limit={limit}
               isTurn={G.turnSeatID === seatID && G.roundConfirm === null}
@@ -91,15 +94,31 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
         eventPending={G.pendingEvent != null}
       />
 
-      {myTurn && me && (
-        <ActionBar
-          player={me}
-          eventPending={owesReveal}
-          onDrink={() => moves.drink?.()}
-          onReveal={() => moves.revealEvent?.()}
-          onWithdraw={() => moves.withdraw?.()}
-          onUseItem={(item: ItemId) => moves.useItem?.(item)}
+      {/*
+        A face-up choice card owns the move surface outright: the whole table
+        sees it, the drawer gets the buttons and everyone else gets a line
+        saying who they are waiting on. Spectators land here too, which is the
+        right answer -- they can already read the card in DrawnCards above.
+      */}
+      {choice ? (
+        <EventChoicePanel
+          options={eventOptions(choice.eventId) ?? []}
+          chooserName={nameFor(choice.seatID)}
+          mine={owesChoice}
+          onChoose={(index: number) => moves.chooseEventOption?.(index)}
         />
+      ) : (
+        myTurn &&
+        me && (
+          <ActionBar
+            player={me}
+            eventPending={owesReveal}
+            onDrink={() => moves.drink?.()}
+            onReveal={() => moves.revealEvent?.()}
+            onWithdraw={() => moves.withdraw?.()}
+            onUseItem={(item: ItemId) => moves.useItem?.(item)}
+          />
+        )
       )}
 
       {jumps.current && (

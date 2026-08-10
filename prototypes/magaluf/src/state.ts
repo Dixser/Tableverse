@@ -87,6 +87,8 @@ export interface GameState {
   turnIndex: number;
   startPlayer: number;
   withdrawCounter: number;
+  /** Último en Pie is paid at most once per phase. */
+  lastStandingAwarded: boolean;
   log: LogEntry[];
   jumps: JumpRecord[];
   over: boolean;

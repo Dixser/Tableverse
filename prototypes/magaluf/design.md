@@ -476,6 +476,41 @@ obvious candidate is a non-player "guiri" seat that draws cards and triggers
 Rondas, though `tech-stack.md` notes boardgame.io has no first-class
 non-player actor and it would have to be modelled as a regular seat.
 
+### 13a. Re-run after feature 034 (flat limit deck + choice cards)
+
+The numbers above describe the rules as they stood before feature 034. Re-run
+with the flat 16/19/22/25/28 deck, the eight choice cards and the round-start
+Último en Pie, the sweep lands at **12/15** where it used to be 14/15. Both new
+misses are narrow, and running the two changes separately attributes them
+cleanly:
+
+| Target | Before | Choice cards only | Both (shipped) |
+|---|---|---|---|
+| Saturday deaths (11–20%) | 11.7% | **9.8%** | **10.4%** |
+| Early exits (10–25%) | 22.6% | 23.0% | **25.8%** |
+| Greedy share (40–60%) | **61.6%** | **66.1%** | **60.8%** |
+
+- **Saturday's death rate fell because of the choice cards, not the deck.**
+  Every card that used to add intoxication unconditionally now has a branch
+  that does not, so fewer players die by accident. That is the feature working
+  — the complaint it answers is *deaths nobody could steer* — but it does mean
+  the mid-weekend is now gentler than the target band wants.
+- **The early-exit rise is the flat deck.** Friday's limit fell from 26–29 to
+  16–28, so a bot's phase budget is tighter and it reaches its withdrawal
+  threshold before the drink minimum more often.
+- **Greedy share improved slightly** and is the one target that was already
+  failing before this feature.
+
+Caveat worth stating: `chooseOption` in `bots.ts` is new and unvalidated. It
+prices intoxication and Resaca off the same budget the drinking policy uses,
+which makes it good at ducking damage — quite possibly better than a human
+reading a card for the first time. Some of the Saturday drop may be bot skill
+rather than a real softening.
+
+The obvious lever if the mid-weekend needs its teeth back is the drink caps or
+`earlyExitPenalty`, not the limit deck: 16–28 came out of table playtests and
+is the thing feature 034 exists to keep.
+
 ---
 
 ## 14. Deliberate simplifications in the prototype

@@ -21,18 +21,24 @@ export interface PhaseRules {
 }
 
 /**
- * The spread widens rather than the level falling.
+ * One deck, the same every day.
  *
- * Lowering the limit does almost nothing to the death rate — players scale
- * their drinking to whatever capacity they have. What kills people is being
- * wrong about the number while it is face-down, so Friday's deck is tight and
- * Sunday's is wide.
+ * It used to narrow across the weekend — Friday 26–29 down to Sunday 14–26 —
+ * on the theory that the danger should rise. Playtesting showed that punishes
+ * the unlucky twice over: `resaca` is already an intoxication floor carried
+ * forward, so the player who drew a Vomitona on Friday met Sunday's 14 with
+ * capacity they never chose to spend, was forced out of every phase early, and
+ * lost the day the 2.25× multiplier makes decisive. The comeback was gone by
+ * Saturday lunchtime.
+ *
+ * So the weekend's arc is carried entirely by DAY_VP_MULTIPLIER below — which
+ * is what that constant's own comment already claimed — and the limit is one
+ * honest spread you learn once. Lowering it never did much to the death rate
+ * anyway: players scale their drinking to whatever capacity they have. What
+ * kills people is being wrong about the number while it is face-down, and a
+ * five-card 16–28 spread is plenty wrong enough.
  */
-export const LIMIT_DECKS: Record<string, number[]> = {
-  viernes: [26, 27, 28, 29],
-  sabado: [20, 23, 26, 29],
-  domingo: [14, 18, 22, 26],
-};
+export const LIMIT_DECK = [16, 19, 22, 25, 28];
 
 /**
  * Multiplier on everything banked at the end of each day.
@@ -98,7 +104,7 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
     // the After's. Its own low-value tier plus a thin VP density is what stops
     // the safest phase being the most profitable one.
     events: {
-      ligueTardeo: 3,
+      ligueTardeo: 2,
       fiestaTardeo: 2,
       peleaTardeo: 2,
       chungoTardeo: 2,
@@ -111,6 +117,12 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       kebabEvent: 2,
       aguaEvent: 2,
       redbullEvent: 2,
+      // Choice cards, paid for out of `nada` and a Ligue. The Tardeo is where a
+      // player who is already behind still has a whole weekend to spend, so it
+      // carries the pair of Resacón that make Friday's hangover survivable.
+      resacon: 2,
+      invitacion: 1,
+      dobleONada: 1,
       // The dealer's mix shifts across the weekend: mostly joints in the
       // daylight, mostly powder by the After. A single card that rolled
       // between three items could never express that; card counts can.
@@ -118,7 +130,7 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       camelloPastis: 2,
       camelloFarlopa: 1,
       cacheo: 1,
-      nada: 4,
+      nada: 1,
     },
   },
 
@@ -141,18 +153,18 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       agua: 1,
     },
     events: {
-      ligueNoche: 3,
+      ligueNoche: 2,
       fiestaNoche: 2,
       peleaNoche: 3,
       chungoNoche: 2,
       gorila: 2,
-      garrafonEvent: 3,
+      garrafonEvent: 2,
       karaoke: 2,
       barraLibre: 2,
       reyGuiri: 2,
       perdido: 2,
-      chupitoCasa: 3,
-      ronda: 3,
+      chupitoCasa: 2,
+      ronda: 2,
       vomitona: 2,
       ambulancia: 1,
       kebabEvent: 2,
@@ -162,7 +174,15 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       camelloFarlopa: 2,
       cacheo: 1,
       redada: 1,
-      nada: 1,
+      // Paid for by trimming a forced drink, a Garrafón, and a Ligue. The
+      // forced-drink cards are the right thing to trade away here: they are
+      // the ones that spend your capacity without asking, which is the exact
+      // complaint these cards exist to answer.
+      ultimaRonda: 2,
+      resacon: 1,
+      invitacion: 1,
+      dobleONada: 1,
+      // No `nada` left in the Noche. There was only ever one.
     },
   },
 
@@ -187,7 +207,7 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
     },
     // No `nada`. Nothing in the After is ever nothing.
     events: {
-      ligueAfter: 3,
+      ligueAfter: 2,
       fiestaAfter: 2,
       peleaAfter: 3,
       chungoAfter: 2,
@@ -198,17 +218,23 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       barraLibre: 2,
       reyGuiri: 3,
       perdido: 1,
-      chupitoCasa: 5,
-      ronda: 5,
-      garrafonEvent: 4,
+      chupitoCasa: 4,
+      ronda: 4,
+      garrafonEvent: 3,
       vomitona: 2,
       ambulancia: 2,
       kebabEvent: 1,
       camelloPorro: 2,
       camelloPastis: 2,
-      camelloFarlopa: 4,
+      camelloFarlopa: 3,
       cacheo: 1,
       redada: 2,
+      // Saltar la cola only lives here: cashing out and going home is only a
+      // real decision in the venue where leaving costs you the biggest Último
+      // en Pie in the game.
+      ultimaRonda: 2,
+      dobleONada: 1,
+      saltarLaCola: 2,
     },
   },
 };

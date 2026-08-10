@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { Client } from 'boardgame.io/client';
 
-import type { EventId, ItemId, PhaseId } from './cards.js';
-import { ALCOHOL, PHASE_IDS } from './cards.js';
-import { PHASE_RULES } from './constants.js';
+import type { EventId, EventOption, ItemId, PhaseId } from './cards.js';
+import { ALCOHOL, eventOptions, PHASE_IDS } from './cards.js';
+import { LIMIT_DECK, PHASE_RULES } from './constants.js';
 import { HIDDEN_LIMIT, magalufGameDef, type MagalufG } from './gameDef.js';
 import { magalufModule } from './index.js';
 import { clampSettings, DEFAULT_SETTINGS } from './settings.js';
@@ -56,6 +56,36 @@ function G(client: TestClient): MagalufG {
 }
 
 /**
+ * How a driver answers a face-up choice card. Branch 0 unless told otherwise,
+ * so a stacked deck still produces a fixed weekend.
+ */
+type OptionPolicy = (options: readonly EventOption[]) => number;
+
+const firstBranch: OptionPolicy = () => 0;
+
+/**
+ * Takes a branch that inflicts no hangover, so a test measuring resaca from
+ * one specific source is not quietly picking some up on the way there.
+ */
+const duckResaca: OptionPolicy = (options) => {
+  const index = options.findIndex((option) => (option.resaca ?? 0) <= 0);
+  return index === -1 ? 0 : index;
+};
+
+/**
+ * Answers a face-up choice card.
+ *
+ * Every driver below needs this: a choice blocks every other move, so a policy
+ * that only knows drink/withdraw would spin until its guard ran out. Tests that
+ * care which branch was taken call `chooseEventOption` themselves.
+ */
+function answerChoice(client: TestClient, policy: OptionPolicy): void {
+  const pending = G(client).pendingChoice;
+  if (!pending) return;
+  actAs(client, pending.seatID).chooseEventOption!(policy(eventOptions(pending.eventId) ?? []));
+}
+
+/**
  * Drives the table until `stop` is true, or the weekend ends.
  *
  * Clears round-confirm gates automatically. Tests that care about the gate
@@ -66,6 +96,7 @@ function play(
   client: TestClient,
   choose: (g: MagalufG, seat: string) => 'drink' | 'withdraw',
   stop: (g: MagalufG) => boolean = () => false,
+  pickOption: OptionPolicy = firstBranch,
 ): void {
   for (let guard = 0; guard < 6000; guard++) {
     const g = G(client);
@@ -73,6 +104,11 @@ function play(
 
     if (g.pendingEvent) {
       actAs(client, g.pendingEvent.seatID).revealEvent!();
+      continue;
+    }
+
+    if (g.pendingChoice) {
+      answerChoice(client, pickOption);
       continue;
     }
 
@@ -91,7 +127,12 @@ function play(
   throw new Error('play() did not terminate');
 }
 
-/** Drinks and immediately turns the event over, the way the old single move did. */
+/**
+ * Drinks and immediately turns the event over, the way the old single move did.
+ *
+ * Stops at a choice card rather than answering it — a test that stacked one
+ * wants to inspect or answer the question itself.
+ */
 function drinkAndReveal(client: TestClient, seat: string): void {
   actAs(client, seat).drink!();
   const pending = G(client).pendingEvent;
@@ -102,12 +143,17 @@ function drinkAndReveal(client: TestClient, seat: string): void {
 function playToGate(
   client: TestClient,
   choose: (g: MagalufG, seat: string) => 'drink' | 'withdraw' = alwaysWithdraw,
+  pickOption: OptionPolicy = firstBranch,
 ): void {
   for (let guard = 0; guard < 6000; guard++) {
     const g = G(client);
     if (g.finished || g.roundConfirm) return;
     if (g.pendingEvent) {
       actAs(client, g.pendingEvent.seatID).revealEvent!();
+      continue;
+    }
+    if (g.pendingChoice) {
+      answerChoice(client, pickOption);
       continue;
     }
     const seat = g.turnSeatID;
@@ -122,6 +168,19 @@ const alwaysDrink = () => 'drink' as const;
 /** Meets the phase's drink minimum, then leaves. Survives a normal weekend. */
 const moderate = (g: MagalufG, seat: string) =>
   g.players[seat]!.drinksThisPhase < phaseMinimum(g) ? ('drink' as const) : ('withdraw' as const);
+
+/**
+ * True when something other than a balcony jump put resaca on this seat.
+ *
+ * With `duckResaca` driving the choice cards, the only source left in an
+ * item-free run is an Ambulancia that picked this seat as the drunkest — the
+ * one hangover in the game nobody gets a say in.
+ */
+function tookResacaFromACard(client: TestClient, seatID: string): boolean {
+  return G(client).log.some(
+    (e) => e.key === 'magaluf.log.ambulance' && e.params?.actor === seatID,
+  );
+}
 
 /** Stacks the current decks so the next draws are known. */
 function stack(g: MagalufG, alcohol: string[], events: EventId[]): void {
@@ -416,6 +475,278 @@ describe('magaluf gameDef', () => {
     });
   });
 
+  /**
+   * Último en Pie used to be settled at endPhase and go to whoever had the
+   * highest withdrawSeq. That paid for seat position: a table that all leaves
+   * at the drink minimum leaves in turn order, so the last seat collected for
+   * free every single time. The bonus is now paid the moment somebody *opens a
+   * round* alone, which has to be bought with one more solo turn.
+   */
+  describe('ultimo en pie (round-start rule)', () => {
+    // Cheap alcohol and inert events, so these tests measure the rule rather
+    // than whatever the shuffle handed out.
+    const quiet = (g: MagalufG) =>
+      stack(g, Array<string>(16).fill('cana'), Array<EventId>(16).fill('nada'));
+
+    const BONUS = PHASE_RULES.tardeo.lastStandingBonus;
+
+    it('does not pay a survivor who is only alone mid-lap', () => {
+      const client = makeClient(3, quiet);
+      const solo = G(client).turnSeatID; // seat 0 opens the Tardeo on day 0
+
+      drinkAndReveal(client, solo); // 1 drink, below the minimum of 2
+      actAs(client, '1').withdraw!();
+      actAs(client, '2').withdraw!();
+
+      // Alone, and it is their turn -- but the round turned over while they
+      // were still one drink short, so there is nothing to pay yet.
+      expect(G(client).turnSeatID).toBe(solo);
+      expect(G(client).lastStandingAwarded).toBe(false);
+      expect(G(client).players[solo]!.roundVP).toBe(ALCOHOL.cana!.vp);
+    });
+
+    it('pays once the solo seat opens a round having met the minimum', () => {
+      const client = makeClient(3, quiet);
+      const solo = G(client).turnSeatID;
+
+      drinkAndReveal(client, solo);
+      actAs(client, '1').withdraw!();
+      actAs(client, '2').withdraw!();
+      // The extra solo turn is the price of the bonus.
+      drinkAndReveal(client, solo);
+
+      expect(G(client).lastStandingAwarded).toBe(true);
+      expect(G(client).players[solo]!.roundVP).toBe(ALCOHOL.cana!.vp * 2 + BONUS);
+    });
+
+    it('pays it only once, however long the survivor keeps drinking', () => {
+      const client = makeClient(3, quiet);
+      const solo = G(client).turnSeatID;
+
+      drinkAndReveal(client, solo);
+      actAs(client, '1').withdraw!();
+      actAs(client, '2').withdraw!();
+      drinkAndReveal(client, solo);
+      const afterBonus = G(client).players[solo]!.roundVP;
+
+      // The phase carries on -- a solo player may keep pushing their luck.
+      drinkAndReveal(client, solo);
+      expect(G(client).players[solo]!.drinksThisPhase).toBe(3);
+      expect(G(client).players[solo]!.roundVP).toBe(afterBonus + ALCOHOL.cana!.vp);
+    });
+
+    /**
+     * The case the old rule got wrong in the other direction: nobody was ever
+     * alone, so nobody has earned anything. A Ronda tips every seat over the
+     * drink cap at once and closing time empties the venue in one sweep.
+     */
+    it('pays nobody when the whole table hits closing time together', () => {
+      const client = makeClient(3, (g) => {
+        quiet(g);
+        g.eventDeck = ['ronda'];
+        for (const id of g.activeSeatIDs) {
+          g.players[id]!.drinksThisPhase = PHASE_RULES.tardeo.maxDrinks - 1;
+        }
+      });
+      const opener = G(client).turnSeatID;
+
+      drinkAndReveal(client, opener);
+
+      // The venue emptied in one sweep, so it is now holding a gate open on
+      // the next one rather than having advanced already.
+      expect(G(client).pendingAdvance).toEqual({ kind: 'phase', next: 1 });
+      expect(G(client).lastStandingAwarded).toBe(false);
+      for (const id of G(client).activeSeatIDs) {
+        expect(G(client).log.some((e) => e.key === 'magaluf.log.ultimoEnPie' && e.params?.actor === id))
+          .toBe(false);
+      }
+    });
+
+    /**
+     * Worth stating outright, because it is the behaviour change: a table that
+     * all drinks the minimum and leaves in turn order pays nobody. The last
+     * seat never opens a round alone -- it becomes alone mid-lap and then goes
+     * home, which is exactly the free bonus the old rule handed out.
+     */
+    it('pays nobody when everyone leaves at the minimum in turn order', () => {
+      const client = makeClient(3, quiet);
+      playToGate(client, moderate);
+      expect(G(client).lastStandingAwarded).toBe(false);
+      for (const id of G(client).activeSeatIDs) {
+        expect(G(client).players[id]!.roundVP).toBe(ALCOHOL.cana!.vp * PHASE_RULES.tardeo.minDrinks);
+      }
+    });
+
+    it('resets the award for each new venue', () => {
+      const client = makeClient(3, quiet);
+      const solo = G(client).turnSeatID;
+
+      drinkAndReveal(client, solo);
+      actAs(client, '1').withdraw!();
+      actAs(client, '2').withdraw!();
+      drinkAndReveal(client, solo);
+      expect(G(client).lastStandingAwarded).toBe(true);
+
+      play(client, alwaysWithdraw, (g) => g.phase === 1 && g.roundConfirm === null);
+      expect(G(client).phase).toBe(1);
+      expect(G(client).lastStandingAwarded).toBe(false);
+    });
+  });
+
+  /**
+   * Choice cards. The engine contract is the same one `revealEvent` already
+   * established one step earlier: the drawer owes an answer, and until it comes
+   * nobody has any other move.
+   */
+  describe('event cards with options', () => {
+    /** Draws a stacked choice card and stops with the question on the table. */
+    function drawChoice(eventId: EventId, setup: (g: MagalufG) => void = () => {}) {
+      const client = makeClient(3, (g) => {
+        stack(g, Array<string>(8).fill('cana'), [eventId]);
+        setup(g);
+      });
+      const seat = G(client).turnSeatID;
+      drinkAndReveal(client, seat);
+      return { client, seat };
+    }
+
+    it('parks the card face-up instead of resolving it', () => {
+      const { client, seat } = drawChoice('vomitona');
+      expect(G(client).pendingChoice).toEqual({ seatID: seat, eventId: 'vomitona', endsTurn: true });
+      // Face-up, so the table can read what is being decided.
+      expect(G(client).lastDraw?.event).toBe('vomitona');
+      expect(G(client).pendingEvent).toBeNull();
+    });
+
+    it('blocks every other move until the branch is picked', () => {
+      const { client, seat } = drawChoice('vomitona');
+      const before = JSON.stringify(G(client).players[seat]);
+
+      actAs(client, seat).drink!();
+      actAs(client, seat).withdraw!();
+      actAs(client, seat).useItem!('kebab');
+
+      expect(JSON.stringify(G(client).players[seat])).toBe(before);
+      expect(G(client).pendingChoice).not.toBeNull();
+    });
+
+    it('refuses an answer from the wrong seat or an impossible index', () => {
+      const { client, seat } = drawChoice('vomitona');
+      const other = G(client).activeSeatIDs.find((id) => id !== seat)!;
+
+      actAs(client, other).chooseEventOption!(0);
+      expect(G(client).pendingChoice).not.toBeNull();
+
+      for (const bad of [-1, 2, 1.5]) {
+        actAs(client, seat).chooseEventOption!(bad);
+        expect(G(client).pendingChoice).not.toBeNull();
+      }
+    });
+
+    it('applies the branch the player picked, and only that one (vomitona)', () => {
+      const vomit = drawChoice('vomitona', (g) => {
+        g.players[g.turnSeatID]!.intox = 10;
+      });
+      actAs(vomit.client, vomit.seat).chooseEventOption!(0);
+      const puked = G(vomit.client).players[vomit.seat]!;
+      // 10 + 1 for the drink, then -4 relief. Resaca is tomorrow's problem.
+      expect(puked.intox).toBe(10 + ALCOHOL.cana!.intox - 4);
+      expect(puked.resaca).toBe(3);
+
+      const hold = drawChoice('vomitona', (g) => {
+        g.players[g.turnSeatID]!.intox = 10;
+      });
+      actAs(hold.client, hold.seat).chooseEventOption!(1);
+      const held = G(hold.client).players[hold.seat]!;
+      expect(held.intox).toBe(10 + ALCOHOL.cana!.intox + 2);
+      expect(held.resaca).toBe(0);
+    });
+
+    it('lets Resacón sleep hangover off, and floors it at zero', () => {
+      const { client, seat } = drawChoice('resacon', (g) => {
+        // One point of resaca against a branch that removes two: the floor is
+        // the whole reason addResaca exists rather than a bare `-=`.
+        g.players[g.turnSeatID]!.resaca = 1;
+      });
+      const before = G(client).players[seat]!.roundVP;
+      actAs(client, seat).chooseEventOption!(0);
+
+      expect(G(client).players[seat]!.resaca).toBe(0);
+      expect(G(client).players[seat]!.roundVP).toBe(before - 3);
+    });
+
+    it('walks a Saltar la cola player out of the venue with the VP in hand', () => {
+      const { client, seat } = drawChoice('saltarLaCola');
+      const before = G(client).players[seat]!.roundVP;
+      actAs(client, seat).chooseEventOption!(0);
+
+      const player = G(client).players[seat]!;
+      expect(player.status).toBe('withdrawn');
+      // Kept, not banked: it rides on tonight's limit check like everything else.
+      expect(player.roundVP).toBe(before + 7);
+      // Chosen, but not a withdrawal -- no Aguafiestas on top.
+      expect(G(client).log.some((e) => e.key === 'magaluf.log.aguafiestas')).toBe(false);
+    });
+
+    it('pours Doble o nada’s extra drink at double VP without drawing a second event', () => {
+      const { client, seat } = drawChoice('dobleONada');
+      const eventsLeft = G(client).eventDeck.length;
+      actAs(client, seat).chooseEventOption!(0);
+
+      const player = G(client).players[seat]!;
+      expect(player.drinksThisPhase).toBe(2);
+      // The drink that drew the card at face value, the extra one doubled.
+      expect(player.roundVP).toBe(ALCOHOL.cana!.vp + ALCOHOL.cana!.vp * 2);
+      expect(player.intox).toBe(ALCOHOL.cana!.intox * 2);
+      // An event that drew an event would chain without a fixed point.
+      expect(G(client).eventDeck.length).toBe(eventsLeft);
+      expect(G(client).pendingEvent).toBeNull();
+      expect(player.pastisArmed).toBe(false);
+    });
+
+    it('ends the turn when the extra drink hits closing time on a free action', () => {
+      // A Farlopa's extra draw normally leaves the player their own action.
+      // Doble o nada on top of it can still pour them past the cap, and
+      // somebody at closing time has nothing left to spend that action on.
+      const client = makeClient(3, (g) => {
+        stack(g, Array<string>(8).fill('cana'), ['dobleONada']);
+        const seat = g.turnSeatID;
+        g.players[seat]!.items = ['farlopa'];
+        g.players[seat]!.drinksThisPhase = PHASE_RULES.tardeo.maxDrinks - 2;
+      });
+      const seat = G(client).turnSeatID;
+
+      actAs(client, seat).useItem!('farlopa');
+      actAs(client, seat).revealEvent!();
+      expect(G(client).pendingChoice?.endsTurn).toBe(false);
+
+      actAs(client, seat).chooseEventOption!(0);
+      expect(G(client).players[seat]!.drinksThisPhase).toBeGreaterThanOrEqual(
+        PHASE_RULES.tardeo.maxDrinks,
+      );
+      expect(G(client).players[seat]!.status).toBe('withdrawn');
+    });
+
+    it('hands the turn straight on when the branch does nothing', () => {
+      const { client, seat } = drawChoice('dobleONada');
+      actAs(client, seat).chooseEventOption!(1); // pasar
+      expect(G(client).turnSeatID).not.toBe(seat);
+      expect(G(client).pendingChoice).toBeNull();
+    });
+
+    it('logs the card and the branch, in that order', () => {
+      const { client, seat } = drawChoice('vomitona');
+      actAs(client, seat).chooseEventOption!(0);
+
+      const keys = G(client).log.map((e) => e.key);
+      const drew = keys.lastIndexOf('magaluf.log.event');
+      const chose = keys.lastIndexOf('magaluf.log.choseOption');
+      expect(drew).toBeGreaterThan(-1);
+      expect(chose).toBeGreaterThan(drew);
+      expect(G(client).log[chose]!.params?.descriptionKey).toBe('magaluf.eventOption.vomitar');
+    });
+  });
+
   describe('resaca and banking', () => {
     it('resets each morning to resaca, not to zero (AC10)', () => {
       const client = makeClient(3, (g) => {
@@ -459,35 +790,44 @@ describe('magaluf gameDef', () => {
   });
 
   describe('balconing', () => {
-    // A limit of 0 set at setup is how these tests put a player over it without
-    // mutating a frozen G mid-match: any drink at all is now fatal, and a
-    // player who never drinks sits exactly ON the limit.
+    /**
+     * A limit pinned at setup is how these tests put a player over it without
+     * mutating a frozen G mid-match.
+     *
+     * Zero for the tests that only need *a* jump. The two that need both
+     * outcomes to occur use JUMPABLE_LIMIT instead: drinking each venue's
+     * minimum lands somewhere in the mid-twenties, and against a limit of zero
+     * that is past what even a d20 can beat, so every run would die and a test
+     * needing both branches would silently only ever prove one.
+     */
+    const JUMPABLE_LIMIT = 14;
+
     const drinkToMinimum = (seat: string) => (g: MagalufG, s: string) =>
       s === seat && g.players[s]!.drinksThisPhase < phaseMinimum(g) ? 'drink' : 'withdraw';
 
     const SEEDS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
 
     /**
-     * Plays seat 0 over a limit of 0 on each seed and returns what happened.
-     *
-     * A d20 rather than the default d6: drinking each venue's minimum against
-     * a limit of zero lands around 15 over, which a d6 can never beat, so on
-     * the standard die every run would die and a test needing both outcomes
-     * would silently only ever prove one.
+     * A d20 rather than the default d6: even against JUMPABLE_LIMIT the
+     * overshoot runs into double figures, which a d6 can never beat.
      */
     const VARIED_DIE = 20;
 
+    /** Plays seat 0 over the limit on each seed and returns what happened. */
     function jumpRuns() {
       return SEEDS.map((seed) => {
         const client = makeClient(
           3,
           (g) => {
-            g.limit = 0;
+            g.limit = JUMPABLE_LIMIT;
             g.settings = { ...g.settings, balconyDie: VARIED_DIE };
           },
           seed,
         );
-        play(client, drinkToMinimum('0'), (g) => g.day !== 0 || g.finished);
+        // duckResaca so the resaca assertions below measure the jump alone:
+        // now that the Vomitona is a choice card, a driver that always took
+        // branch 0 would arrive at the balcony already hungover.
+        play(client, drinkToMinimum('0'), (g) => g.day !== 0 || g.finished, duckResaca);
         return { client, jump: G(client).jumps.find((j) => j.seatID === '0') };
       }).filter((run) => run.jump !== undefined);
     }
@@ -551,13 +891,13 @@ describe('magaluf gameDef', () => {
         const client = makeClient(
           3,
           (g) => {
-            g.limit = 0;
+            g.limit = JUMPABLE_LIMIT;
             g.settings = { ...g.settings, balconyDie: VARIED_DIE };
             g.players['0']!.items = ['kebab'];
           },
           seed,
         );
-        play(client, drinkToMinimum('0'), (g) => g.day !== 0 || g.finished);
+        play(client, drinkToMinimum('0'), (g) => g.day !== 0 || g.finished, duckResaca);
         return { client, jump: G(client).jumps.find((j) => j.seatID === '0') };
       }).filter((run) => {
         if (run.jump === undefined) return false;
@@ -582,7 +922,10 @@ describe('magaluf gameDef', () => {
     it('pays the legend bonus and resaca to a survivor, kills the rest (AC12)', () => {
       const runs = jumpRuns();
 
-      const survivor = runs.find((r) => r.jump!.survived)!;
+      // An Ambulancia can still pick seat 0 as the drunkest and hand them a
+      // hangover nobody chose, which is the one resaca source a branch policy
+      // cannot duck. Exclude those runs rather than assert around them.
+      const survivor = runs.find((r) => r.jump!.survived && !tookResacaFromACard(r.client, '0'))!;
       expect(survivor).toBeDefined();
       expect(G(survivor.client).players['0']!.status).not.toBe('dead');
       expect(survivor.jump!.legendVP).toBe(3 + survivor.jump!.d);
@@ -592,7 +935,7 @@ describe('magaluf gameDef', () => {
       );
       expect(G(survivor.client).players['0']!.resaca).toBe(4);
 
-      const dead = runs.find((r) => !r.jump!.survived)!;
+      const dead = runs.find((r) => !r.jump!.survived && !tookResacaFromACard(r.client, '0'))!;
       expect(dead).toBeDefined();
       expect(G(dead.client).players['0']!.status).toBe('dead');
       expect(dead.jump!.legendVP).toBe(0);
@@ -723,9 +1066,10 @@ describe('magaluf gameDef', () => {
     it('draws a fresh limit each morning', () => {
       const client = makeClient(3);
       const friday = G(client).limit;
-      expect([26, 27, 28, 29]).toContain(friday);
+      expect(LIMIT_DECK).toContain(friday);
       play(client, alwaysWithdraw, (g) => g.day === 1);
-      expect([20, 23, 26, 29]).toContain(G(client).limit);
+      // The same deck on every day now — the weekend's arc is the multiplier.
+      expect(LIMIT_DECK).toContain(G(client).limit);
     });
   });
 
@@ -772,7 +1116,7 @@ describe('magaluf gameDef', () => {
 
       expect(g.settings.balconyDie).toBe(6); // 42 is not a die, so it falls back
       expect(g.settings.limitShift).toBe(-2);
-      expect([24, 25, 26, 27]).toContain(g.limit); // Friday deck, shifted -2
+      expect(LIMIT_DECK.map((n) => n - 2)).toContain(g.limit); // the deck, shifted -2
     });
 
     it('rejects a claimed-seat list below the player floor', () => {

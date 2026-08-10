@@ -10,7 +10,6 @@ export interface PlayerPanelProps {
   seatID: string;
   name: string;
   player: MagalufPlayer;
-  day: number;
   settings: MagalufSettings;
   /** The real limit, or null while face-down for this viewer. */
   limit: number | null;
@@ -28,7 +27,6 @@ export function PlayerPanel({
   seatID,
   name,
   player,
-  day,
   settings,
   limit,
   isTurn,
@@ -73,7 +71,6 @@ export function PlayerPanel({
       <IntoxMeter
         intox={player.intox}
         resaca={player.resaca}
-        day={day}
         limitShift={settings.limitShift}
         limit={limit}
       />

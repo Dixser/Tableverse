@@ -135,24 +135,59 @@ export type EventId =
   | 'camelloFarlopa'
   | 'cacheo'
   | 'redada'
-  | 'nada';
+  | 'nada'
+  // Cards that ask a question instead of announcing an outcome (feature 034).
+  | 'ultimaRonda'
+  | 'resacon'
+  | 'invitacion'
+  | 'dobleONada'
+  | 'saltarLaCola';
 
-export interface EventCard {
-  id: EventId;
-  name: Bilingual;
-  text: Bilingual;
+/**
+ * What a card — or one branch of a card — does.
+ *
+ * Split out from EventCard by feature 034 so a choice branch runs down the
+ * same applier as a plain card.
+ */
+export interface EventEffects {
   /** VP to the drawing player. Negative is a loss. */
   vp?: number;
   /** Intoxication to the drawing player. */
   intox?: number;
   /** VP to every player still partying, including the drawer. */
   vpAll?: number;
-  /** Permanent Resaca inflicted on the drawing player. */
+  /** Resaca inflicted on the drawing player. Signed: negative sleeps it off. */
   resaca?: number;
   /** Intoxication removed before Resaca is applied. */
   relief?: number;
   /** The drawing player loses every item they hold. */
   losesItems?: boolean;
+
+  // --- Structural. Only ever set on a branch. ----------------------------
+  /** Leaves the phase. Chosen, but not a withdrawal — no Aguafiestas. */
+  leaves?: boolean;
+  /** Draws one extra alcohol card. Never draws an event: that would chain. */
+  extraDrink?: boolean;
+  /** Arms the Pastis doubler, so `extraDrink` lands at double VP. */
+  doubles?: boolean;
+  /** Loses the next turn. */
+  skips?: boolean;
+}
+
+export interface EventOption extends EventEffects {
+  id: string;
+  name: Bilingual;
+}
+
+export interface EventCard extends EventEffects {
+  id: EventId;
+  name: Bilingual;
+  text: Bilingual;
+  /**
+   * When present, the drawing player picks exactly one branch and nothing on
+   * the card itself applies. See `spec/features/034-magaluf-choices/`.
+   */
+  options?: readonly EventOption[];
 }
 
 /**
@@ -227,8 +262,14 @@ export const EVENTS: Record<EventId, EventCard> = {
   chungoNoche: {
     id: 'chungoNoche',
     name: { es: 'Te roban la cartera', en: 'Pickpocketed' },
-    text: { es: 'Pierdes todos tus objetos.', en: 'You lose all your items.' },
-    losesItems: true,
+    text: {
+      es: 'Págales, o pierde todo lo que llevas encima.',
+      en: 'Pay them off, or lose everything you are carrying.',
+    },
+    options: [
+      { id: 'pagarLaCuenta', name: { es: 'Pagarles', en: 'Pay them off' }, vp: -4 },
+      { id: 'perderTodo', name: { es: 'Perderlo todo', en: 'Lose everything' }, losesItems: true },
+    ],
   },
   gorila: {
     id: 'gorila',
@@ -281,9 +322,14 @@ export const EVENTS: Record<EventId, EventCard> = {
   terraza: {
     id: 'terraza',
     name: { es: 'La terraza del quinto', en: 'The fifth-floor terrace' },
-    text: { es: 'La mejor fiesta del viaje. +8 PV y +3 de Intoxicación.', en: 'The best party of the trip. +8 VP and +3 Intoxication.' },
-    vp: 8,
-    intox: 3,
+    text: {
+      es: 'La mejor fiesta del viaje. Sube, o quédate abajo tranquilo.',
+      en: 'The best party of the trip. Go up, or keep it quiet downstairs.',
+    },
+    options: [
+      { id: 'subirALaTerraza', name: { es: 'Subir', en: 'Go up' }, vp: 8, intox: 3 },
+      { id: 'quedarseAbajo', name: { es: 'Quedarte abajo', en: 'Stay downstairs' }, vp: 3 },
+    ],
   },
   comaEtilico: {
     id: 'comaEtilico',
@@ -327,10 +373,12 @@ export const EVENTS: Record<EventId, EventCard> = {
   },
   vomitona: {
     id: 'vomitona',
-    name: { es: 'Vomitona', en: 'Puking' },
-    text: { es: '−4 de Intoxicación ahora, pero +3 de Resaca para siempre.', en: '−4 Intoxication now, but +3 Resaca permanently.' },
-    relief: 4,
-    resaca: 3,
+    name: { es: 'Te sube', en: 'You feel it coming up' },
+    text: { es: 'Échalo fuera, o aguántate.', en: 'Let it out, or hold it in.' },
+    options: [
+      { id: 'vomitar', name: { es: 'Vomitar', en: 'Throw up' }, relief: 4, resaca: 3 },
+      { id: 'aguantar', name: { es: 'Aguantarte', en: 'Hold it in' }, intox: 2 },
+    ],
   },
   ambulancia: {
     id: 'ambulancia',
@@ -393,5 +441,69 @@ export const EVENTS: Record<EventId, EventCard> = {
     id: 'nada',
     name: { es: 'No pasa nada', en: 'Nothing happens' },
     text: { es: 'Sigue la fiesta.', en: 'The party goes on.' },
+  },
+
+  // --- Choice cards (feature 034) -----------------------------------------
+
+  ultimaRonda: {
+    id: 'ultimaRonda',
+    name: { es: 'Última ronda', en: 'Last round' },
+    text: {
+      es: 'Te ponen una copa en la mano. Métetela ya, o promételes mañana.',
+      en: 'Someone puts a drink in your hand. Sink it now, or promise them tomorrow.',
+    },
+    options: [
+      { id: 'unaMas', name: { es: 'Metértela', en: 'Sink it' }, intox: 4 },
+      { id: 'mananaLoPago', name: { es: 'Mañana lo pago', en: 'Pay tomorrow' }, resaca: 2 },
+    ],
+  },
+
+  resacon: {
+    id: 'resacon',
+    name: { es: 'Vas fino', en: 'Rough one' },
+    text: {
+      es: 'Podrías quedarte quieto y dormir un poco, pero cuesta.',
+      en: 'You could sit this out and sleep some of it off, at a price.',
+    },
+    options: [
+      { id: 'dormirla', name: { es: 'Dormirla un rato', en: 'Sleep some off' }, resaca: -2, vp: -3 },
+      { id: 'seguirDeFiesta', name: { es: 'Seguir de fiesta', en: 'Keep going' } },
+    ],
+  },
+
+  invitacion: {
+    id: 'invitacion',
+    name: { es: 'Te deben una', en: 'You are owed a favour' },
+    text: { es: 'Coge el dinero, o coge la comida.', en: 'Take the cash, or take the food.' },
+    options: [
+      { id: 'cobrarla', name: { es: 'Cobrarla', en: 'Take the cash' }, vp: 3 },
+      { id: 'pillarKebab', name: { es: 'Pillar comida', en: 'Take the food' } },
+    ],
+  },
+
+  dobleONada: {
+    id: 'dobleONada',
+    name: { es: 'Doble o nada', en: 'Double or nothing' },
+    text: {
+      es: 'Una copa más, y vale el doble.',
+      en: 'One more drink, worth twice as much.',
+    },
+    options: [
+      { id: 'doblar', name: { es: 'Doblar', en: 'Double it' }, extraDrink: true, doubles: true },
+      { id: 'pasar', name: { es: 'Pasar', en: 'Pass' } },
+    ],
+  },
+
+  saltarLaCola: {
+    id: 'saltarLaCola',
+    name: { es: 'Colarte', en: 'Queue-jump' },
+    text: {
+      es: 'Hay un fiestón empezando en otro sitio, y tendrías que irte ya.',
+      en: 'A big night is starting elsewhere, and you would have to go now.',
+    },
+    options: [
+      { id: 'colarse', name: { es: 'Irte ya', en: 'Go now' }, vp: 7, leaves: true },
+      { id: 'hacerCola', name: { es: 'Quedarte', en: 'Stay put' } },
+    ],
   },
 };

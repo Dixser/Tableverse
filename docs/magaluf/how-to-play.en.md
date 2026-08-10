@@ -27,7 +27,7 @@ phase, you are back for the Afterparty.
 | Number | What it means |
 |---|---|
 | **Intoxication** | How drunk you are right now. Resets every morning — but to your Hangover, not to zero. Never goes below zero. |
-| **Hangover** | Permanent damage. It only ever grows, and it sets the level your Intoxication starts at every remaining morning. |
+| **Hangover** | Where your Intoxication starts every remaining morning. Most cards only add to it, but a few let you sleep some off. Never goes below zero. |
 | **At risk** | Points earned today and not yet safe. |
 | **Banked** | Points that are yours permanently. This is what wins the game. |
 
@@ -35,15 +35,20 @@ Everyone's numbers are visible to everyone, all the time.
 
 ## 3. The Drinking Limit
 
-Each morning, one **Limit card** is drawn face-down. It is the same number for
-every player, and it is **the only hidden information in the game**. You know
-which numbers the day's deck contains, but not which one was drawn:
+Each morning, one **Limit card** is drawn face-down from the same five-card
+deck. It is the same number for every player, and it is **the only hidden
+information in the game**. You know which numbers the deck contains, but not
+which one was drawn:
 
-| Day | Possible limits |
-|---|---|
-| Friday | 26 / 27 / 28 / 29 |
-| Saturday | 20 / 23 / 26 / 29 |
-| Sunday | 14 / 18 / 22 / 26 |
+| Possible limits, every day |
+|---|
+| 16 / 19 / 22 / 25 / 28 |
+
+The deck does not change across the weekend. It used to shrink on Saturday and
+Sunday, which punished a bad Friday twice over: Hangover already carries
+forward as a floor, so a player who took a hard card early met a lower limit
+with capacity they never chose to spend. What makes later days matter is the
+points multiplier (section 8), not a smaller number.
 
 By default the limit is revealed at the **start of the Afterparty**. The host
 can change this to reveal it earlier, or never.
@@ -85,8 +90,16 @@ drinks for this phase.
 - Reaching the **maximum** sends you home automatically: closing time.
 - Withdrawing with **fewer than the minimum** drinks costs you the party
   pooper penalty.
-- The **last one standing** bonus goes to the last player to leave the phase,
-  and only if that player met the drink minimum.
+- The **last one standing** bonus goes to a player who **begins a round as the
+  only person left at the party**, and only if they met the drink minimum. It
+  is paid once per phase, and the phase carries on afterwards — you may keep
+  drinking alone.
+
+  Note what this means: becoming the last player *during* a round is not
+  enough. Everyone else went home ahead of you, so you have to take one more
+  turn on your own — and the Intoxication that comes with it — to reach the
+  start of the next round and collect. If the whole table hits closing time on
+  the same round, nobody was ever alone and nobody is paid.
 - Being thrown out by the bouncer, taken away by ambulance or arrested is not
   a withdrawal, and never costs the party pooper penalty.
 
@@ -166,11 +179,37 @@ the card. A few change the structure of the turn:
 - **House shot** — you drink one further Alcohol card.
 - **Bouncer** — you leave the phase immediately, with no penalty.
 - **You get lost** — you miss your next turn, but stay at the party.
-- **Puking** — −4 Intoxication now, **Hangover +3** permanently.
 - **Ambulance** — the most intoxicated player at the table is taken away:
-  −5 Intoxication, **Hangover +4**, and their phase ends.
-- **Pickpocketed / You wake up with nothing** — you lose all your items.
+  −5 Intoxication, **Hangover +3**, and their phase ends.
+- **You wake up with nothing** — you lose all your items.
 - **Dealer** — you receive a piece of contraband.
+
+### Cards that ask you a question
+
+Some Event cards have **two options printed on them**. When you turn one over,
+nothing happens until you pick a branch — and until you do, it is the only
+thing anyone at the table can do.
+
+These exist because every other card is pure outcome. A player who drew cheap
+drinks and expensive events had no lever at all, and the comeback was gone by
+Saturday. A choice does not take the luck away — you still do not pick the
+card — it just means the luck hands you a decision instead of a result.
+
+- **You feel it coming up** — throw up (−4 Intoxication, **Hangover +3**), or
+  hold it in (+2 Intoxication). The card that used to make this decision for
+  you.
+- **Last round** — sink it (+4 Intoxication), or promise them tomorrow
+  (**Hangover +2**). Cheap on Sunday night, expensive on Friday.
+- **Rough one** — sleep some off (**Hangover −2**, −3 points), or keep going
+  and take nothing. The only way in the game to reduce Hangover.
+- **Pickpocketed** — pay them off (−4 points), or lose everything you carry.
+- **The fifth-floor terrace** — go up (+8 points, +3 Intoxication), or stay
+  downstairs (+3 points).
+- **You are owed a favour** — take the cash (+3 points), or take a Kebab.
+- **Double or nothing** — drink one more Alcohol card at **double** points (at
+  its full Intoxication), or pass.
+- **Queue-jump** — go now for +7 points but **leave the phase immediately**,
+  forfeiting last one standing, or stay put.
 
 ## 11. Winning
 

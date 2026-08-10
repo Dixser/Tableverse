@@ -19,7 +19,7 @@ Nueve fases en total. Cada fase se juega por turnos en sentido horario; pero sol
 | Número | Qué significa |
 |---|---|
 | **Intoxicación** | Lo borracho que estás ahora mismo. Se reinicia cada mañana. Nunca baja de cero. |
-| **Resaca** | Daño permanente. Solo sube, y marca el nivel al que empieza tu Intoxicación cada mañana que te quede. |
+| **Resaca** | El nivel al que empieza tu Intoxicación cada mañana que te quede. Casi todas las cartas solo la suben, pero unas pocas te dejan dormir un poco. Nunca baja de cero. |
 | **En juego** | Puntos conseguidos durante la fiesta de hoy que todavía no están a salvo. |
 | **Banco** | Puntos tuyos para siempre. Esto es lo que decide la partida. |
 
@@ -27,15 +27,21 @@ Los números de todos son visibles para todos en todo momento.
 
 ## 3. El Límite de Consumo
 
-Cada mañana se roba una **carta de Límite** boca abajo. Es el mismo número
-para todos los jugadores y es **la única información oculta del juego**. Sabes
-qué números contiene la baraja del día, pero no cuál ha salido (valores provisionales):
+Cada mañana se roba una **carta de Límite** boca abajo de la misma baraja de
+cinco cartas. Es el mismo número para todos los jugadores y es **la única
+información oculta del juego**. Sabes qué números contiene la baraja, pero no
+cuál ha salido:
 
-| Día | Límites posibles |
-|---|---|
-| Viernes | 26 / 27 / 28 / 29 |
-| Sábado | 20 / 23 / 26 / 29 |
-| Domingo | 14 / 18 / 22 / 26 |
+| Límites posibles, todos los días |
+|---|
+| 16 / 19 / 22 / 25 / 28 |
+
+La baraja no cambia a lo largo del fin de semana. Antes se estrechaba el
+sábado y el domingo, y eso castigaba dos veces un mal viernes: la Resaca ya se
+arrastra como suelo, así que quien se comía una carta dura pronto llegaba a un
+límite más bajo con una capacidad que nunca eligió gastar. Lo que hace que los
+días finales importen es el multiplicador de puntos (sección 8), no un número
+más pequeño.
 
 Por defecto, el límite se revela **al empezar el After**. El anfitrión puede
 configurar que se revele antes, o que no se revele nunca.
@@ -77,8 +83,16 @@ como copas tuyas en esta fase.
 - Llegar al **máximo** te manda a casa automáticamente: cierran el local.
 - Retirarte con **menos copas que el mínimo** te cuesta la penalización por
   aguafiestas.
-- El bonus de **Último en Pie** es para el último jugador que abandona la
-  fase, y solo si ese jugador ha cumplido el mínimo de copas.
+- El bonus de **Último en Pie** es para quien **empiece una ronda siendo el
+  único que queda de fiesta**, y solo si ha cumplido el mínimo de copas. Se
+  paga una vez por fase, y la fase continúa después: puedes seguir bebiendo
+  solo.
+
+  Ojo a lo que significa: quedarte solo *a mitad* de ronda no basta. Los demás
+  se han ido antes que tú, así que tienes que jugar un turno más tú solo —con
+  la Intoxicación que eso conlleva— para llegar al principio de la siguiente
+  ronda y cobrarlo. Si toda la mesa llega al cierre en la misma ronda, nadie
+  ha estado solo y nadie cobra.
 - Que te eche el portero, que te lleve la ambulancia o que te detengan no
   cuenta como retirarse, y nunca cuesta la penalización por aguafiestas.
 
@@ -158,11 +172,36 @@ dicen en la carta. Algunos cambian la estructura del turno:
 - **Chupito de la casa** — bebes una carta de Alcohol más.
 - **Portero** — abandonas la fase inmediatamente, sin penalización.
 - **Te pierdes** — pierdes tu próximo turno, pero sigues de fiesta.
-- **Vomitona** — −4 de Intoxicación ahora, **Resaca +3** para siempre.
 - **Ambulancia** — se llevan al jugador más borracho de la mesa: −5 de
-  Intoxicación, **Resaca +4**, y se le acaba la fase.
-- **Te roban la cartera / Despiertas sin nada** — pierdes todos tus objetos.
+  Intoxicación, **Resaca +3**, y se le acaba la fase.
+- **Despiertas sin nada** — pierdes todos tus objetos.
 - **Camello** — recibes una pieza de contrabando.
+
+### Cartas que te hacen una pregunta
+
+Algunas cartas de Evento llevan **dos opciones impresas**. Al darle la vuelta
+no pasa nada hasta que eliges una — y hasta que lo hagas, es lo único que
+puede hacer nadie en la mesa.
+
+Existen porque el resto de cartas son puro resultado. Quien robaba copas
+baratas y eventos caros no tenía ninguna palanca, y la remontada estaba muerta
+el sábado. Elegir no quita la suerte —la carta sigue sin elegirla tú—, solo
+hace que la suerte te dé una decisión en vez de un resultado.
+
+- **Te sube** — vomitar (−4 de Intoxicación, **Resaca +3**) o aguantarte (+2
+  de Intoxicación). La carta que antes decidía por ti.
+- **Última ronda** — metértela (+4 de Intoxicación) o prometerles mañana
+  (**Resaca +2**). Barato el domingo por la noche, caro el viernes.
+- **Vas fino** — dormirla un rato (**Resaca −2**, −3 puntos) o seguir y no
+  llevarte nada. La única forma de bajar la Resaca en todo el juego.
+- **Te roban la cartera** — pagarles (−4 puntos) o perder todo lo que llevas.
+- **La terraza del quinto** — subir (+8 puntos, +3 de Intoxicación) o quedarte
+  abajo (+3 puntos).
+- **Te deben una** — cobrarla (+3 puntos) o pillar un Kebab.
+- **Doble o nada** — bebes una carta de Alcohol más al **doble** de puntos
+  (con toda su Intoxicación), o pasas.
+- **Colarte** — irte ya por +7 puntos pero **abandonando la fase**,
+  renunciando al Último en Pie, o quedarte donde estás.
 
 ## 11. Cómo se gana
 

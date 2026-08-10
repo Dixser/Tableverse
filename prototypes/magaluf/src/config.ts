@@ -85,13 +85,19 @@ export const defaultConfig: Config = {
    * The simulator was unambiguous here: lowering the limit does almost nothing
    * to the death rate, because a rational player simply drinks less. What
    * actually kills people is being wrong about the number while it is still
-   * face-down. Friday's deck is tight and predictable; Sunday's is wide, so a
-   * player estimating 20 may be facing 14 and not find out until the After.
+   * face-down.
+   *
+   * Feature 034 flattened the three decks into one for the whole weekend. The
+   * shrinking version punished a bad Friday twice over — Resaca already
+   * carries forward as a floor, so a player who took a hard card early met a
+   * lower limit with capacity they never chose to spend, on the day the 2.25×
+   * multiplier makes decisive. The arc is the multiplier's job. Kept as a
+   * per-day record so a sweep can still hand each day a different deck.
    */
   limitDecks: {
-    viernes: [26, 27, 28, 29],
-    sabado: [20, 23, 26, 29],
-    domingo: [14, 18, 22, 26],
+    viernes: [16, 19, 22, 25, 28],
+    sabado: [16, 19, 22, 25, 28],
+    domingo: [16, 19, 22, 25, 28],
   },
 
   dayVPMultiplier: [1, 1.5, 2.25],
@@ -143,7 +149,7 @@ export const defaultConfig: Config = {
       // capacity than the After's does. Its own low-value tier plus a thin VP
       // density is what stops the safest phase being the most profitable one.
       events: {
-        ligueTardeo: 3,
+        ligueTardeo: 2,
         fiestaTardeo: 2,
         peleaTardeo: 2,
         chungoTardeo: 2,
@@ -160,7 +166,11 @@ export const defaultConfig: Config = {
         camelloPastis: 2,
         camelloFarlopa: 1,
         cacheo: 1,
-        nada: 4,
+        // Choice cards, paid for out of `nada` and a Ligue.
+        resacon: 2,
+        invitacion: 1,
+        dobleONada: 1,
+        nada: 1,
       },
     },
 
@@ -186,18 +196,18 @@ export const defaultConfig: Config = {
       // start actually costing something — a bouncer can end your phase and
       // the first Redada appears.
       events: {
-        ligueNoche: 3,
+        ligueNoche: 2,
         fiestaNoche: 2,
         peleaNoche: 3,
         chungoNoche: 2,
         gorila: 2,
-        garrafonEvent: 3,
+        garrafonEvent: 2,
         karaoke: 2,
         barraLibre: 2,
         reyGuiri: 2,
         perdido: 2,
-        chupitoCasa: 3,
-        ronda: 3,
+        chupitoCasa: 2,
+        ronda: 2,
         vomitona: 2,
         ambulancia: 1,
         kebabEvent: 2,
@@ -207,7 +217,13 @@ export const defaultConfig: Config = {
         camelloFarlopa: 2,
         cacheo: 1,
         redada: 1,
-        nada: 1,
+        // Paid for by trimming the forced-drink cards: they are the ones that
+        // spend a player's capacity without asking, which is the complaint
+        // these cards exist to answer.
+        ultimaRonda: 2,
+        resacon: 1,
+        invitacion: 1,
+        dobleONada: 1,
       },
     },
 
@@ -232,7 +248,7 @@ export const defaultConfig: Config = {
       // cards that can end a weekend on their own. No `nada` — nothing in the
       // After is ever nothing.
       events: {
-        ligueAfter: 3,
+        ligueAfter: 2,
         fiestaAfter: 2,
         peleaAfter: 3,
         chungoAfter: 2,
@@ -243,17 +259,22 @@ export const defaultConfig: Config = {
         barraLibre: 2,
         reyGuiri: 3,
         perdido: 1,
-        chupitoCasa: 5,
-        ronda: 5,
-        garrafonEvent: 4,
+        chupitoCasa: 4,
+        ronda: 4,
+        garrafonEvent: 3,
         vomitona: 2,
         ambulancia: 2,
         kebabEvent: 1,
         camelloPorro: 2,
         camelloPastis: 2,
-        camelloFarlopa: 4,
+        camelloFarlopa: 3,
         cacheo: 1,
         redada: 2,
+        // Saltar la cola only lives here: cashing out and going home is only a
+        // real decision where leaving costs the biggest Último en Pie.
+        ultimaRonda: 2,
+        dobleONada: 1,
+        saltarLaCola: 2,
       },
     },
   },

@@ -122,17 +122,52 @@ export type EventId =
   | 'camelloFarlopa'
   | 'cacheo'
   | 'redada'
-  | 'nada';
+  | 'nada'
+  // Cards that ask a question instead of announcing an outcome. See EventCard's
+  // `options` and the table in `spec/features/034-magaluf-choices/spec.md`.
+  | 'ultimaRonda'
+  | 'resacon'
+  | 'invitacion'
+  | 'dobleONada'
+  | 'saltarLaCola';
 
-export interface EventCard {
-  id: EventId;
+/**
+ * Every id an option button can carry. Closed, like EventId, so a typo is a
+ * compile error rather than a missing translation discovered at the table.
+ */
+export type EventOptionId =
+  | 'vomitar'
+  | 'aguantar'
+  | 'pagarLaCuenta'
+  | 'perderTodo'
+  | 'subirALaTerraza'
+  | 'quedarseAbajo'
+  | 'unaMas'
+  | 'mananaLoPago'
+  | 'dormirla'
+  | 'seguirDeFiesta'
+  | 'cobrarla'
+  | 'pillarKebab'
+  | 'doblar'
+  | 'pasar'
+  | 'colarse'
+  | 'hacerCola';
+
+/**
+ * What a card — or one branch of a card — does.
+ *
+ * Split out from EventCard so both share one shape and one applier: a choice
+ * card's branches are ordinary card effects, and nothing is gained by giving
+ * them a second vocabulary.
+ */
+export interface EventEffects {
   /** VP to the drawing player. Negative is a loss. */
   vp?: number;
   /** Intoxication to the drawing player. */
   intox?: number;
   /** VP to every player still partying, including the drawer. */
   vpAll?: number;
-  /** Permanent Resaca inflicted. */
+  /** Resaca inflicted. Signed — a negative value sleeps some off. */
   resaca?: number;
   /** Intoxication removed before Resaca is applied. */
   relief?: number;
@@ -140,6 +175,36 @@ export interface EventCard {
   losesItems?: boolean;
   /** The item this card hands over. Printed on the card, never rolled for. */
   givesItem?: ItemId;
+
+  // --- Structural. Only ever set on an option. ---------------------------
+  /** Leaves the phase. Chosen, but not a withdrawal — no Aguafiestas penalty. */
+  leaves?: boolean;
+  /** Draws one extra alcohol card. Never draws an event: that would chain. */
+  extraDrink?: boolean;
+  /** Arms the Pastis doubler, so `extraDrink` lands at double VP. */
+  doubles?: boolean;
+  /** Loses the next turn. */
+  skips?: boolean;
+}
+
+export interface EventOption extends EventEffects {
+  /** i18n: `magaluf.eventOption.<id>`. */
+  id: EventOptionId;
+}
+
+export interface EventCard extends EventEffects {
+  id: EventId;
+  /**
+   * When present, the drawing player picks exactly one branch and **nothing on
+   * the card itself applies**.
+   *
+   * The reason these exist: every other card in the deck is pure outcome, so a
+   * player who drew cheap alcohol and expensive events had no lever at all and
+   * the comeback was arithmetically gone. A choice does not remove the luck —
+   * you still do not pick the card — it just means the luck hands you a
+   * decision rather than a result.
+   */
+  options?: readonly EventOption[];
 }
 
 /**
@@ -163,7 +228,15 @@ export const EVENTS: Record<EventId, EventCard> = {
   ligueNoche: { id: 'ligueNoche', vp: 4 },
   fiestaNoche: { id: 'fiestaNoche', vpAll: 2 },
   peleaNoche: { id: 'peleaNoche', vp: 4, intox: 2 },
-  chungoNoche: { id: 'chungoNoche', losesItems: true },
+  // Two penalties. Paying is the flat, boring, correct play when you are
+  // holding nothing — which is exactly when the old version did nothing at all.
+  chungoNoche: {
+    id: 'chungoNoche',
+    options: [
+      { id: 'pagarLaCuenta', vp: -4 },
+      { id: 'perderTodo', losesItems: true },
+    ],
+  },
   gorila: { id: 'gorila' },
   garrafonEvent: { id: 'garrafonEvent', intox: 3 },
 
@@ -173,7 +246,15 @@ export const EVENTS: Record<EventId, EventCard> = {
   peleaAfter: { id: 'peleaAfter', vp: 6, intox: 3 },
   chungoAfter: { id: 'chungoAfter', vp: -4, losesItems: true },
   soloVoyAMirar: { id: 'soloVoyAMirar', vp: 6 },
-  terraza: { id: 'terraza', vp: 8, intox: 3 },
+  // Two bonuses. The safe branch is genuinely worth taking when you are one
+  // drink under the limit, which is the whole point of offering it.
+  terraza: {
+    id: 'terraza',
+    options: [
+      { id: 'subirALaTerraza', vp: 8, intox: 3 },
+      { id: 'quedarseAbajo', vp: 3 },
+    ],
+  },
   comaEtilico: { id: 'comaEtilico', intox: 5 },
 
   // Shared across tiers
@@ -183,8 +264,21 @@ export const EVENTS: Record<EventId, EventCard> = {
   perdido: { id: 'perdido' },
   chupitoCasa: { id: 'chupitoCasa' },
   ronda: { id: 'ronda' },
-  vomitona: { id: 'vomitona', relief: 4, resaca: 3 },
-  ambulancia: { id: 'ambulancia', relief: 5, resaca: 4 },
+  // The card that started this. It used to hand you −4 intoxication and +3
+  // resaca whether you wanted the trade or not, which meant a lucky player
+  // banked the relief and an unlucky one carried the hangover to Sunday for
+  // nothing. Now you decide whether tonight's headroom is worth tomorrow's.
+  vomitona: {
+    id: 'vomitona',
+    options: [
+      { id: 'vomitar', relief: 4, resaca: 3 },
+      { id: 'aguantar', intox: 2 },
+    ],
+  },
+  // Resaca 3 rather than 4: this is the last source nobody chooses — it
+  // retargets to the drunkest seat, not the drawer — so it should also be the
+  // mildest now that every other source is either opt-in or self-inflicted.
+  ambulancia: { id: 'ambulancia', relief: 5, resaca: 3 },
   kebabEvent: { id: 'kebabEvent', givesItem: 'kebab' },
   aguaEvent: { id: 'aguaEvent', givesItem: 'botella' },
   redbullEvent: { id: 'redbullEvent', givesItem: 'redbull' },
@@ -194,4 +288,64 @@ export const EVENTS: Record<EventId, EventCard> = {
   cacheo: { id: 'cacheo', vp: -3 },
   redada: { id: 'redada' },
   nada: { id: 'nada' },
+
+  // --- Choice cards --------------------------------------------------------
+
+  /**
+   * Two penalties, and the sharpest card in the set: resaca is expensive on
+   * Friday and nearly free on Sunday night, so the same card asks a different
+   * question depending on how much weekend is left to ruin.
+   */
+  ultimaRonda: {
+    id: 'ultimaRonda',
+    options: [
+      { id: 'unaMas', intox: 4 },
+      { id: 'mananaLoPago', resaca: 2 },
+    ],
+  },
+
+  /** The resaca sink. Buying your way out of a bad Friday costs points. */
+  resacon: {
+    id: 'resacon',
+    options: [
+      { id: 'dormirla', resaca: -2, vp: -3 },
+      { id: 'seguirDeFiesta' },
+    ],
+  },
+
+  /** Two bonuses: cash now, or something to spend later. */
+  invitacion: {
+    id: 'invitacion',
+    options: [
+      { id: 'cobrarla', vp: 3 },
+      { id: 'pillarKebab', givesItem: 'kebab' },
+    ],
+  },
+
+  /**
+   * Press your luck. Reuses the Pastis doubler rather than inventing a second
+   * "double this drink" path, so the extra card lands at double VP and full
+   * intoxication — you are betting capacity you may not have.
+   */
+  dobleONada: {
+    id: 'dobleONada',
+    options: [
+      { id: 'doblar', extraDrink: true, doubles: true },
+      { id: 'pasar' },
+    ],
+  },
+
+  /** Take the money and go home — forfeiting Último en Pie to do it. */
+  saltarLaCola: {
+    id: 'saltarLaCola',
+    options: [
+      { id: 'colarse', vp: 7, leaves: true },
+      { id: 'hacerCola' },
+    ],
+  },
 };
+
+/** The branches this card offers, or null when it simply happens to you. */
+export function eventOptions(id: EventId): readonly EventOption[] | null {
+  return EVENTS[id].options ?? null;
+}

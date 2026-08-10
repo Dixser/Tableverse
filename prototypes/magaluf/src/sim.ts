@@ -11,7 +11,7 @@
 
 import { DAY_IDS } from './cards.ts';
 import { peakJumpExpectedValue, poolChance } from './balconing.ts';
-import { POLICIES, POLICY_NAMES, chooseAction } from './bots.ts';
+import { POLICIES, POLICY_NAMES, chooseAction, chooseOption } from './bots.ts';
 import type { Config } from './config.ts';
 import { cloneConfig, defaultConfig } from './config.ts';
 import { applyAction, createGame, currentPlayer, standings } from './engine.ts';
@@ -79,7 +79,9 @@ export function playGame(config: Config, seed: number, policies: string[]): Game
     if (!player) break;
 
     const policy = POLICIES[policies[player.id]!]!;
-    applyAction(state, config, chooseAction(state, config, player, policy));
+    applyAction(state, config, chooseAction(state, config, player, policy), (s, p, card) =>
+      chooseOption(s, config, p, policy, card),
+    );
   }
 
   // What was on the table at each night's check: banked by survivors, forfeited
