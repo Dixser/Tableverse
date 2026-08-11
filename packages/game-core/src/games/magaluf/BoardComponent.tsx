@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BoardProps } from '../../types.js';
 import type { ItemId } from './cards.js';
@@ -12,7 +11,6 @@ import { DrawnCards } from './DrawnCards.js';
 import { EventChoicePanel } from './EventChoicePanel.js';
 import { PhaseHeader } from './PhaseHeader.js';
 import { PlayerPanel } from './PlayerPanel.js';
-import { useJumpQueue } from './useJumpQueue.js';
 import styles from './BoardComponent.module.css';
 
 /**
@@ -26,6 +24,9 @@ import styles from './BoardComponent.module.css';
  *
  * - **No win/loss or standings UI.** The platform's GameoverBanner owns both,
  *   and since feature 033 it renders the final table from `endIf`'s standings.
+ *   It needs no holding back during the last night's balcony either: the
+ *   engine keeps `finished` false until the table has watched every jump, so
+ *   the banner cannot arrive early and `onRevealPending` is not used here.
  * - **No round-confirm UI.** GameMount renders RoundConfirmBanner for every
  *   game; this one just goes quiet behind it while a gate is open.
  *
@@ -38,7 +39,6 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
   playerID,
   isActive,
   playerNames,
-  onRevealPending,
 }) => {
   const { t } = useTranslation();
 
@@ -46,24 +46,11 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
   // The board treats that as "no information" and never reconstructs it.
   const limit = G.limit === HIDDEN_LIMIT ? null : G.limit;
 
-  const jumps = useJumpQueue(G.jumps);
+  // Which jump the *table* is watching, and which beat of it. Read straight
+  // from G rather than paced per-viewer, so nobody is ever a jump ahead of
+  // anybody else -- see BalconyOverlay.
+  const jump = G.balcony ? G.jumps[G.balcony.index] ?? null : null;
 
-  /**
-   * Hold the gameover banner while this viewer still has a jump to watch.
-   *
-   * The weekend's last balconing roll and `endIf` land on the same tick, so
-   * without this the winner is announced over the top of the die that decides
-   * whether they are the winner. The cleanup reports `false` so the banner
-   * cannot be stranded if the board unmounts mid-reveal.
-   *
-   * Depends on the boolean, not on the jump record: advancing from one jump
-   * straight to another must not flicker the banner on between them.
-   */
-  const revealPending = jumps.current !== null;
-  useEffect(() => {
-    onRevealPending?.(revealPending);
-    return () => onRevealPending?.(false);
-  }, [revealPending, onRevealPending]);
   /**
    * Falls back to the seat, and qualifies a name two people are both using.
    *
@@ -87,6 +74,10 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
     isActive &&
     playerID != null &&
     G.roundConfirm === null &&
+    // The night is over and the engine will refuse a party move anyway; the
+    // seat that happened to be up when the venue closed must not be left
+    // holding a live action bar behind the balcony overlay.
+    G.balcony === null &&
     // Either it is your turn, or you owe a reveal -- which is only ever true on
     // your own turn anyway, but stating both keeps the two ideas separate.
     (G.turnSeatID === playerID || owesReveal);
@@ -154,13 +145,17 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
         )
       )}
 
-      {jumps.current && (
+      {jump && G.balcony && (
         <BalconyOverlay
-          jump={jumps.current}
-          jumperName={nameFor(jumps.current.seatID)}
+          jump={jump}
+          jumperName={nameFor(jump.seatID)}
           settings={G.settings}
-          onAdvance={jumps.advance}
-          onSkip={jumps.skipAll}
+          revealed={G.balcony.revealed}
+          mine={playerID != null && jump.seatID === playerID}
+          canSkip={playerID != null && G.hostPlayerID === playerID}
+          onJump={() => moves.revealJump?.()}
+          onContinue={() => moves.advanceJump?.()}
+          onSkip={() => moves.skipBalcony?.()}
         />
       )}
     </div>

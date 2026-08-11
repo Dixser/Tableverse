@@ -62,7 +62,12 @@ export function ActionBar({
           data-testid={`use-${item}`}
           onClick={() => onUseItem(item)}
         >
-          {t('magaluf.board.use', { item: t(`magaluf.item.${item}`) })}
+          {t('magaluf.board.use', { item: t(`magaluf.item.${item}`) })}{' '}
+          {/* The full rules live on the player panel's chip; a button you are
+              about to press only needs the one number that decides it. */}
+          <span className={styles.effect}>
+            {t('magaluf.board.itemEffect', { effect: t(`magaluf.itemShort.${item}`) })}
+          </span>
         </button>
       ))}
     </div>

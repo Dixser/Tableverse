@@ -511,6 +511,22 @@
       "pastis": "Pastis",
       "farlopa": "Farlopa"
     },
+    "itemDesc": {
+      "kebab": "Kebab — para asentar el estómago. Quita 3 de Intoxicación.",
+      "botella": "Botella de agua — quita 2 de Intoxicación.",
+      "redbull": "Red Bull — miras el límite de hoy. Solo lo ves tú, y solo hasta que acabe el día.",
+      "porro": "Porro — te saltas el turno sin beber y sin retirarte. Contrabando: los cacheos cuestan puntos y las redadas, el calabozo.",
+      "pastis": "Pastis — tu próxima copa vale el doble de puntos. Contrabando: los cacheos cuestan puntos y las redadas, el calabozo.",
+      "farlopa": "Farlopa — bebes una copa extra a mitad de Intoxicación y te llevas 3 de Resaca. Contrabando: los cacheos cuestan puntos y las redadas, el calabozo."
+    },
+    "itemShort": {
+      "kebab": "−3 int",
+      "botella": "−2 int",
+      "redbull": "ver límite",
+      "porro": "pasar turno",
+      "pastis": "×2 PV",
+      "farlopa": "+1 copa, +3 resaca"
+    },
     "phase": {
       "tardeo": "Tardeo",
       "noche": "Noche",
@@ -619,6 +635,7 @@
       "drink": "Beber",
       "withdraw": "Retirarse",
       "use": "Usar {{item}}",
+      "itemEffect": "({{effect}})",
       "banked": "Banco",
       "atRisk": "En juego",
       "intoxication": "Intoxicación",
@@ -627,6 +644,7 @@
       "limitBetween": "Límite: entre {{min}} y {{max}}",
       "drinks_one": "{{count}} copa",
       "drinks_other": "{{count}} copas",
+      "phaseDrinks": "{{min}}–{{max}} copas",
       "dayMultiplier": "Puntos x{{multiplier}}",
       "you": "{{name}} (tú)",
       "statusOut": "Fuera",
@@ -638,6 +656,7 @@
       "meterAria": "Intoxicación {{intox}}, resaca {{resaca}}",
       "nothingDrawn": "Aún no ha bebido nadie en esta fase.",
       "drewCaption": "{{name}} ha bebido:",
+      "pouredCaption": "La carta sirve:",
       "balconyTitle": "Al balcón",
       "balconyBody": "{{name}} está {{over}} por encima del límite. Solo queda saber si llega a la piscina.",
       "balconyNumbers": "Intoxicación {{intox}} · Límite {{limit}}",
@@ -654,6 +673,8 @@
       "balconySkip": "Omitir el resto",
       "balconyTarget": "Tira 1d{{die}} · necesitas más de {{over}}",
       "balconyRolled": "Sale un {{roll}}",
+      "balconyWaitingJump": "{{name}} está en la barandilla…",
+      "balconyWaitingContinue": "Esperando a {{name}}…",
       "revealEvent": "Revelar evento",
       "eventFaceDown": "Evento boca abajo",
       "chooseOption": "Tú decides:",

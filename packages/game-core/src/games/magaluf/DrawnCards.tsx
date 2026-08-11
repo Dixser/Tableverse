@@ -29,7 +29,10 @@ const PLAYER_PARAM_KEYS = ['actor', 'winners'] as const;
  *
  * Reads `G.lastDraw` rather than the log tail: a Ronda appends one entry per
  * player and a Chupito de la casa chains a second for the same seat, so the
- * last log entry is not reliably the draw that caused them.
+ * last log entry is not reliably the draw that caused them. Those knock-on
+ * drinks now come back as `lastDraw.pours` and are dealt out below the pair
+ * that caused them, so "everyone drinks" arrives as cards rather than as
+ * intoxication that has already moved.
  */
 export function DrawnCards({ lastDraw, drawerName, eventPending, nameFor }: DrawnCardsProps) {
   const { t } = useTranslation();
@@ -81,6 +84,28 @@ export function DrawnCards({ lastDraw, drawerName, eventPending, nameFor }: Draw
           )
         )}
       </div>
+      {/*
+        What the card poured on top: a Ronda's whole round, a Chupito de la
+        casa's one extra. Below the cards that caused them and visibly smaller,
+        because the drawn pair is still the headline -- these are its knock-on.
+      */}
+      {lastDraw.pours.length > 0 && (
+        <div className={styles.poured} data-testid="poured-drinks">
+          <span className={styles.caption}>{t('magaluf.board.pouredCaption')}</span>
+          <div className={styles.cards}>
+            {lastDraw.pours.map((pour, index) => (
+              // Index in the key because one card can pour the same drink on
+              // the same seat twice -- a Ronda into a Chupito de la casa.
+              <div key={`${pour.seatID}-${pour.alcohol}-${index}`} className={styles.pour}>
+                <span className={styles.pourName} data-testid={`poured-${pour.seatID}`}>
+                  {nameFor(pour.seatID)}
+                </span>
+                <CardTile kind="alcohol" id={pour.alcohol} intox={pour.intox} vp={pour.vp} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {outcomeText && (
         <span className={styles.outcome} data-testid="event-outcome">
           {outcomeText}

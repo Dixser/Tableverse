@@ -87,16 +87,35 @@ export function PlayerPanel({
         </span>
       </div>
 
+      {/*
+        Every chip carries its own rules text. The items are the only part of
+        the board whose effect is not written on something the table can read
+        -- the alcohol and the events both arrive as a card with their numbers
+        on it, and an item just sits here as a noun until you use it.
+
+        The chip is a button purely so the description can be reached: hover
+        covers a mouse, `:focus-within` covers the keyboard, and a tap focuses
+        the button, which is the only hover a phone has.
+      */}
       <ul className={styles.items}>
-        {player.items.map((item: ItemId, index) => (
-          <li
-            key={`${item}-${index}`}
-            className={isContraband(item) ? styles.contraband : styles.item}
-            data-testid={`item-${seatID}-${item}`}
-          >
-            {t(`magaluf.item.${item}`)}
-          </li>
-        ))}
+        {player.items.map((item: ItemId, index) => {
+          const tipID = `item-tip-${seatID}-${item}-${index}`;
+          return (
+            <li key={`${item}-${index}`} className={styles.itemSlot}>
+              <button
+                type="button"
+                className={isContraband(item) ? styles.contraband : styles.item}
+                data-testid={`item-${seatID}-${item}`}
+                aria-describedby={tipID}
+              >
+                {t(`magaluf.item.${item}`)}
+              </button>
+              <span role="tooltip" id={tipID} className={styles.tip}>
+                {t(`magaluf.itemDesc.${item}`)}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

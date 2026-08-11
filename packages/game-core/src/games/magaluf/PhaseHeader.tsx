@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { DAY_IDS, PHASE_IDS } from './cards.js';
+import { PHASE_RULES } from './constants.js';
 import { limitRange } from './limitScale.js';
 import styles from './PhaseHeader.module.css';
 
@@ -15,6 +16,10 @@ export interface PhaseHeaderProps {
 export function PhaseHeader({ day, phase, dayMultiplier, limitShift, limit }: PhaseHeaderProps) {
   const { t } = useTranslation();
   const band = limitRange(limitShift);
+  // The two numbers that decide when you may leave and when the venue throws
+  // you out. They are printed on the phase table in the rules and were the one
+  // thing a player had to remember rather than read.
+  const rules = PHASE_RULES[PHASE_IDS[phase] ?? 'tardeo'];
 
   return (
     <header className={styles.header}>
@@ -26,7 +31,10 @@ export function PhaseHeader({ day, phase, dayMultiplier, limitShift, limit }: Ph
         data-phase={PHASE_IDS[phase]}
         data-testid="phase-chip"
       >
-        {t(`magaluf.phase.${PHASE_IDS[phase]}`)}
+        <span>{t(`magaluf.phase.${PHASE_IDS[phase]}`)}</span>
+        <span className={styles.drinks} data-testid="phase-drinks-chip">
+          ({t('magaluf.board.phaseDrinks', { min: rules.minDrinks, max: rules.maxDrinks })})
+        </span>
       </span>
       <span className={styles.chip}>
         {t('magaluf.board.dayMultiplier', { multiplier: dayMultiplier })}

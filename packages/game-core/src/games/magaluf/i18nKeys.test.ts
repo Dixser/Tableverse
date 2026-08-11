@@ -40,6 +40,11 @@ function expectedCardKeys(): string[] {
       (card.options ?? []).map((option) => `magaluf.eventOption.${option.id}`),
     ),
     ...ITEM_IDS.map((id) => `magaluf.item.${id}`),
+    // An item is the only card-like thing whose effect is not printed where
+    // the table can read it, so its rules text and the action bar's one-line
+    // reminder are as load-bearing as the name itself.
+    ...ITEM_IDS.map((id) => `magaluf.itemDesc.${id}`),
+    ...ITEM_IDS.map((id) => `magaluf.itemShort.${id}`),
     ...PHASE_IDS.map((id) => `magaluf.phase.${id}`),
     ...DAY_IDS.map((id) => `magaluf.day.${id}`),
   ];
@@ -64,6 +69,16 @@ function keysFromAPlayedMatch(): Set<string> {
       for (let guard = 0; guard < 6000; guard++) {
         const G = client.store.getState().G;
         if (G.finished) break;
+
+        // The night's jumps are watched by the seat that made them, and until
+        // they are the table is at a balcony with no other move available.
+        if (G.balcony) {
+          const jumper = G.jumps[G.balcony.index]!.seatID;
+          client.updatePlayerID(jumper);
+          if (G.balcony.revealed) client.moves.advanceJump!();
+          else client.moves.revealJump!();
+          continue;
+        }
 
         // Gates have to be cleared or the weekend stalls at the first venue
         // change and most of the key surface is never reached.

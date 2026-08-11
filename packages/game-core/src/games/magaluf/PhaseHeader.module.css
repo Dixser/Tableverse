@@ -22,6 +22,8 @@
 /* Keyed off a data attribute rather than three classes, so the phase id in
    the DOM and the colour cannot drift apart. */
 .phase {
+  display: flex;
+  gap: 5px;
   font-weight: 600;
   color: var(--phase-color);
   border-color: var(--phase-color);
@@ -38,6 +40,12 @@
 
 .phase[data-phase='after'] {
   --phase-color: var(--magaluf-after);
+}
+
+/* Sits against the phase chip and reads as part of it: these two numbers only
+   mean anything in the context of the venue they belong to. */
+.drinks {
+  font-variant-numeric: tabular-nums;
 }
 
 .limit {

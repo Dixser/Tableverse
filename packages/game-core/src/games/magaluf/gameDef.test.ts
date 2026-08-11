@@ -45,7 +45,12 @@ function makeClient(
   return Client({ game, numPlayers }) as unknown as {
     updatePlayerID: (id: string) => void;
     moves: AnyMoves;
-    store: { getState: () => { G: MagalufG; ctx: { currentPlayer: string; gameover?: unknown } } };
+    store: {
+      getState: () => {
+        G: MagalufG;
+        ctx: { currentPlayer: string; phase?: string; gameover?: unknown };
+      };
+    };
   };
 }
 
@@ -86,11 +91,28 @@ function answerChoice(client: TestClient, policy: OptionPolicy): void {
 }
 
 /**
+ * Plays out the balcony the table is stood at, one beat per call.
+ *
+ * Every driver needs this for the same reason they need `answerChoice`: while
+ * `G.balcony` is set the only moves in the game belong to the jumper, so a
+ * driver that only knows drink/withdraw would spin until its guard ran out.
+ * Returns false when there is no balcony to play.
+ */
+function watchBalcony(client: TestClient): boolean {
+  const g = G(client);
+  if (!g.balcony) return false;
+  const jumper = g.jumps[g.balcony.index]!.seatID;
+  if (g.balcony.revealed) actAs(client, jumper).advanceJump!();
+  else actAs(client, jumper).revealJump!();
+  return true;
+}
+
+/**
  * Drives the table until `stop` is true, or the weekend ends.
  *
- * Clears round-confirm gates automatically. Tests that care about the gate
- * itself drive it by hand instead; everything else wants to look through it at
- * the game underneath.
+ * Clears round-confirm gates and balconies automatically. Tests that care about
+ * either drive them by hand instead; everything else wants to look through them
+ * at the game underneath.
  */
 function play(
   client: TestClient,
@@ -111,6 +133,8 @@ function play(
       answerChoice(client, pickOption);
       continue;
     }
+
+    if (watchBalcony(client)) continue;
 
     if (g.roundConfirm) {
       const waitingOn = g.roundConfirm.pendingSeatIDs.find(
@@ -139,7 +163,12 @@ function drinkAndReveal(client: TestClient, seat: string): void {
   if (pending) actAs(client, pending.seatID).revealEvent!();
 }
 
-/** Plays until a gate opens, leaving it un-confirmed for the test to inspect. */
+/**
+ * Plays until a gate opens, leaving it un-confirmed for the test to inspect.
+ *
+ * Walks any balcony on the way, because a night with a jump in it does not open
+ * its gate until the table has watched the last die.
+ */
 function playToGate(
   client: TestClient,
   choose: (g: MagalufG, seat: string) => 'drink' | 'withdraw' = alwaysWithdraw,
@@ -156,6 +185,7 @@ function playToGate(
       answerChoice(client, pickOption);
       continue;
     }
+    if (watchBalcony(client)) continue;
     const seat = g.turnSeatID;
     actAs(client, seat)[choose(g, seat)]!();
   }
@@ -216,18 +246,134 @@ describe('magaluf gameDef', () => {
       expect(g.finished).toBe(true);
     });
 
-    it('rotates which seat opens each phase', () => {
+  });
+
+  describe('who opens the next one', () => {
+    /** The seat that opened Friday's Tardeo under `seed`. */
+    const firstOpener = (seed: string) => G(makeClient(3, () => {}, seed)).turnSeatID;
+
+    it('draws the very first opener by lot rather than seating seat 0 (AC)', () => {
+      const seeds = Array.from({ length: 40 }, (_, i) => `opener-seed-${i}`);
+      const openers = new Set(seeds.map(firstOpener));
+
+      // Every seat can open the weekend, and no seat is the default.
+      expect(openers).toEqual(new Set(['0', '1', '2']));
+    });
+
+    it('draws the same opener every time a seed is replayed', () => {
+      // Not a nicety: the server rebuilds a match by replaying its move log, so
+      // an opener drawn outside the seeded Rng would desynchronise on resume.
+      expect(firstOpener('replay-me')).toBe(firstOpener('replay-me'));
+    });
+
+    it('leaves the first opener at the head of the lap it anchors', () => {
+      const client = makeClient(3, () => {}, 'opener-seed-3');
+      const g = G(client);
+      expect(g.activeSeatIDs[g.roundAnchor]).toBe(g.turnSeatID);
+      expect(client.store.getState().ctx.currentPlayer).toBe(g.turnSeatID);
+    });
+
+    /** The seat the venue rule says should lead off, read from a live gate. */
+    function expectedVenueOpener(g: MagalufG): string {
+      const alive = g.activeSeatIDs.filter((id) => g.players[id]!.status !== 'dead');
+      const lastOut = alive.reduce((a, b) =>
+        g.players[b]!.withdrawSeq > g.players[a]!.withdrawSeq ? b : a,
+      );
+      const seats = g.activeSeatIDs;
+      for (let step = 1; step <= seats.length; step++) {
+        const id = seats[(seats.indexOf(lastOut) + step) % seats.length]!;
+        if (g.players[id]!.status !== 'dead') return id;
+      }
+      throw new Error('nobody alive to open');
+    }
+
+    it('opens the next venue on the seat after whoever was last out', () => {
+      // Seat 1 hangs on for a second drink, so the table does not simply file
+      // out in turn order and the last one standing is somebody in the middle.
       const client = makeClient(3);
-      const openers: string[] = [G(client).turnSeatID];
-      let phase = 0;
+      playToGate(client, (g, s) =>
+        s === '1' && g.players[s]!.drinksThisPhase < 2 ? 'drink' : 'withdraw',
+      );
+
+      const atGate = G(client);
+      expect(atGate.pendingAdvance?.kind).toBe('phase');
+      const expected = expectedVenueOpener(atGate);
+
+      for (const id of atGate.roundConfirm!.pendingSeatIDs) actAs(client, id).confirmRoundReady!();
+      expect(G(client).turnSeatID).toBe(expected);
+      // And the lap boundary moved with it, or Ultimo en Pie would be measured
+      // against a seat that is not the one who started the round.
+      expect(G(client).activeSeatIDs[G(client).roundAnchor]).toBe(expected);
+    });
+
+    /**
+     * The rule's blind spot, pinned deliberately rather than left to be
+     * rediscovered in a playtest: when everybody leaves on their own turn the
+     * last one out is always the seat *before* the opener, so the lead comes
+     * straight back round to where it started and never moves all weekend.
+     */
+    it('leaves the lead where it is when the whole table walks out in turn order', () => {
+      const client = makeClient(3);
+      const openers = new Set<string>([G(client).turnSeatID]);
+      let phase = G(client).phase;
       play(client, alwaysWithdraw, (g) => {
         if (g.phase !== phase) {
           phase = g.phase;
-          openers.push(g.turnSeatID);
+          openers.add(g.turnSeatID);
         }
-        return openers.length >= 3;
+        return g.day > 0;
       });
-      expect(new Set(openers).size).toBeGreaterThan(1);
+      expect([...openers]).toEqual(['0']);
+    });
+
+    it('steps over a dead seat, but never over a merely withdrawn one', () => {
+      // Seat 0 starts Friday nine over a limit of 3 and cannot roll out of it.
+      // Seat 2 is handed a lead it can never be furthest behind on, so Saturday
+      // opens on seat 1 and the walk from the last out has to cross the corpse.
+      const client = makeClient(3, (g) => {
+        g.limit = 3;
+        g.players['0']!.resaca = 9;
+        g.players['0']!.intox = 9;
+        g.players['2']!.bankedVP = 50;
+      });
+
+      play(client, alwaysWithdraw, (g) => g.day === 1 && g.roundConfirm === null);
+      const saturday = G(client);
+      expect(saturday.players['0']!.status).toBe('dead');
+      expect(saturday.turnSeatID).toBe('1');
+
+      // Seat 1 leads, seat 2 follows it out, so the seat after the last out is
+      // the dead one -- and every living seat is 'withdrawn' at that moment.
+      playToGate(client, alwaysWithdraw);
+      const atGate = G(client);
+      expect(atGate.players['2']!.withdrawSeq).toBeGreaterThan(atGate.players['1']!.withdrawSeq);
+
+      for (const id of atGate.roundConfirm!.pendingSeatIDs) actAs(client, id).confirmRoundReady!();
+      expect(G(client).turnSeatID).toBe('1');
+    });
+
+    it('hands a new day to the seat furthest behind on banked points', () => {
+      const client = makeClient(3, (g) => {
+        g.players['0']!.bankedVP = 40;
+        g.players['1']!.bankedVP = 10;
+        g.players['2']!.bankedVP = 25;
+      });
+      // Nobody drinks, so the only thing that moves a score is the identical
+      // aguafiestas penalty each seat takes -- the order survives the night.
+      play(client, alwaysWithdraw, (g) => g.day === 1 && g.roundConfirm === null);
+
+      expect(G(client).day).toBe(1);
+      expect(G(client).turnSeatID).toBe('1');
+    });
+
+    it('breaks a tie on banked points by seat order', () => {
+      const client = makeClient(3);
+      play(client, alwaysWithdraw, (g) => g.day === 1 && g.roundConfirm === null);
+
+      const g = G(client);
+      const scores = g.activeSeatIDs.map((id) => g.players[id]!.bankedVP);
+      expect(new Set(scores).size).toBe(1);
+      expect(g.turnSeatID).toBe('0');
     });
   });
 
@@ -288,10 +434,14 @@ describe('magaluf gameDef', () => {
       const client = makeClient(3);
       const cap = PHASE_RULES.tardeo.maxDrinks;
       const seat = G(client).turnSeatID;
-      // The cap is only enforced once the event is turned over, so wait for a
-      // settled state rather than catching the player mid-draw.
+      // The cap is only enforced once the event is done with -- turned over,
+      // and answered if it asked anything -- so wait for a settled state rather
+      // than catching the player mid-draw.
       play(client, (g, s) => (s === seat ? 'drink' : 'withdraw'), (g) =>
-        (g.pendingEvent === null && g.players[seat]!.drinksThisPhase >= cap) || g.phase !== 0,
+        (g.pendingEvent === null &&
+          g.pendingChoice === null &&
+          g.players[seat]!.drinksThisPhase >= cap) ||
+        g.phase !== 0,
       );
       const player = G(client).players[seat]!;
       if (G(client).phase === 0) expect(player.status).not.toBe('partying');
@@ -310,6 +460,7 @@ describe('magaluf gameDef', () => {
         alcohol: 'pinta',
         event: null,
         outcome: null,
+        pours: [],
       });
 
       actAs(client, seat).revealEvent!();
@@ -319,6 +470,7 @@ describe('magaluf gameDef', () => {
         alcohol: 'pinta',
         event: 'foto',
         outcome: null,
+        pours: [],
       });
     });
 
@@ -327,16 +479,64 @@ describe('magaluf gameDef', () => {
       const seat = G(client).turnSeatID;
       drinkAndReveal(client, seat);
 
-      expect(G(client).lastDraw).toEqual({
-        seatID: seat,
-        alcohol: 'pinta',
-        event: 'ronda',
-        outcome: null,
-      });
-      // The ronda really did pour for everyone; it just did not claim the reveal.
+      // The reveal still belongs to the pinta the drawer chose -- the round is
+      // dealt out beside it rather than overwriting it.
+      const draw = G(client).lastDraw!;
+      expect(draw.seatID).toBe(seat);
+      expect(draw.alcohol).toBe('pinta');
+      expect(draw.event).toBe('ronda');
+
+      // And the round itself is face-up: one card per seat still partying, with
+      // the numbers each of them actually took.
+      expect(draw.pours).toEqual(
+        G(client).activeSeatIDs.map((id) => ({ seatID: id, alcohol: 'cana', intox: 1, vp: 1 })),
+      );
       for (const id of G(client).activeSeatIDs) {
         expect(G(client).players[id]!.drinksThisPhase).toBeGreaterThan(0);
       }
+    });
+
+    it('deals a chupito de la casa face-up too, on the drawer alone', () => {
+      const client = makeClient(3, (g) => stack(g, ['pinta', 'cana'], ['chupitoCasa']));
+      const seat = G(client).turnSeatID;
+      drinkAndReveal(client, seat);
+
+      expect(G(client).lastDraw?.pours).toEqual([
+        { seatID: seat, alcohol: 'cana', intox: 1, vp: 1 },
+      ]);
+    });
+
+    it('records what each seat really took, not what the card prints', () => {
+      // An armed Pastis doubles the next drink's points, and a drink somebody
+      // bought you is still a drink. The tile has to say 2, not the printed 1.
+      const client = makeClient(3, (g) => {
+        stack(g, ['pinta', 'cana', 'cana', 'cana'], ['ronda']);
+        g.players[g.activeSeatIDs.find((id) => id !== g.turnSeatID)!]!.pastisArmed = true;
+      });
+      const seat = G(client).turnSeatID;
+      const armed = G(client).activeSeatIDs.find((id) => id !== seat)!;
+      drinkAndReveal(client, seat);
+
+      const pours = G(client).lastDraw!.pours;
+      expect(pours.find((p) => p.seatID === armed)).toEqual({
+        seatID: armed,
+        alcohol: 'cana',
+        intox: 1,
+        vp: 2,
+      });
+      expect(pours.find((p) => p.seatID === seat)?.vp).toBe(1);
+    });
+
+    it('clears the round with the draw it belonged to', () => {
+      const client = makeClient(3, (g) => stack(g, ['pinta', 'cana', 'cana', 'cana'], ['ronda']));
+      const seat = G(client).turnSeatID;
+      drinkAndReveal(client, seat);
+      expect(G(client).lastDraw!.pours.length).toBeGreaterThan(0);
+
+      // The next ordinary draw puts its own card on the table; the round that
+      // came with the previous one must not still be sitting under it.
+      actAs(client, G(client).turnSeatID).drink!();
+      expect(G(client).lastDraw!.pours).toEqual([]);
     });
 
     it('clears lastDraw when a new phase opens', () => {
@@ -1316,9 +1516,9 @@ describe('magaluf gameDef', () => {
       expect(g.players[g.turnSeatID]!.status).toBe('partying');
     });
 
-    it('records the balconing rolls before opening the day gate (AC25)', () => {
+    it('watches the balconing rolls out before opening the day gate (AC25)', () => {
       // Limit 0 makes any drink fatal, so the night is guaranteed to produce a
-      // jump the gate must already be able to show.
+      // jump the table must be walked through first.
       const client = makeClient(3, (g) => {
         g.limit = 0;
       });
@@ -1327,7 +1527,7 @@ describe('magaluf gameDef', () => {
       );
       // Walk through the venue gates to reach the end of the night.
       let guard = 0;
-      while (G(client).pendingAdvance?.kind !== 'day' && ++guard < 200) {
+      while (G(client).balcony === null && ++guard < 200) {
         const g = G(client);
         if (g.roundConfirm) {
           const waiting = g.roundConfirm.pendingSeatIDs.find(
@@ -1339,9 +1539,19 @@ describe('magaluf gameDef', () => {
         actAs(client, g.turnSeatID).withdraw!();
       }
 
+      // The night is resolved -- the rolls are recorded -- but nothing has
+      // moved on: the table is stood at the balcony, not at tomorrow's gate.
+      const atBalcony = G(client);
+      expect(atBalcony.jumps.length).toBeGreaterThan(0);
+      expect(atBalcony.balcony).toEqual({ index: 0, revealed: false });
+      expect(atBalcony.roundConfirm).toBeNull();
+      expect(atBalcony.pendingAdvance).toBeNull();
+
+      for (let i = 0; i < 40 && watchBalcony(client); i++);
+
       const g = G(client);
+      expect(g.balcony).toBeNull();
       expect(g.pendingAdvance).toEqual({ kind: 'day', next: 1 });
-      expect(g.jumps.length).toBeGreaterThan(0);
       expect(g.roundConfirm).not.toBeNull();
     });
 
@@ -1354,8 +1564,12 @@ describe('magaluf gameDef', () => {
       });
 
       let guard = 0;
-      while (G(client).players['0']!.status !== 'dead' && ++guard < 400) {
+      while (
+        (G(client).players['0']!.status !== 'dead' || G(client).roundConfirm === null) &&
+        ++guard < 400
+      ) {
         const g = G(client);
+        if (watchBalcony(client)) continue;
         if (g.roundConfirm) {
           const waiting = g.roundConfirm.pendingSeatIDs.find(
             (id) => !g.roundConfirm!.confirmedSeatIDs.includes(id),
@@ -1414,6 +1628,137 @@ describe('magaluf gameDef', () => {
         actAs(client, seat).drink!();
         actAs(client, seat).withdraw!();
         actAs(client, seat).useItem!('kebab');
+      }
+      expect(G(client)).toEqual(before);
+    });
+  });
+
+  /**
+   * The balcony is a shared moment or it is not a moment at all.
+   *
+   * It used to be per-viewer client state: each player stepped through the
+   * night's jumps at their own pace, which meant anyone who clicked fast knew
+   * the whole death toll while the jumpers were still deciding to look. These
+   * pin the two halves of the fix -- the beat lives in G, and the buttons
+   * belong to the seat on the railing.
+   */
+  describe('the balcony', () => {
+    /**
+     * Three seats, all six over a limit they cannot beat on a d6, and nobody
+     * ever drinks -- so the night is three certain jumps and no event card can
+     * wander in and change the count. Stops the moment the table is stood at
+     * the first balcony, before anybody has looked over the railing.
+     */
+    function tableAtTheBalcony(host: string | null = null) {
+      const client = makeClient(3, (g) => {
+        g.hostPlayerID = host;
+        g.limit = 3;
+        for (const id of g.activeSeatIDs) {
+          g.players[id]!.intox = 9;
+          g.players[id]!.resaca = 9;
+        }
+      });
+      play(client, alwaysWithdraw, (g) => g.balcony !== null);
+      expect(G(client).jumps).toHaveLength(3);
+      return client;
+    }
+
+    it('stands the whole table at one jump, in G rather than in each client', () => {
+      const client = tableAtTheBalcony();
+      const g = G(client);
+
+      expect(g.jumps).toHaveLength(3);
+      expect(g.balcony).toEqual({ index: 0, revealed: false });
+
+      // And it is public: a reveal that playerView could strip per seat would
+      // be the old bug wearing a server hat.
+      for (const seat of [...g.activeSeatIDs, null]) {
+        const view = magalufGameDef.playerView!({ G: g, ctx: {} as never, playerID: seat });
+        expect((view as MagalufG).balcony).toEqual(g.balcony);
+      }
+    });
+
+    it('lets only the jumper turn the die over (AC20)', () => {
+      const client = tableAtTheBalcony();
+      const jumper = G(client).jumps[0]!.seatID;
+      const watcher = G(client).activeSeatIDs.find((id) => id !== jumper)!;
+
+      const before = G(client);
+      actAs(client, watcher).revealJump!();
+      expect(G(client)).toEqual(before);
+
+      actAs(client, jumper).revealJump!();
+      expect(G(client).balcony).toEqual({ index: 0, revealed: true });
+    });
+
+    it('lets only the jumper move the table on to the next balcony', () => {
+      const client = tableAtTheBalcony();
+      const jumper = G(client).jumps[0]!.seatID;
+      const watcher = G(client).activeSeatIDs.find((id) => id !== jumper)!;
+
+      // Not even the jumper, until the die is actually face-up.
+      let before = G(client);
+      actAs(client, jumper).advanceJump!();
+      expect(G(client)).toEqual(before);
+
+      actAs(client, jumper).revealJump!();
+      before = G(client);
+      actAs(client, watcher).advanceJump!();
+      expect(G(client)).toEqual(before);
+
+      actAs(client, jumper).advanceJump!();
+      expect(G(client).balcony).toEqual({ index: 1, revealed: false });
+    });
+
+    it('walks every jump of the night before the weekend can end (AC21)', () => {
+      const client = tableAtTheBalcony();
+
+      for (const index of [0, 1, 2]) {
+        const g = G(client);
+        expect(g.balcony?.index).toBe(index);
+        // Nothing is over while anybody is still on a railing -- the gameover
+        // banner must not announce a winner over the top of the die.
+        expect(g.finished).toBe(false);
+        expect(client.store.getState().ctx.gameover).toBeUndefined();
+        watchBalcony(client); // jump
+        watchBalcony(client); // continue
+      }
+
+      const g = G(client);
+      expect(g.balcony).toBeNull();
+      expect(g.activeSeatIDs.every((id) => g.players[id]!.status === 'dead')).toBe(true);
+      expect(g.finished).toBe(true);
+      expect(client.store.getState().ctx.gameover).toBeDefined();
+    });
+
+    it('refuses a skip from anyone but the host seat', () => {
+      const client = tableAtTheBalcony();
+      const before = G(client);
+
+      // hostPlayerID is null in these matches, so nobody is authorized at all.
+      for (const seat of before.activeSeatIDs) actAs(client, seat).skipBalcony!();
+      expect(G(client)).toEqual(before);
+    });
+
+    it('lets the host drop the rest, for a jumper who has gone home', () => {
+      const client = tableAtTheBalcony('0');
+
+      actAs(client, '1').skipBalcony!();
+      expect(G(client).balcony).not.toBeNull();
+
+      actAs(client, '0').skipBalcony!();
+      expect(G(client).balcony).toBeNull();
+      expect(G(client).finished).toBe(true);
+    });
+
+    it('rejects every party move while the table is at a balcony', () => {
+      const client = tableAtTheBalcony();
+      const before = G(client);
+
+      for (const seat of before.activeSeatIDs) {
+        actAs(client, seat).drink!();
+        actAs(client, seat).withdraw!();
+        actAs(client, seat).confirmRoundReady!();
       }
       expect(G(client)).toEqual(before);
     });

@@ -511,6 +511,22 @@
       "pastis": "MDMA",
       "farlopa": "Cocaine"
     },
+    "itemDesc": {
+      "kebab": "Kebab — soak it up. Removes 3 Intoxication.",
+      "botella": "Water bottle — removes 2 Intoxication.",
+      "redbull": "Red Bull — look at tonight's limit. Only you see it, and only until the day ends.",
+      "porro": "Joint — skip your turn without drinking and without withdrawing. Contraband: searches cost points, raids mean jail.",
+      "pastis": "MDMA — your next drink is worth double points. Contraband: searches cost points, raids mean jail.",
+      "farlopa": "Cocaine — drink an extra card at half Intoxication, and take 3 Hangover. Contraband: searches cost points, raids mean jail."
+    },
+    "itemShort": {
+      "kebab": "−3 int",
+      "botella": "−2 int",
+      "redbull": "see limit",
+      "porro": "skip turn",
+      "pastis": "×2 VP",
+      "farlopa": "+1 drink, +3 hangover"
+    },
     "phase": {
       "tardeo": "Day drinking",
       "noche": "Clubbing",
@@ -619,6 +635,7 @@
       "drink": "Drink",
       "withdraw": "Withdraw",
       "use": "Use {{item}}",
+      "itemEffect": "({{effect}})",
       "banked": "Banked",
       "atRisk": "At risk",
       "intoxication": "Intoxication",
@@ -627,6 +644,7 @@
       "limitBetween": "Limit: between {{min}} and {{max}}",
       "drinks_one": "{{count}} drink",
       "drinks_other": "{{count}} drinks",
+      "phaseDrinks": "{{min}}–{{max}} drinks",
       "dayMultiplier": "Points x{{multiplier}}",
       "you": "{{name}} (you)",
       "statusOut": "Out",
@@ -638,6 +656,7 @@
       "meterAria": "Intoxication {{intox}}, hangover {{resaca}}",
       "nothingDrawn": "Nobody has had a drink yet this phase.",
       "drewCaption": "{{name}} drank:",
+      "pouredCaption": "The card pours:",
       "balconyTitle": "To the balcony",
       "balconyBody": "{{name}} is {{over}} over the limit. All that is left is whether they reach the pool.",
       "balconyNumbers": "Intoxication {{intox}} · Limit {{limit}}",
@@ -654,6 +673,8 @@
       "balconySkip": "Skip the rest",
       "balconyTarget": "Roll 1d{{die}} · you need more than {{over}}",
       "balconyRolled": "It comes up {{roll}}",
+      "balconyWaitingJump": "{{name}} is on the railing…",
+      "balconyWaitingContinue": "Waiting for {{name}}…",
       "revealEvent": "Reveal event",
       "eventFaceDown": "Event face-down",
       "chooseOption": "Your call:",

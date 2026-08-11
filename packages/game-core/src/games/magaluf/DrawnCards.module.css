@@ -25,7 +25,35 @@
 .cards {
   display: flex;
   gap: var(--space-2);
+  /* A Ronda at six seats deals six tiles; wrapping is the only thing that
+     keeps the row inside the board rather than pushing it sideways. */
   flex-wrap: wrap;
+}
+
+/* The round the card bought. Separated by a rule rather than by space alone,
+   so it reads as a consequence of the pair above it and not as a second draw. */
+.poured {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--color-border);
+}
+
+.pour {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pourName {
+  font-size: var(--font-size-sm);
+  opacity: 0.8;
+  /* Long names shrink the tile under them rather than stretching the row. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* What a rule-shaped card actually came to — "+1 VP per drink" does not tell
@@ -47,11 +75,9 @@
   padding: var(--space-2);
   border-radius: var(--radius);
   border: 1px dashed var(--color-border);
-  background: repeating-linear-gradient(
-    45deg,
-    color-mix(in srgb, var(--color-text) 10%, var(--color-surface)) 0 6px,
-    var(--color-surface) 6px 12px
-  );
+  background: repeating-linear-gradient(45deg,
+      color-mix(in srgb, var(--color-text) 10%, var(--color-surface)) 0 6px,
+      var(--color-surface) 6px 12px);
   font-size: var(--font-size-sm);
   opacity: 0.85;
 }

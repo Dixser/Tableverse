@@ -39,6 +39,13 @@
   color: var(--color-accent);
 }
 
+/* Subordinate to the item's name: it is the reminder, not the label. */
+.effect {
+  font-size: var(--font-size-sm);
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
 .drink:disabled,
 .withdraw:disabled,
 .item:disabled,

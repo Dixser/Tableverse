@@ -68,6 +68,26 @@ export interface JumpRecord {
 }
 
 /**
+ * The balcony the whole table is stood at.
+ *
+ * The jump itself is already resolved and sitting in `G.jumps` — this is only
+ * *when the table learns it*, and it lives in `G` rather than in each client's
+ * head so that everyone learns it at the same moment. It used to be per-viewer
+ * local state, which meant a player could watch every other seat's roll play
+ * out at their own pace, and knew the whole night's death toll while the
+ * jumpers were still deciding to click. The reveal is a shared moment or it is
+ * not a moment at all.
+ *
+ * Only the jumper may move it along: it is their roll to read out.
+ */
+export interface BalconyView {
+  /** Index into `G.jumps` of the jump the table is watching. */
+  index: number;
+  /** True once the jumper has jumped and the die is face-up for everyone. */
+  revealed: boolean;
+}
+
+/**
  * The cards face-up on the table from the most recent draw.
  *
  * Public, and kept in `G` rather than recovered from the log tail: a Ronda
@@ -90,6 +110,28 @@ export interface LastDraw {
    * resolves the same keys.
    */
   outcome: EventOutcome | null;
+  /**
+   * The drinks the *card* poured, in the order they came off the deck.
+   *
+   * A Ronda buys the whole venue a round and a Chupito de la casa buys the
+   * drawer one more; those cards came off the same deck as the drink already
+   * face-up on the table, and until now nobody could see them. "Everyone
+   * drinks" told the table a rule, not what it cost them — the numbers only
+   * showed up as intoxication that had already moved.
+   *
+   * Not the drawer's own chosen drink: that is `alcohol`, above, and it is on
+   * the table before the event is even turned over.
+   */
+  pours: PouredDrink[];
+}
+
+/** One drink somebody did not choose, with the numbers actually applied. */
+export interface PouredDrink {
+  seatID: string;
+  alcohol: string;
+  /** After halving, and after any Pastis doubling — what the seat really took. */
+  intox: number;
+  vp: number;
 }
 
 /** A resolved event result, shaped like a log entry because it is one. */
@@ -179,6 +221,11 @@ export interface MagalufG extends RoundConfirmG {
   pendingAdvance: PendingAdvance | null;
   /** Every jump resolved this match, oldest first. Drives the board's balcony moment. */
   jumps: JumpRecord[];
+  /**
+   * Non-null while the table is stood at the balcony watching one of them.
+   * The night does not settle — no gate, no gameover — until it is null again.
+   */
+  balcony: BalconyView | null;
   log: GameLogEntry[];
   /** Set once the weekend is over, so endIf stays a pure read. */
   finished: boolean;
@@ -371,13 +418,16 @@ export function drunkestSeat(G: MagalufG): string | null {
  * Also used for drinks a player did not choose — a Ronda, a Chupito de la
  * casa — which deliberately still count toward their phase drink total. If
  * somebody buys you a shot, you drank it.
+ *
+ * Returns what was actually applied, which is not what is printed on the card:
+ * a Farlopa halves the intoxication and an armed Pastis doubles the points.
  */
 export function consumeAlcohol(
   G: MagalufG,
   seatID: string,
   card: AlcoholCard,
   options: { halveIntox?: boolean } = {},
-): void {
+): { intox: number; vp: number } {
   const player = G.players[seatID]!;
   const intox = options.halveIntox ? Math.floor(card.intox / 2) : card.intox;
 
@@ -393,6 +443,34 @@ export function consumeAlcohol(
   player.totalDrinks += 1;
 
   log(G, 'drank', { actor: seatID, descriptionKey: `magaluf.alcohol.${card.id}`, intox, vp }, 'play');
+  return { intox, vp };
+}
+
+/**
+ * A drink the card poured, applied AND put face-up next to the card.
+ *
+ * The pair every "and then everybody drinks" event needs: without the second
+ * half a Ronda moved three players' numbers with nothing on the table to
+ * explain it, and the only record was three lines in the chat feed that the
+ * drawer had already scrolled past.
+ *
+ * Not used for the drawer's own chosen drink — `takeDrink` puts that one in
+ * `lastDraw.alcohol`, and it is face-up before the event is even turned over.
+ */
+export function pourDrink(
+  G: MagalufG,
+  seatID: string,
+  card: AlcoholCard,
+  options: { halveIntox?: boolean } = {},
+): void {
+  const applied = consumeAlcohol(G, seatID, card, options);
+  // Guarded because an event can only ever pour on top of a draw that is
+  // already on the table; if there is none there is nothing to attach to.
+  if (!G.lastDraw) return;
+  G.lastDraw = {
+    ...G.lastDraw,
+    pours: [...G.lastDraw.pours, { seatID, alcohol: card.id, ...applied }],
+  };
 }
 
 export type LeaveReason = 'withdrew' | 'closingTime' | 'ambulance' | 'bouncer';

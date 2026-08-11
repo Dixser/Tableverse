@@ -21,7 +21,6 @@ import {
   addIntox,
   addResaca,
   arrest,
-  consumeAlcohol,
   drawAlcohol,
   drunkestSeat,
   dropContraband,
@@ -31,6 +30,7 @@ import {
   log,
   logOutcome,
   partying,
+  pourDrink,
   rankingParams,
   rankSeats,
 } from './state.js';
@@ -70,11 +70,11 @@ function applyCardEffects(
   // doubling. There is no second "double this drink" rule in the game.
   if (effects.doubles) player.pastisArmed = true;
   if (effects.extraDrink) {
-    // drawAlcohol + consumeAlcohol directly, the same pair Ronda and Chupito
-    // de la casa use. Deliberately NOT takeDrink: that would draw another
-    // event, and an event that draws an event chains without a fixed point.
+    // drawAlcohol + pourDrink, the same pair Ronda and Chupito de la casa use.
+    // Deliberately NOT takeDrink: that would draw another event, and an event
+    // that draws an event chains without a fixed point.
     const drink = drawAlcohol(G, rng);
-    if (drink) consumeAlcohol(G, seatID, drink);
+    if (drink) pourDrink(G, seatID, drink);
   }
   if (effects.skips) player.skipNextTurn = true;
   // 'bouncer' rather than a new reason: you chose to go, but it is not a
@@ -191,7 +191,7 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
 
     case 'chupitoCasa': {
       const drink = drawAlcohol(G, rng);
-      if (drink) consumeAlcohol(G, seatID, drink);
+      if (drink) pourDrink(G, seatID, drink);
       break;
     }
 
@@ -199,7 +199,7 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
       for (const id of partying(G)) {
         const drink = drawAlcohol(G, rng);
         if (!drink) break;
-        consumeAlcohol(G, id, drink);
+        pourDrink(G, id, drink);
       }
       break;
     }

@@ -11,50 +11,59 @@ everybody reaches Monday morning.
 
 The game lasts **three days**, and each day has **three phases**:
 
-| Day | Phases |
+| Days | Phases |
 |---|---|
-| Friday | Day drinking → Clubbing → Afterparty |
-| Saturday | Day drinking → Clubbing → Afterparty |
-| Sunday | Day drinking → Clubbing → Afterparty |
+| Friday → Saturday → Sunday | Day drinking → Clubbing → Afterparty |
 
-Nine phases in total. Within a phase, players take turns in seat order; only
-players still at the party take a turn. A phase ends when nobody is left at
-the party. Withdrawing is **per phase**: if you go home during the Clubbing
-phase, you are back for the Afterparty.
+Nine phases in total. Each phase is played in turn order, and only players
+still at the party take a turn. On your turn you decide whether to drink or go
+home. The phase ends when nobody is left at the party, or when the last player
+standing hits closing time.
+
+Withdrawing is **per phase**: if you go home during the Clubbing phase, you
+are back for the Afterparty.
+
+Who leads off is not a rotation:
+
+- **The weekend** is opened by a player drawn at random — not by whoever
+  happens to be sitting in the first seat.
+- **A new venue** is opened by the player sitting after whoever was last out
+  of the previous one — whether they chose to leave or were carried out.
+- **A new day** is opened by whoever is furthest behind on banked points.
+  Going first into a fresh limit is worth something, and it is the one thing
+  the weekend hands to the player who is losing.
 
 ## 2. Your four numbers
 
 | Number | What it means |
 |---|---|
-| **Intoxication** | How drunk you are right now. Resets every morning — but to your Hangover, not to zero. Never goes below zero. |
-| **Hangover** | Where your Intoxication starts every remaining morning. Most cards only add to it, but a few let you sleep some off. Never goes below zero. |
-| **At risk** | Points earned today and not yet safe. |
+| **Intoxication** | How drunk you are right now. Resets every morning. Never goes below zero. |
+| **Hangover** | The level your Intoxication starts at every remaining morning. Almost every card that touches it pushes it up; a couple let you sleep some off. Never goes below zero. |
+| **At risk** | Points earned at today's party that are not yet safe. |
 | **Banked** | Points that are yours permanently. This is what wins the game. |
 
 Everyone's numbers are visible to everyone, all the time.
 
 ## 3. The Drinking Limit
 
-Each morning, one **Limit card** is drawn face-down from the same five-card
-deck. It is the same number for every player, and it is **the only hidden
-information in the game**. You know which numbers the deck contains, but not
-which one was drawn:
+Each morning one **Limit card** is drawn face-down, from the same five-card
+deck every day. It is the same number for every player, and it is **the only
+hidden information in the game**. You know what the deck contains; you do not
+know which card came out:
 
 | Possible limits, every day |
 |---|
 | 16 / 19 / 22 / 25 / 28 |
 
-The deck does not change across the weekend. It used to shrink on Saturday and
-Sunday, which punished a bad Friday twice over: Hangover already carries
-forward as a floor, so a player who took a hard card early met a lower limit
-with capacity they never chose to spend. What makes later days matter is the
-points multiplier (section 8), not a smaller number.
+The deck does not change across the weekend. What makes the later days matter
+is the points multiplier (section 7), not a smaller number.
 
 By default the limit is revealed at the **start of the Afterparty**. The host
 can change this to reveal it earlier, or never.
 
 At the end of the day, any player whose Intoxication is **above** the limit
-goes to the balcony (section 7). Exactly equal to the limit is safe.
+finishes the night on a balcony (section 7). Exactly equal to the limit is
+safe.
 
 ## 4. Your turn
 
@@ -70,14 +79,15 @@ On your turn you take **one** of these actions:
 Drinking is two separate steps on purpose: the table applies the drink first,
 and only then reads out the event. **While your event is face-down you may do
 nothing else** — no second drink, no withdrawing, no items — and nobody else
-may turn it over for you.
+may turn it over for you. The same holds for a card that asks you a question
+(section 10): until you answer it, nobody at the table has a move.
 
 In addition, once per turn you may **use one item**. Using an item is free and
-does not end your turn (with the two exceptions noted in section 5). A second
-item in the same turn is not allowed.
+does not end your turn, with two exceptions noted in section 6. A second item
+in the same turn is not allowed.
 
-Drinks you did not choose — a Round, a House shot — still count as your
-drinks for this phase.
+Drinks you did not choose — a Round, a House shot — still count as your drinks
+for this phase.
 
 ## 5. Phase caps and exits
 
@@ -90,16 +100,16 @@ drinks for this phase.
 - Reaching the **maximum** sends you home automatically: closing time.
 - Withdrawing with **fewer than the minimum** drinks costs you the party
   pooper penalty.
-- The **last one standing** bonus goes to a player who **begins a round as the
-  only person left at the party**, and only if they met the drink minimum. It
+- The **last one standing** bonus goes to whoever **begins a round as the only
+  player still at the party**, and only if they have met the drink minimum. It
   is paid once per phase, and the phase carries on afterwards — you may keep
   drinking alone.
 
-  Note what this means: becoming the last player *during* a round is not
-  enough. Everyone else went home ahead of you, so you have to take one more
-  turn on your own — and the Intoxication that comes with it — to reach the
-  start of the next round and collect. If the whole table hits closing time on
-  the same round, nobody was ever alone and nobody is paid.
+  Note what that requires. Being left alone *part-way* through a round is not
+  enough: the others went home before you, so you have to take one more solo
+  turn — and the Intoxication that comes with it — to reach the start of the
+  next round and collect. If the whole table hits closing time on the same
+  round, nobody was ever alone and nobody is paid.
 - Being thrown out by the bouncer, taken away by ambulance or arrested is not
   a withdrawal, and never costs the party pooper penalty.
 
@@ -114,15 +124,15 @@ You may hold any number of items. They carry over from day to day.
 | Red Bull | Look at the day's Limit. Only you see it. | Yes |
 | Joint | Skip your draw this turn without withdrawing. **Ends your turn**, and does not count as a drink. | No |
 | MDMA | Doubles the points of your next drink. | No |
-| Cocaine | Take an extra drink immediately, at **half** its Intoxication (rounded down). It also draws an Event card. **Hangover +3.** Does not end your turn unless that extra drink reaches the phase maximum. | No |
+| Cocaine | Take an extra drink immediately, at **half** its Intoxication (rounded down). That drink also draws an Event card. **Hangover +3.** Does not end your turn unless the extra drink reaches the phase maximum. | No |
 
 The Joint, the MDMA and the Cocaine are **contraband**, which matters when the
 police show up.
 
 ## 7. The end of the day
 
-At the end of each day, every surviving player who is not in a cell is
-checked against the limit.
+At the end of each day, every surviving player who is not in a cell is checked
+against the limit.
 
 **At or below the limit:** you survive the night. Your points at risk are
 banked, multiplied by the day's rate and rounded:
@@ -146,13 +156,13 @@ Roll **1d6**. You survive if the roll is **strictly higher than `d`**.
   all of your items**, and take no further part in the weekend. The points you
   banked on previous nights remain yours.
 
-A `d` of 6 or more cannot be survived on a d6. The host may choose a different
-die before the game starts.
+On a d6, a `d` of 6 or more cannot be survived. The host may choose a
+different die before the game starts.
 
 ## 8. The next morning
 
 - Your Intoxication resets to your **Hangover**.
-- Your drink counts reset, and everyone is back at the party.
+- Drink counts reset and everyone is back at the party.
 - Anyone arrested the previous day is released and plays normally.
 - Dead players do not return.
 
@@ -186,30 +196,25 @@ the card. A few change the structure of the turn:
 
 ### Cards that ask you a question
 
-Some Event cards have **two options printed on them**. When you turn one over,
-nothing happens until you pick a branch — and until you do, it is the only
-thing anyone at the table can do.
+Some Event cards carry **two printed options**. Turning one over does nothing
+until you pick a branch — and until you do, it is the only thing anybody at
+the table can do. You choose; nobody else may choose for you.
 
-These exist because every other card is pure outcome. A player who drew cheap
-drinks and expensive events had no lever at all, and the comeback was gone by
-Saturday. A choice does not take the luck away — you still do not pick the
-card — it just means the luck hands you a decision instead of a result.
-
-- **You feel it coming up** — throw up (−4 Intoxication, **Hangover +3**), or
-  hold it in (+2 Intoxication). The card that used to make this decision for
-  you.
-- **Last round** — sink it (+4 Intoxication), or promise them tomorrow
-  (**Hangover +2**). Cheap on Sunday night, expensive on Friday.
-- **Rough one** — sleep some off (**Hangover −2**, −3 points), or keep going
-  and take nothing. The only way in the game to reduce Hangover.
-- **Pickpocketed** — pay them off (−4 points), or lose everything you carry.
-- **The fifth-floor terrace** — go up (+8 points, +3 Intoxication), or stay
+- **You feel it coming up** — throw up (−4 Intoxication, **Hangover +3**) or
+  hold it in (+2 Intoxication).
+- **Last round** — sink it (+4 Intoxication) or promise them tomorrow
+  (**Hangover +2**).
+- **Rough one** — sleep some off (**Hangover −2**, −3 points) or keep going
+  and take nothing. The only way to reduce Hangover in the entire game.
+- **Pickpocketed** — pay them off (−4 points) or lose everything you are
+  carrying.
+- **The fifth-floor terrace** — go up (+8 points, +3 Intoxication) or stay
   downstairs (+3 points).
-- **You are owed a favour** — take the cash (+3 points), or take a Kebab.
-- **Double or nothing** — drink one more Alcohol card at **double** points (at
-  its full Intoxication), or pass.
-- **Queue-jump** — go now for +7 points but **leave the phase immediately**,
-  forfeiting last one standing, or stay put.
+- **You are owed a favour** — take the cash (+3 points) or take a Kebab.
+- **Double or nothing** — drink one more Alcohol card at **double** points
+  (at its full Intoxication), or pass.
+- **Queue-jump** — leave now for +7 points, **abandoning the phase** and any
+  claim to Last One Standing, or stay where you are.
 
 ## 11. Winning
 
@@ -232,14 +237,16 @@ Answer these from memory before your first game.
 4. You are 3 over the limit on Sunday night with 20 points at risk. What do
    you need to roll, and what happens to those 20 points on each of the two
    outcomes?
-5. You vomit on Friday. What is your Intoxication at the start of Saturday
-   morning and at the start of Sunday morning, assuming nothing else happens?
+5. You choose to throw up on Friday. What is your Intoxication at the start of
+   Saturday morning and at the start of Sunday morning, assuming nothing else
+   happens?
 6. A Police raid is drawn while you are holding a Joint and you are still at
    the party. List everything that happens to you.
 7. Which single piece of information in this game is hidden from you, and what
    are the two ways of learning it?
 8. You use Cocaine and the extra drink is a Rum & coke (3 Intoxication). How
    much Intoxication do you take, and what else does it cost you?
-9. You are the last player left in the Afterparty, having drunk once. Do you
-   get the bonus?
+9. Everyone else has gone home mid-round in the Afterparty and you have had
+   one drink. What exactly do you still have to do to collect the Last One
+   Standing bonus?
 10. You die on Saturday night with 40 banked points. What is your final score?

@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import type { Ctx } from 'boardgame.io';
 import './i18nFixture.js';
 import { MagalufBoard } from './BoardComponent.js';
+import { PHASE_RULES } from './constants.js';
 import { HIDDEN_LIMIT } from './gameDef.js';
 import { DEFAULT_SETTINGS } from './settings.js';
 import { newPlayer, type JumpRecord, type MagalufG, type MagalufPlayer } from './state.js';
@@ -39,6 +40,7 @@ function makeG(overrides: Partial<MagalufG> = {}): MagalufG {
     roundConfirm: null,
     hostPlayerID: null,
     jumps: [],
+    balcony: null,
     log: [],
     finished: false,
     ...overrides,
@@ -64,6 +66,9 @@ function renderBoard(G: MagalufG, playerID: string | null = '0', isActive = true
     useItem: vi.fn(),
     revealEvent: vi.fn(),
     chooseEventOption: vi.fn(),
+    revealJump: vi.fn(),
+    advanceJump: vi.fn(),
+    skipBalcony: vi.fn(),
   };
   const result = render(
     <MagalufBoard
@@ -161,110 +166,48 @@ describe('MagalufBoard', () => {
       const illegal = screen.getByTestId('item-0-farlopa');
       expect(legal.className).not.toBe(illegal.className);
     });
+
+    it('describes every item it holds, so the rules are readable off the panel', () => {
+      const G = makeG();
+      G.players['1']!.items = ['kebab', 'farlopa'];
+      renderBoard(G, '0');
+
+      // Reached by pointing at the chip, so it has to be the chip's own
+      // accessible description rather than text loose in the panel.
+      expect(screen.getByTestId('item-1-kebab')).toHaveAccessibleDescription(
+        'TEST_kebab_rules',
+      );
+      expect(screen.getByTestId('item-1-farlopa')).toHaveAccessibleDescription(
+        'TEST_cocaine_rules',
+      );
+    });
+
+    it('prints the short effect on the action bar button (not the full rules)', () => {
+      const G = makeG();
+      G.players['0']!.items = ['botella'];
+      renderBoard(G, '0');
+
+      const button = screen.getByTestId('use-botella');
+      expect(button).toHaveTextContent('TEST_use TEST_water (TEST_water_short)');
+      expect(button).not.toHaveTextContent('TEST_water_rules');
+    });
   });
 
-  /**
-   * The board half of the balcony fix. The engine resolves the weekend's last
-   * jump inside the same move that sets `finished`, so `endIf` fires on the
-   * tick the die lands -- without this signal the chrome announces the winner
-   * over the top of the roll that decides them.
-   */
-  describe('holding the gameover banner during a jump', () => {
-    const jump = (overrides: Partial<JumpRecord> = {}): JumpRecord => ({
-      day: 2,
-      seatID: '0',
-      d: 3,
-      limit: 22,
-      roll: 5,
-      die: 6,
-      survived: true,
-      legendVP: 6,
-      poolVP: 40,
-      lostVP: 0,
-      bankedVP: 90,
-      ...overrides,
-    });
-
+  describe('the phase header', () => {
     /**
-     * Mounts with the jumps that already existed, then lands new ones.
-     *
-     * The split matters: `useJumpQueue`'s watermark starts at whatever was
-     * already in `G.jumps`, so a board mounted with a jump present treats it
-     * as history. A jump is only ever shown to someone who was already
-     * watching when it landed -- which is the case this fix is about.
+     * Read straight off PHASE_RULES rather than hardcoded here: the point of
+     * the chip is that the table never has to remember these two numbers, so
+     * the test must fail if the chip and the rules ever disagree.
      */
-    function renderWithJumps(present: JumpRecord[], landing: JumpRecord[] = []) {
-      const onRevealPending = vi.fn();
-      const board = (jumps: JumpRecord[]) => (
-        <MagalufBoard
-          G={makeG({ jumps })}
-          ctx={makeCtx()}
-          moves={{} as never}
-          playerID="0"
-          isActive
-          playerNames={NAMES}
-          onRevealPending={onRevealPending}
-        />
-      );
-      const result = render(board(present));
-      if (landing.length > 0) result.rerender(board([...present, ...landing]));
-      return { ...result, onRevealPending };
-    }
-
-    it('reports pending while a jump is still unwatched', () => {
-      const { onRevealPending } = renderWithJumps([], [jump()]);
-      expect(onRevealPending).toHaveBeenLastCalledWith(true);
-      expect(screen.getByTestId('balcony-overlay')).toBeInTheDocument();
-    });
-
-    it('reports nothing pending when there is no jump to show', () => {
-      const { onRevealPending } = renderWithJumps([]);
-      expect(onRevealPending).toHaveBeenLastCalledWith(false);
-    });
-
-    /** The overlay is two steps: press to jump, then read the die and move on. */
-    const playOutOneJump = () => {
-      fireEvent.click(screen.getByTestId('balcony-jump'));
-      fireEvent.click(screen.getByTestId('balcony-continue'));
-    };
-
-    it('releases once the viewer dismisses the last jump', () => {
-      const { onRevealPending } = renderWithJumps([], [jump()]);
-      playOutOneJump();
-      expect(onRevealPending).toHaveBeenLastCalledWith(false);
-      expect(screen.queryByTestId('balcony-overlay')).toBeNull();
-    });
-
-    it('stays held between two jumps rather than flickering the banner on', () => {
-      const { onRevealPending } = renderWithJumps(
-        [],
-        [jump({ seatID: '0' }), jump({ seatID: '1' })],
-      );
-      onRevealPending.mockClear();
-
-      playOutOneJump();
-      // Still one to go, so the chrome must never have been told to release.
-      expect(onRevealPending).not.toHaveBeenCalledWith(false);
-      expect(screen.getByTestId('balcony-overlay')).toBeInTheDocument();
-    });
-
-    it('releases when the viewer skips the rest', () => {
-      const { onRevealPending } = renderWithJumps(
-        [],
-        [jump({ seatID: '0' }), jump({ seatID: '1' })],
-      );
-      fireEvent.click(screen.getByTestId('balcony-skip'));
-      expect(onRevealPending).toHaveBeenLastCalledWith(false);
-      expect(screen.queryByTestId('balcony-overlay')).toBeNull();
-    });
-
-    it('reports nothing pending to a viewer who arrived after the jump', () => {
-      // The watermark starts at the number of jumps already there, so a late
-      // joiner has no reveal owed and gets the result straight away rather
-      // than being walked through a weekend they did not watch.
-      const { onRevealPending } = renderWithJumps([jump()]);
-      expect(screen.queryByTestId('balcony-overlay')).toBeNull();
-      expect(onRevealPending).toHaveBeenLastCalledWith(false);
+    it('prints the current venue’s drink minimum and maximum', () => {
+      for (const [phase, id] of [[0, 'tardeo'], [1, 'noche'], [2, 'after']] as const) {
+        const { unmount } = renderBoard(makeG({ phase }));
+        const rules = PHASE_RULES[id];
+        expect(screen.getByTestId('phase-drinks-chip')).toHaveTextContent(
+          `TEST_phase_drinks ${rules.minDrinks} ${rules.maxDrinks}`,
+        );
+        unmount();
+      }
     });
   });
 
@@ -280,13 +223,13 @@ describe('MagalufBoard', () => {
     it('colours a drink by what it does to you, not by the sign of the number', () => {
       // Pinta adds intoxication; agua is the only card that takes it away.
       const { unmount } = renderBoard(
-        makeG({ lastDraw: { seatID: '0', alcohol: 'pinta', event: null, outcome: null } }),
+        makeG({ lastDraw: { seatID: '0', alcohol: 'pinta', event: null, outcome: null, pours: [] } }),
       );
       const up = screen.getByTestId('card-pinta').querySelector('span[class*="intox"]')!;
       expect(up.className).toContain('intoxUp');
       unmount();
 
-      renderBoard(makeG({ lastDraw: { seatID: '0', alcohol: 'agua', event: null, outcome: null } }));
+      renderBoard(makeG({ lastDraw: { seatID: '0', alcohol: 'agua', event: null, outcome: null, pours: [] } }));
       const down = screen.getByTestId('card-agua').querySelector('span[class*="intox"]')!;
       expect(down.className).toContain('intoxDown');
     });
@@ -294,7 +237,7 @@ describe('MagalufBoard', () => {
 
   describe('the draw reveal', () => {
     it('renders the alcohol card and its event (AC6)', () => {
-      renderBoard(makeG({ lastDraw: { seatID: '1', alcohol: 'pinta', event: 'foto', outcome: null } }));
+      renderBoard(makeG({ lastDraw: { seatID: '1', alcohol: 'pinta', event: 'foto', outcome: null, pours: [] } }));
       expect(screen.getByTestId('drawn-cards')).toBeInTheDocument();
       expect(screen.getByTestId('card-pinta')).toHaveTextContent('TEST_pint');
       expect(screen.getByTestId('card-foto')).toHaveTextContent('TEST_photo');
@@ -308,7 +251,7 @@ describe('MagalufBoard', () => {
     });
 
     it('renders an alcohol card whose event was skipped', () => {
-      renderBoard(makeG({ lastDraw: { seatID: '0', alcohol: 'cana', event: null, outcome: null } }));
+      renderBoard(makeG({ lastDraw: { seatID: '0', alcohol: 'cana', event: null, outcome: null, pours: [] } }));
       expect(screen.getByTestId('card-cana')).toBeInTheDocument();
       expect(screen.queryByTestId('event-facedown')).toBeNull();
     });
@@ -324,6 +267,7 @@ describe('MagalufBoard', () => {
               key: 'magaluf.log.barraLibreResult',
               params: { actor: '1', vp: 3, n: 3 },
             },
+            pours: [],
           },
         }),
       );
@@ -341,6 +285,7 @@ describe('MagalufBoard', () => {
               key: 'magaluf.log.reyGuiriResult',
               params: { winners: '0,2', n: 4, vp: 3 },
             },
+            pours: [],
           },
         }),
       );
@@ -359,6 +304,7 @@ describe('MagalufBoard', () => {
             key: 'magaluf.log.reyGuiriResult',
             params: { winners: '0,1', n: 4, vp: 3 },
           },
+          pours: [],
         },
       });
       render(
@@ -381,7 +327,7 @@ describe('MagalufBoard', () => {
 
     it('renders no outcome line for a card that is just its own numbers', () => {
       renderBoard(
-        makeG({ lastDraw: { seatID: '0', alcohol: 'pinta', event: 'foto', outcome: null } }),
+        makeG({ lastDraw: { seatID: '0', alcohol: 'pinta', event: 'foto', outcome: null, pours: [] } }),
       );
       expect(screen.queryByTestId('event-outcome')).toBeNull();
     });
@@ -389,7 +335,7 @@ describe('MagalufBoard', () => {
     it('shows the event face-down while it is still owed', () => {
       renderBoard(
         makeG({
-          lastDraw: { seatID: '0', alcohol: 'pinta', event: null, outcome: null },
+          lastDraw: { seatID: '0', alcohol: 'pinta', event: null, outcome: null, pours: [] },
           pendingEvent: { seatID: '0', endsTurn: true },
         }),
       );
@@ -398,10 +344,78 @@ describe('MagalufBoard', () => {
     });
   });
 
+  /**
+   * A Ronda buys the whole venue a round and a Chupito de la casa buys the
+   * drawer one more. Those cards used to arrive as intoxication that had
+   * already moved, with the only record three lines deep in the chat feed.
+   */
+  describe('the drinks a card pours', () => {
+    const rondaDraw = () =>
+      makeG({
+        lastDraw: {
+          seatID: '0',
+          alcohol: 'pinta',
+          event: 'ronda',
+          outcome: null,
+          pours: [
+            { seatID: '0', alcohol: 'cana', intox: 1, vp: 1 },
+            { seatID: '1', alcohol: 'pecera', intox: 6, vp: 5 },
+            { seatID: '2', alcohol: 'cana', intox: 1, vp: 1 },
+          ],
+        },
+      });
+
+    it('deals one tile per drinker, named, with the numbers they took', () => {
+      renderBoard(rondaDraw());
+
+      const poured = screen.getByTestId('poured-drinks');
+      expect(poured).toHaveTextContent('TEST_poured');
+      for (const [seat, name] of [['0', 'Alice'], ['1', 'Bob'], ['2', 'Carol']] as const) {
+        expect(screen.getByTestId(`poured-${seat}`)).toHaveTextContent(name);
+      }
+      // Bob's fishbowl carries its own numbers, not the drawer's pinta's.
+      expect(poured).toHaveTextContent('TEST_fishbowl');
+      expect(poured).toHaveTextContent('TEST_int 6');
+      expect(poured).toHaveTextContent('TEST_vp 5');
+    });
+
+    it('keeps the round separate from the pair that caused it', () => {
+      renderBoard(rondaDraw());
+
+      // The drawer's own pinta is the headline and stays outside the round --
+      // otherwise the same drink reads as two.
+      const poured = screen.getByTestId('poured-drinks');
+      expect(poured).not.toHaveTextContent('TEST_pint');
+      expect(screen.getByTestId('card-pinta')).toBeInTheDocument();
+    });
+
+    it('renders nothing at all for a card that pours no drinks', () => {
+      renderBoard(
+        makeG({ lastDraw: { seatID: '0', alcohol: 'pinta', event: 'foto', outcome: null, pours: [] } }),
+      );
+      expect(screen.queryByTestId('poured-drinks')).toBeNull();
+    });
+
+    it('qualifies a name two seats are both using, as the outcome line does', () => {
+      render(
+        <MagalufBoard
+          G={rondaDraw()}
+          ctx={makeCtx()}
+          moves={{} as never}
+          playerID="0"
+          isActive
+          playerNames={{ '0': 'Alice', '1': 'Alice', '2': 'Carol' }}
+        />,
+      );
+      expect(screen.getByTestId('poured-0')).toHaveTextContent('TEST_seat_1');
+      expect(screen.getByTestId('poured-1')).toHaveTextContent('TEST_seat_2');
+    });
+  });
+
   describe('the event reveal step', () => {
     const pendingG = (seatID = '0') =>
       makeG({
-        lastDraw: { seatID, alcohol: 'pinta', event: null, outcome: null },
+        lastDraw: { seatID, alcohol: 'pinta', event: null, outcome: null, pours: [] },
         pendingEvent: { seatID, endsTurn: true },
       });
 
@@ -439,7 +453,7 @@ describe('MagalufBoard', () => {
     // drink would have set, which is what the engine carries through.
     const choiceG = (seatID = '0') =>
       makeG({
-        lastDraw: { seatID, alcohol: 'pinta', event: 'vomitona', outcome: null },
+        lastDraw: { seatID, alcohol: 'pinta', event: 'vomitona', outcome: null, pours: [] },
         pendingChoice: { seatID, eventId: 'vomitona', endsTurn: true },
       });
 
@@ -582,6 +596,12 @@ describe('MagalufBoard', () => {
     });
   });
 
+  /**
+   * The overlay reads `G.balcony`, so every seat is on the same beat of the
+   * same jump, and only the seat on the railing gets buttons. It used to pace
+   * itself per viewer, which let anyone who clicked quickly read the night's
+   * whole death toll before the jumpers had looked at their own.
+   */
   describe('the balcony overlay', () => {
     const jump = (over: Partial<JumpRecord> = {}): JumpRecord => ({
       day: 0,
@@ -598,52 +618,40 @@ describe('MagalufBoard', () => {
       ...over,
     });
 
-    it('renders nothing on a board mounted with jumps already in G (AC23)', () => {
+    /** A table stood at `jumps[index]`, seen from `viewer`'s seat. */
+    const atBalcony = (
+      jumps: JumpRecord[],
+      { index = 0, revealed = false, viewer = '0' as string | null, host = null as string | null } = {},
+    ) => renderBoard(makeG({ jumps, balcony: { index, revealed }, hostPlayerID: host }), viewer);
+
+    it('renders nothing while the table is not at a balcony (AC23)', () => {
+      // Jumps in the log with no balcony open is every moment except the
+      // reveal itself -- including a viewer who joined after the weekend's.
       renderBoard(makeG({ jumps: [jump(), jump({ seatID: '2' })] }));
       expect(screen.queryByTestId('balcony-overlay')).toBeNull();
     });
 
-    it('opens on a newly appended jump, showing odds but not the outcome (AC20)', () => {
-      const G = makeG();
-      const { rerender } = renderBoard(G);
-      expect(screen.queryByTestId('balcony-overlay')).toBeNull();
-
-      rerender(
-        <MagalufBoard
-          G={{ ...G, jumps: [jump()] }}
-          ctx={makeCtx()}
-          moves={{} as never}
-          playerID="0"
-          isActive
-          playerNames={NAMES}
-        />,
-      );
-
+    it('shows the odds but not the outcome before the die is turned (AC20)', () => {
+      atBalcony([jump()]);
       expect(screen.getByTestId('balcony-overlay')).toBeInTheDocument();
       expect(screen.getByTestId('balcony-odds')).toHaveTextContent('67');
       expect(screen.queryByTestId('balcony-outcome')).toBeNull();
+      // The seat that was up when the venue closed keeps no live action bar
+      // underneath the overlay -- the night is over, there is nothing to drink.
+      expect(screen.queryByTestId('action-bar')).toBeNull();
     });
 
     it('reveals pool with the legend bonus on the second beat (AC21)', () => {
-      const G = makeG();
-      const { rerender } = renderBoard(G);
-      rerender(
-        <MagalufBoard
-          G={{ ...G, jumps: [jump({ survived: true, legendVP: 5 })] }}
-          ctx={makeCtx()}
-          moves={{} as never}
-          playerID="0"
-          isActive
-          playerNames={NAMES}
-        />,
-      );
+      const jumps = [jump({ survived: true, legendVP: 5 })];
+      const { unmount } = atBalcony(jumps);
 
       // Before the roll the pool is at stake, not gone: the first beat says
       // what is riding on it and never says it was lost.
       expect(screen.getByText('TEST_at_risk 12')).toBeInTheDocument();
       expect(screen.queryByTestId('balcony-lost')).toBeNull();
+      unmount();
 
-      fireEvent.click(screen.getByTestId('balcony-jump'));
+      atBalcony(jumps, { revealed: true });
       expect(screen.getByTestId('balcony-outcome')).toHaveTextContent('TEST_pool');
       expect(screen.getByText('TEST_pool_body Bob 5')).toBeInTheDocument();
       // The night is banked, not forfeited.
@@ -652,76 +660,73 @@ describe('MagalufBoard', () => {
     });
 
     it('distinguishes the concrete (AC21)', () => {
-      const G = makeG();
-      const { rerender } = renderBoard(G);
-      rerender(
-        <MagalufBoard
-          G={{ ...G, jumps: [jump({ survived: false, legendVP: 0, lostVP: 12, bankedVP: 0 })] }}
-          ctx={makeCtx()}
-          moves={{} as never}
-          playerID="0"
-          isActive
-          playerNames={NAMES}
-        />,
-      );
+      atBalcony([jump({ survived: false, legendVP: 0, lostVP: 12, bankedVP: 0 })], {
+        revealed: true,
+      });
 
-      fireEvent.click(screen.getByTestId('balcony-jump'));
       expect(screen.getByTestId('balcony-outcome')).toHaveTextContent('TEST_concrete');
       // Only the concrete costs the night.
       expect(screen.getByTestId('balcony-lost')).toHaveTextContent('TEST_lost 12');
       expect(screen.queryByTestId('balcony-banked')).toBeNull();
     });
 
-    it('walks through two jumps from one update, then closes (AC22)', () => {
-      const G = makeG();
-      const { rerender } = renderBoard(G);
-      const next = { ...G, jumps: [jump({ seatID: '1' }), jump({ seatID: '2' })] };
-      const show = () =>
-        rerender(
-          <MagalufBoard
-            G={next}
-            ctx={makeCtx()}
-            moves={{} as never}
-            playerID="0"
-            isActive
-            playerNames={NAMES}
-          />,
-        );
-
-      show();
-      expect(screen.getByText('TEST_balcony_body Bob 2')).toBeInTheDocument();
-
-      fireEvent.click(screen.getByTestId('balcony-jump'));
-      fireEvent.click(screen.getByTestId('balcony-continue'));
-      show();
-      expect(screen.getByText('TEST_balcony_body Carol 2')).toBeInTheDocument();
-
-      fireEvent.click(screen.getByTestId('balcony-jump'));
-      fireEvent.click(screen.getByTestId('balcony-continue'));
-      show();
-      expect(screen.queryByTestId('balcony-overlay')).toBeNull();
+    it('shows every seat the same jump, from the same index (AC22)', () => {
+      const jumps = [jump({ seatID: '1' }), jump({ seatID: '2' })];
+      for (const viewer of ['0', '1', '2', null]) {
+        const { unmount } = atBalcony(jumps, { index: 1, viewer });
+        // Carol's, for everyone -- nobody is a jump ahead of anybody else.
+        expect(screen.getByText('TEST_balcony_body Carol 2')).toBeInTheDocument();
+        unmount();
+      }
     });
 
-    it('skips the remainder in one go (AC22)', () => {
-      const G = makeG();
-      const { rerender } = renderBoard(G);
-      const next = { ...G, jumps: [jump({ seatID: '1' }), jump({ seatID: '2' })] };
-      const show = () =>
-        rerender(
-          <MagalufBoard
-            G={next}
-            ctx={makeCtx()}
-            moves={{} as never}
-            playerID="0"
-            isActive
-            playerNames={NAMES}
-          />,
-        );
+    it('gives the buttons to the jumper alone, and wires them to the moves', () => {
+      const { moves } = atBalcony([jump({ seatID: '1' })], { viewer: '1' });
 
-      show();
+      fireEvent.click(screen.getByTestId('balcony-jump'));
+      expect(moves.revealJump).toHaveBeenCalledOnce();
+      expect(screen.queryByTestId('balcony-waiting')).toBeNull();
+    });
+
+    it('gives a watcher the waiting line instead of the jump button', () => {
+      atBalcony([jump({ seatID: '1' })], { viewer: '0' });
+
+      expect(screen.queryByTestId('balcony-jump')).toBeNull();
+      expect(screen.getByTestId('balcony-waiting')).toHaveTextContent('TEST_on_railing Bob');
+    });
+
+    it('keeps continue with the jumper once the die is face-up', () => {
+      const mine = atBalcony([jump({ seatID: '1' })], { revealed: true, viewer: '1' });
+      fireEvent.click(screen.getByTestId('balcony-continue'));
+      expect(mine.moves.advanceJump).toHaveBeenCalledOnce();
+      mine.unmount();
+
+      atBalcony([jump({ seatID: '1' })], { revealed: true, viewer: '0' });
+      expect(screen.queryByTestId('balcony-continue')).toBeNull();
+      expect(screen.getByTestId('balcony-waiting')).toHaveTextContent('TEST_waiting_jumper Bob');
+    });
+
+    it('shows a spectator the jump and no controls at all', () => {
+      renderBoard(
+        makeG({ jumps: [jump()], balcony: { index: 0, revealed: false } }),
+        null,
+        false,
+      );
+      expect(screen.getByTestId('balcony-overlay')).toBeInTheDocument();
+      expect(screen.queryByTestId('balcony-jump')).toBeNull();
+      expect(screen.queryByTestId('balcony-skip')).toBeNull();
+    });
+
+    it('offers the skip to the host only, as the escape hatch it is', () => {
+      const jumps = [jump({ seatID: '1' })];
+
+      const guest = atBalcony(jumps, { viewer: '0', host: '2' });
+      expect(screen.queryByTestId('balcony-skip')).toBeNull();
+      guest.unmount();
+
+      const { moves } = atBalcony(jumps, { viewer: '2', host: '2' });
       fireEvent.click(screen.getByTestId('balcony-skip'));
-      show();
-      expect(screen.queryByTestId('balcony-overlay')).toBeNull();
+      expect(moves.skipBalcony).toHaveBeenCalledOnce();
     });
   });
 });

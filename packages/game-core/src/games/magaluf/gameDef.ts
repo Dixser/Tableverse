@@ -2,8 +2,8 @@
  * Magaluf — turn, venue, day and weekend orchestration.
  *
  * **Naming, because two things are called a phase.** `G.phase` is the *venue*
- * — Tardeo, Noche, After. A boardgame.io phase is either `party` or `confirm`.
- * They are not the same axis and the code never conflates them.
+ * — Tardeo, Noche, After. A boardgame.io phase is `party`, `balcony` or
+ * `confirm`. They are not the same axis and the code never conflates them.
  *
  * Feature 032 shipped with no boardgame.io phase machinery at all: every
  * transition happened inside the move that caused it. **Feature 033 reversed
@@ -143,10 +143,107 @@ function advanceTurn(G: MagalufG): void {
 }
 
 // ---------------------------------------------------------------------------
+// Who opens the next one
+// ---------------------------------------------------------------------------
+//
+// Three different questions with three different answers, and none of them is
+// a fixed rotation. The weekend opens on a seat drawn by lot; a venue passes
+// the lead on round the table from whoever shut the place; a new day hands it
+// to whoever is losing.
+
+/** The next seat clockwise from `seatID` that is still alive. */
+function nextLivingSeat(G: MagalufG, seatID: string): number {
+  const seats = G.activeSeatIDs;
+  const start = seats.indexOf(seatID);
+  for (let step = 1; step <= seats.length; step++) {
+    const index = (start + step) % seats.length;
+    if (G.players[seats[index]!]!.status !== 'dead') return index;
+  }
+  // Unreachable while anybody is alive, and the weekend is over if nobody is.
+  return Math.max(0, start);
+}
+
+/**
+ * Opens the next venue: the seat after whoever was last out of the last one.
+ *
+ * Only the dead are stepped over. Everybody else is 'withdrawn' at the moment
+ * this is asked — the venue closed because the last of them left — so skipping
+ * anyone who is not partying would skip the whole table.
+ *
+ * Being last out is not necessarily a choice: closing time, an ambulance and
+ * the police all count, because all of them are the same fact about the room.
+ *
+ * MUST be read before `startPhase` clears `withdrawSeq`, which is why the
+ * caller works it out rather than `startPhase` doing it for itself.
+ */
+function openerAfterLastOut(G: MagalufG): number {
+  let lastOut: string | null = null;
+  let latest = -1;
+  for (const id of G.activeSeatIDs) {
+    const player = G.players[id]!;
+    // The dead never left this venue; they were not in it. Their withdrawSeq
+    // is whatever it was on the night they stopped playing.
+    if (player.status === 'dead') continue;
+    if (player.withdrawSeq > latest) {
+      latest = player.withdrawSeq;
+      lastOut = id;
+    }
+  }
+  // A venue nobody could attend closes without anybody leaving it. Walking on
+  // from whoever was up keeps the lead moving rather than pinning it.
+  return nextLivingSeat(G, lastOut ?? G.turnSeatID);
+}
+
+/**
+ * Opens the weekend: a seat drawn out of the hat.
+ *
+ * Friday morning is the one day `openerByLowestBanked` cannot answer — nobody
+ * has banked anything yet, so its seat-order tie-break would hand the opening
+ * turn to seat 0 in every match ever played. Since going first into a fresh
+ * limit is worth something, that is a standing advantage handed out by where
+ * you happened to sit down, which is not a thing this game pays for anywhere
+ * else.
+ *
+ * Drawn with a shuffle rather than a die, because that is a table cutting for
+ * the deal — and because it is the same `Rng` the decks use, so a replayed
+ * match reproduces the same opener.
+ */
+function openerByLot(G: MagalufG, rng: Rng): number {
+  const seats = G.activeSeatIDs;
+  const eligible = seats
+    .map((_, index) => index)
+    .filter((index) => G.players[seats[index]!]!.status !== 'dead');
+  return rng.shuffle(eligible)[0] ?? 0;
+}
+
+/**
+ * Opens the new day: whoever is furthest behind on banked points.
+ *
+ * Deliberately not a rotation. Going first into a fresh limit is worth
+ * something — you drink before anybody has shown you how close the line is —
+ * and giving it to the seat that needs it is the only place in the weekend the
+ * game hands anything to the player who is losing.
+ *
+ * Banked only: the round pool was just settled by the night, so it is zero for
+ * everybody, and a tie goes to the earlier seat.
+ */
+function openerByLowestBanked(G: MagalufG): number {
+  const seats = G.activeSeatIDs;
+  let best = -1;
+  for (let index = 0; index < seats.length; index++) {
+    const player = G.players[seats[index]!]!;
+    if (player.status === 'dead') continue;
+    if (best === -1 || player.bankedVP < G.players[seats[best]!]!.bankedVP) best = index;
+  }
+  return best === -1 ? 0 : best;
+}
+
+// ---------------------------------------------------------------------------
 // Day / phase lifecycle
 // ---------------------------------------------------------------------------
 
-function startPhase(G: MagalufG, rng: Rng, phaseIndex: number): void {
+/** `opener` is the seat index that leads off; see the two rules above. */
+function startPhase(G: MagalufG, rng: Rng, phaseIndex: number, opener: number): void {
   G.phase = phaseIndex;
   const rules = PHASE_RULES[PHASE_IDS[phaseIndex]!];
 
@@ -168,9 +265,12 @@ function startPhase(G: MagalufG, rng: Rng, phaseIndex: number): void {
     // 'arrested' and 'dead' both survive the phase boundary: a cell holds you
     // until morning, and the concrete holds you rather longer.
     if (player.status === 'withdrawn') player.status = 'partying';
+    // Cleared for everybody, the arrested and the dead included, because the
+    // counter restarts at zero each venue: a seat still carrying last venue's
+    // sequence number would outrank this venue's real last-out.
+    player.withdrawSeq = -1;
     if (player.status !== 'partying') continue;
     player.drinksThisPhase = 0;
-    player.withdrawSeq = -1;
     player.skipNextTurn = false;
     player.itemUsedThisTurn = false;
   }
@@ -182,9 +282,8 @@ function startPhase(G: MagalufG, rng: Rng, phaseIndex: number): void {
     return;
   }
 
-  // Rotate who opens each phase across the whole weekend. The opener is also
-  // the anchor every round boundary in this phase is measured from.
-  const opener = (G.day * PHASE_IDS.length + phaseIndex) % G.activeSeatIDs.length;
+  // The opener is also the anchor every round boundary in this phase is
+  // measured from -- see `advanceTurn`.
   G.roundAnchor = opener;
   G.turnSeatID = G.activeSeatIDs[opener]!;
   if (G.players[G.turnSeatID]!.status !== 'partying') advanceTurn(G);
@@ -226,9 +325,8 @@ function awardLastStanding(G: MagalufG, seatID: string): void {
 /**
  * A venue closes. Nothing is dealt here any more — the transition is recorded
  * and handed to a round-confirm wait, so the table regroups before the next
- * venue opens. The night is resolved first when this was the After, so the
- * balconing rolls are already in `G.jumps` by the time the banner appears and
- * the board can play them inside the gate.
+ * venue opens. When this was the After the night is resolved instead, which
+ * may stand the whole table at a balcony before any gate opens.
  */
 function endPhase(G: MagalufG, rng: Rng): void {
   // Último en Pie is not settled here any more: it is paid the moment somebody
@@ -254,7 +352,8 @@ function performPendingAdvance(G: MagalufG, rng: Rng): void {
   G.roundConfirm = null;
   if (!pending) return;
 
-  if (pending.kind === 'phase') startPhase(G, rng, pending.next);
+  // Worked out here, before startPhase clears the sequence it reads.
+  if (pending.kind === 'phase') startPhase(G, rng, pending.next, openerAfterLastOut(G));
   else startDay(G, rng, pending.next);
 }
 
@@ -281,7 +380,9 @@ function startDay(G: MagalufG, rng: Rng, day: number): void {
   }
 
   log(G, 'dayStart', { descriptionKey: `magaluf.day.${DAY_IDS[day]}` }, 'round');
-  startPhase(G, rng, 0);
+  // After the resets, so a seat that just came out of a cell counts as alive.
+  // Friday is drawn for; every day after it goes to whoever is furthest behind.
+  startPhase(G, rng, 0, day === 0 ? openerByLot(G, rng) : openerByLowestBanked(G));
 }
 
 /**
@@ -339,6 +440,7 @@ function jump(G: MagalufG, rng: Rng, seatID: string, multiplier: number): void {
 
 function resolveNight(G: MagalufG, rng: Rng): void {
   const multiplier = dayMultipliers(G.settings)[G.day] ?? 1;
+  const firstJump = G.jumps.length;
 
   for (const id of G.activeSeatIDs) {
     const player = G.players[id]!;
@@ -360,6 +462,27 @@ function resolveNight(G: MagalufG, rng: Rng): void {
     }
   }
 
+  // Every die is already cast — but the table is stood at the first balcony
+  // and nothing else happens until it has watched them all. Deliberately
+  // *before* `finished`: on the final night the gameover banner would
+  // otherwise announce the winner over the top of the roll deciding them, and
+  // that ordering is now the engine's job rather than a presentation-side hold.
+  if (G.jumps.length > firstJump) {
+    G.balcony = { index: firstJump, revealed: false };
+    return;
+  }
+
+  settleNight(G);
+}
+
+/**
+ * What the night was holding open: the weekend ends, or tomorrow's gate opens.
+ *
+ * Re-derived here rather than decided in `resolveNight` and stashed, because
+ * neither input can move while the table is at the balcony — no move in that
+ * phase touches a player's status or the day — so there is nothing to stash.
+ */
+function settleNight(G: MagalufG): void {
   // Check for a wiped-out table before advancing, so the weekend does not tick
   // over to a day nobody is alive to play.
   const allDead = G.activeSeatIDs.every((id) => G.players[id]!.status === 'dead');
@@ -379,7 +502,7 @@ function resolveNight(G: MagalufG, rng: Rng): void {
  * Returns what the caller must do, rather than doing it: `events` are only
  * available inside a move, and this runs from three of them.
  */
-type HandOver = 'turn' | 'confirm' | 'finished';
+type HandOver = 'turn' | 'balcony' | 'confirm' | 'finished';
 
 function finishTurn(G: MagalufG, rng: Rng): HandOver {
   const rules = phaseRules(G);
@@ -396,6 +519,9 @@ function finishTurn(G: MagalufG, rng: Rng): HandOver {
   }
 
   endPhase(G, rng);
+  // Checked first: a night with jumps in it settles later, from the balcony,
+  // so neither `finished` nor the gate is set yet.
+  if (G.balcony) return 'balcony';
   if (G.finished) return 'finished';
   return 'confirm';
 }
@@ -428,7 +554,7 @@ function takeDrink(
   // Set here rather than after the event, so the drink is on the table for
   // everyone to read while the event is still face-down. A Ronda's knock-on
   // drinks cannot overwrite it: those go through consumeAlcohol, never here.
-  G.lastDraw = { seatID, alcohol: card.id, event: null, outcome: null };
+  G.lastDraw = { seatID, alcohol: card.id, event: null, outcome: null, pours: [] };
 
   if (options.drawsEvent !== false) {
     G.pendingEvent = { seatID, endsTurn: options.endsTurn ?? true };
@@ -533,9 +659,10 @@ function canAct(G: MagalufG, playerID: string): boolean {
   );
 }
 
-/** Every party move ends the same way: hand on the turn, or open the gate. */
+/** Every party move ends the same way: hand on the turn, or leave the venue. */
 function handOver(handOver: HandOver, events: MoveCtx['events']): void {
   if (handOver === 'turn') events.endTurn();
+  else if (handOver === 'balcony') events.setPhase('balcony');
   else if (handOver === 'confirm') events.setPhase('confirm');
   // 'finished' needs nothing: the top-level endIf ends the match.
 }
@@ -645,6 +772,80 @@ function useItem({ G, playerID, random, events }: MoveCtx, item: ItemId): typeof
   player.itemUsedThisTurn = true;
   const rng = fromBoardgameRandom(random);
   if (applyItem(G, rng, playerID, item)) handOver(finishTurn(G, rng), events);
+}
+
+// --- Balcony moves ---------------------------------------------------------
+//
+// The whole table is looking at one balcony at a time and only the jumper has
+// the buttons. Everyone else is watching, which is the point: the outcome of
+// somebody else's roll is not yours to read ahead.
+
+interface BalconyCtx {
+  G: MagalufG;
+  playerID: string;
+  events: { setPhase(phase: string): void };
+}
+
+/** The jump on screen, or null if the table is not at a balcony. */
+function balconyJump(G: MagalufG) {
+  if (!G.balcony) return null;
+  return G.jumps[G.balcony.index] ?? null;
+}
+
+/**
+ * Steps the table to `nextIndex`, or leaves the balcony if that is past the
+ * end — at which point the night finally settles into a gate or the gameover.
+ */
+function leaveBalcony(G: MagalufG, nextIndex: number, events: BalconyCtx['events']): void {
+  if (nextIndex < G.jumps.length) {
+    G.balcony = { index: nextIndex, revealed: false };
+    return;
+  }
+
+  G.balcony = null;
+  settleNight(G);
+  // 'finished' needs no phase change: the top-level endIf ends the match.
+  if (!G.finished) events.setPhase('confirm');
+}
+
+/**
+ * Turns the die face-up — for everybody at once.
+ *
+ * Only the seat doing the jumping, which is the whole of the fix: the roll was
+ * made by the engine before any of this rendered, so the only thing left to
+ * own is the moment of finding out, and it belongs to the person on the rail.
+ */
+function revealJump({ G, playerID }: BalconyCtx): typeof INVALID_MOVE | void {
+  const jump = balconyJump(G);
+  if (!G.balcony || G.balcony.revealed || !jump || jump.seatID !== playerID) {
+    return INVALID_MOVE;
+  }
+  G.balcony = { ...G.balcony, revealed: true };
+}
+
+/** Done reading it out; on to the next balcony, or off to bed. */
+function advanceJump({ G, playerID, events }: BalconyCtx): typeof INVALID_MOVE | void {
+  const jump = balconyJump(G);
+  if (!G.balcony || !G.balcony.revealed || !jump || jump.seatID !== playerID) {
+    return INVALID_MOVE;
+  }
+  leaveBalcony(G, G.balcony.index + 1, events);
+}
+
+/**
+ * Drops the rest of the night's jumps in one go.
+ *
+ * Host-only, and for the same reason `forceAdvanceRoundMove` is: a jumper who
+ * has closed the tab would otherwise hold the whole table on a balcony
+ * forever. It is an escape hatch, not a way to skip your own roll — which is
+ * why it is not the jumper's button.
+ */
+function skipBalcony({ G, playerID, events }: BalconyCtx): typeof INVALID_MOVE | void {
+  // hostPlayerID === null must never authorize anyone -- see forceAdvanceRoundMove.
+  if (!G.balcony || G.hostPlayerID === null || playerID !== G.hostPlayerID) {
+    return INVALID_MOVE;
+  }
+  leaveBalcony(G, G.jumps.length, events);
 }
 
 // --- Round-confirm moves ---------------------------------------------------
@@ -759,6 +960,7 @@ export const magalufGameDef: Game<MagalufG, Record<string, unknown>, MagalufSetu
       roundConfirm: null,
       hostPlayerID: setupData?.hostPlayerID ?? null,
       jumps: [],
+      balcony: null,
       log: [],
       finished: false,
     };
@@ -778,10 +980,23 @@ export const magalufGameDef: Game<MagalufG, Record<string, unknown>, MagalufSetu
       moves: { drink, revealEvent, chooseEventOption, withdraw, useItem },
       onBegin: ({ G, events }) => {
         // A venue nobody can attend -- everyone arrested, or dead -- closes on
-        // arrival and opens another gate. Bouncing straight back keeps that
-        // from stranding the table in a phase where nothing is playable.
-        if (G.roundConfirm) events.setPhase('confirm');
+        // arrival and ends the night on the spot. Bouncing straight back keeps
+        // that from stranding the table in a phase where nothing is playable.
+        // The balcony is checked first: a night that produced jumps has not
+        // opened its gate yet.
+        if (G.balcony) events.setPhase('balcony');
+        else if (G.roundConfirm) events.setPhase('confirm');
       },
+    },
+
+    // The night's jumps, watched together. ActivePlayers.ALL because the seat
+    // whose roll it is is almost never the one who happened to be up, and the
+    // host needs the escape hatch from wherever they are sitting.
+    balcony: {
+      turn: { activePlayers: ActivePlayers.ALL },
+      moves: { revealJump, advanceJump, skipBalcony },
+      // Handed on explicitly by leaveBalcony, like every other transition here.
+      next: 'confirm',
     },
 
     // Everybody regroups. ActivePlayers.ALL because a confirm has to be

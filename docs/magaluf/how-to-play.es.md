@@ -1,52 +1,50 @@
 # Magaluf — Cómo se juega
 
-**De 3 a 6 jugadores.** Estáis de finde golfo en Magaluf. España es el paraíso de la fiesta y el alcohol barato, y vas a amortizar cada segundo y ese es precisamente tu objetivo. . Gana quien tenga más puntos de fiesta el lunes por la mañana. Pero ten cuidadocon  cuanto bebes, no todos llegan al lunes por la mañana.
+**De 3 a 6 jugadores.** ¡Bienvenidos a Magaluf!. España es el paraíso de la fiesta y el alcohol barato, y vas a amortizar cada segundo y cada copa de este fin de semana. Bebe, líala, intenta pillar cacho, sigue bebiendo, pero cuidado, el alcohol puede hacerte creer que saltar del quinto piso a la piscina del hotel es una idea genial para cerrar la noche. El objetivo del juego es simple: intenta ser el guiri más fiestero sin acabar con los dientes en el bordillo.
 
 ---
 
 ## 1. El fin de semana
 
-La partida dura **tres días**, y cada día tiene **tres fases**:
+Una partida de Magaluf dura **tres días**, y cada día tiene **tres fases**:
 
 | Días | Fases |
 |---|---|
 | Viernes → Sábado → Domingo | Tardeo → Noche → After |
 
-Nueve fases en total. Cada fase se juega por turnos en sentido horario; pero solo juegan los que siguen de fiesta. En tu turno tendrás que decidir si beber o retirarte.  La fase termina cuando no queda nadie de fiesta u os echan del bar para cerrar. Retirarse es **por fase**: si te vas a casa durante la Noche, vuelves para el After.
+En cada fase, los fiesteros activos juegan por turnos en sentido horario. Durante tu turno, tendrás que decidir si seguir la fiesta bebiendo o retirarte y que te de un poco el aire, aunque podrás utilizar algún objeto para ayudarte a seguir de marcha. En cualquier caso, solo juegan los que siguen de fiesta. La fase termina cuando no queda nadie de fiesta u os echan del bar para cerrar. Ten en cuenta que retirarse es **de la fase actual**: si te vas a casa durante la Noche, vuelves para el After.
 
-## 2. Tus cuatro números
+**¿Quién empieza?**
+El primer turno es aleatorio, lanzad un d6 y el jugador con la tirada más alta empieza el juego. En el resto de casos:
 
-| Número | Qué significa |
+- **Cada nueva fase** la abre el siguiente jugador en sentido horario.
+- **Cada día nuevo** lo abre el jugador que tiene menos puntos en almacenados.
+
+## 2. Tus recursos
+
+| Valor | Qué significa |
 |---|---|
-| **Intoxicación** | Lo borracho que estás ahora mismo. Se reinicia cada mañana. Nunca baja de cero. |
-| **Resaca** | El nivel al que empieza tu Intoxicación cada mañana que te quede. Casi todas las cartas solo la suben, pero unas pocas te dejan dormir un poco. Nunca baja de cero. |
-| **En juego** | Puntos conseguidos durante la fiesta de hoy que todavía no están a salvo. |
-| **Banco** | Puntos tuyos para siempre. Esto es lo que decide la partida. |
+| **Intoxicación** | Lo borracho que estás ahora mismo. Se reinicia cada mañana y jamás puede ser negativo. Sube con las cartas de alcohol y la pueden disminuir objetos y eventos |
+| **Resaca** | El nivel al que empieza tu Intoxicación cada mañana. Se obtiene con algunos eventos y objetos. Nunca baja de cero. |
+| **En juego** | Los puntos de la fase actual, pero tendrás que sobrevivir a la noche para poder guardarlos. |
+| **Banco** | Puntos guardados tras un día de fiesta. El jugador con más puntos guardados se convertirá en el rey de Magaluf. |
 
-Los números de todos son visibles para todos en todo momento.
+Estos valores son públicos en todo momento.
 
 ## 3. El Límite de Consumo
 
-Cada mañana se roba una **carta de Límite** boca abajo de la misma baraja de
-cinco cartas. Es el mismo número para todos los jugadores y es **la única
+Cada mañana se roba una **carta de Límite de Consumo** boca abajo del mazo de consumo. Es el mismo número para todos los jugadores y es **la única
 información oculta del juego**. Sabes qué números contiene la baraja, pero no
 cuál ha salido:
 
-| Límites posibles, todos los días |
+| Límites posibles (provisionales)|
 |---|
 | 16 / 19 / 22 / 25 / 28 |
 
-La baraja no cambia a lo largo del fin de semana. Antes se estrechaba el
-sábado y el domingo, y eso castigaba dos veces un mal viernes: la Resaca ya se
-arrastra como suelo, así que quien se comía una carta dura pronto llegaba a un
-límite más bajo con una capacidad que nunca eligió gastar. Lo que hace que los
-días finales importen es el multiplicador de puntos (sección 8), no un número
-más pequeño.
-
-Por defecto, el límite se revela **al empezar el After**. El anfitrión puede
+Provisionalmente, el límite se revela **al empezar el After**. El anfitrión puede
 configurar que se revele antes, o que no se revele nunca.
 
-Al final del día, todo jugador cuya Intoxicación esté **por encima** del
+Al salir del after, todo jugador cuya Intoxicación esté **por encima** del
 límite terminará la juerga en el balcón (sección 7). Estar exactamente en el límite es seguro.
 
 ## 4. Tu turno
@@ -233,7 +231,7 @@ Responde de memoria antes de tu primera partida.
    formas de conocerla?
 8. Usas Farlopa y la copa extra es un Cubata (3 de Intoxicación). ¿Cuánta
    Intoxicación te llevas y qué más te cuesta?
-9. Eres el último jugador que queda en el After y has bebido una vez.
-   ¿Recibes el bonus?
+9. En el After los demás se han ido a mitad de ronda y tú llevas una copa.
+   ¿Qué te queda por hacer exactamente para cobrar el Último en Pie?
 10. Mueres el sábado por la noche con 40 puntos en el banco. ¿Cuál es tu
     puntuación final?

@@ -76,6 +76,19 @@
   cursor: pointer;
 }
 
+/*
+ * Occupies the button's place rather than leaving a gap, so the overlay does
+ * not resize under the watchers the instant the jumper clicks. Same muted
+ * italic the choice-card panel uses for the identical "somebody else is
+ * deciding" state.
+ */
+.waiting {
+  margin: 0;
+  padding: var(--space-1) 0;
+  color: var(--color-text-muted, var(--color-text));
+  font-style: italic;
+}
+
 .skip {
   font: inherit;
   font-size: var(--font-size-sm);
