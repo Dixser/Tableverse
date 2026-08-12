@@ -92,23 +92,29 @@ cards exist for is the one least able to afford an unasked-for drink.
 ## Tuning, and how it was set
 
 By probe, not by feel. 200 simulated 4-player weekends across three drinking
-strategies, before and after:
+strategies, run against two tunings of the pair:
 
-| | Before | After |
+| | First attempt | Shipped |
 |---|---|---|
+| `colecta` | +5, ×3 | **+6, ×4** |
+| `remontada` | cap 15, ×2 | **cap 20, ×3** |
 | Median winning score | 75 | 66 |
 | Median final leader-to-last gap | 47 | 44 |
-| Catch-up firings per match | — | 2.0 |
-| **Median catch-up paid per match** | — | **12** |
-| Most paid in one match | — | 51 |
+| Catch-up firings per match | 1.4 | 2.0 |
+| **Median catch-up paid per match** | **6** | **12** |
+| Most paid in one match | 35 | 51 |
 
-So the pair returns a bit over a quarter of a typical final gap, and much more
-than that to a player who has actually been buried — which is the shape asked
-for: a way back in, not a refund.
+The first attempt was worth a median of 6 points against a 47-point gap — a
+gesture rather than a mechanic, and a number no unit test would ever have
+complained about. The shipped tuning returns a bit over a quarter of a typical
+final gap, and much more than that to a player who has actually been buried,
+which is the shape asked for: a way back in, not a refund.
 
-The first tuning attempt (`colecta` +5 ×3, `remontada` cap 15 ×2, no Ronda
-slots) returned a median of **6** against a gap of 47, which would have been a
-gesture rather than a mechanic. The numbers above are what moved it into range.
+Both columns already include the pair, so neither is a no-catch-up control.
+What the probe measures is how much the cards pay and how often, not what the
+game looks like without them; the 47 → 44 movement in the gap is suggestive of
+the intended direction but is within the noise of two 200-match runs and should
+not be read as the feature's effect.
 
 Note for anyone reading `design.md` §13: its median winning score of 151 is the
 pre-034 prototype's and does not describe this game. The figures here were
