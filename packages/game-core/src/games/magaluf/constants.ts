@@ -80,6 +80,30 @@ export const ITEM_EFFECTS = {
   farlopaDrawsEvent: true,
 } as const;
 
+/**
+ * La remontada's two dials, set by probe rather than by feel.
+ *
+ * 200 simulated 4-player weekends across three drinking strategies put the
+ * median winning score at ~66 and the median final leader-to-last gap at ~44.
+ * (Not the 151 in `design.md` §13 — that figure is the pre-034 prototype's and
+ * no longer describes this game.) Against that gap the catch-up pair returns a
+ * median of 12 points a match, a bit over a quarter, and much more than that to
+ * a player who has genuinely been buried.
+ *
+ * `gapDivisor: 2` — half the distance to the leader. Proportional is the whole
+ * point: it is worth almost nothing early, when everyone is level, and only
+ * bites once somebody is actually adrift.
+ *
+ * `maxVP: 20` — the ceiling stops a catastrophic first night from being
+ * refunded outright. It binds from a gap of 40 up, which is about what a missed
+ * Saturday night costs.
+ *
+ * These are a starting point for the next playtest, not a settled tuning. The
+ * dial to turn first is the card counts in PHASE_RULES, which move how often
+ * the pair fires at all; these two move only what it pays when it does.
+ */
+export const COMEBACK = { gapDivisor: 2, maxVP: 20 } as const;
+
 export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
   tardeo: {
     maxDrinks: 4,
@@ -161,10 +185,9 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       garrafonEvent: 2,
       karaoke: 2,
       barraLibre: 2,
-      reyGuiri: 2,
       perdido: 2,
       chupitoCasa: 2,
-      ronda: 2,
+      ronda: 1,
       vomitona: 2,
       ambulancia: 1,
       kebabEvent: 2,
@@ -182,6 +205,15 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       resacon: 1,
       invitacion: 1,
       dobleONada: 1,
+      // Catch-up. The Noche is the earliest venue where a weekend can already
+      // be decided -- an arrest here costs the rest of the day -- so it is the
+      // earliest one that needs a way back. Paid for out of Rey del guiri's two
+      // slots plus a Ronda, on feature 034's standing argument: the forced-drink
+      // cards are the right thing to trade away, being the ones that spend a
+      // player's capacity without asking. That trade also helps the seat these
+      // cards are for, who is the least able to afford an unasked-for drink.
+      colecta: 2,
+      remontada: 1,
       // No `nada` left in the Noche. There was only ever one.
     },
   },
@@ -216,10 +248,9 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       comaEtilico: 2,
       karaoke: 2,
       barraLibre: 2,
-      reyGuiri: 3,
       perdido: 1,
       chupitoCasa: 4,
-      ronda: 4,
+      ronda: 3,
       garrafonEvent: 3,
       vomitona: 2,
       ambulancia: 2,
@@ -235,6 +266,12 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       ultimaRonda: 2,
       dobleONada: 1,
       saltarLaCola: 2,
+      // Rey del guiri's other three slots, plus a Ronda. Weighted to the After
+      // because this is where the weekend is actually decided: Sunday's x2.25
+      // means a gap closed here is worth more than the same gap closed on
+      // Friday, and it is the last venue in which anything can be closed.
+      colecta: 2,
+      remontada: 2,
     },
   },
 };

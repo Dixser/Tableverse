@@ -263,6 +263,18 @@ export function partying(G: MagalufG): string[] {
 }
 
 /**
+ * Everyone whose weekend is not over yet.
+ *
+ * Wider than `partying`: a seat in a cell or on the sofa is out of the venue
+ * but still in the running, and still has nights left to play. Only the dead
+ * are gone for good. This is the field a card reaches when it is settling
+ * something about the *match* rather than about the room.
+ */
+export function alive(G: MagalufG): string[] {
+  return G.activeSeatIDs.filter((id) => G.players[id]?.status !== 'dead');
+}
+
+/**
  * Seats a round-confirm wait is allowed to wait on.
  *
  * The dead are excluded deliberately. Their weekend is over, so holding the
@@ -271,7 +283,7 @@ export function partying(G: MagalufG): string[] {
  * they are simply not counted.
  */
 export function confirmableSeats(G: MagalufG): string[] {
-  return G.activeSeatIDs.filter((id) => G.players[id]?.status !== 'dead');
+  return alive(G);
 }
 
 export function log(
@@ -381,6 +393,23 @@ export function drawEvent(G: MagalufG, rng: Rng): EventId | null {
 
 export function gainVP(player: MagalufPlayer, amount: number): void {
   player.roundVP += amount;
+}
+
+/**
+ * VP straight into the bank: no limit check, no day multiplier.
+ *
+ * The balcony's leyenda bonus has always worked this way. The catch-up cards
+ * need it for a harder reason — `resolveNight` zeroes an arrested player's
+ * round pool, so anything handed to a seat in a cell through `gainVP` is
+ * destroyed at midnight without ever being scored. A card meant to reach the
+ * player having the worst weekend has to reach them where they actually are.
+ *
+ * Unmultiplied is the honest reading, not a nerf: the multiplier is the rate
+ * at which the round pool converts to bank, so N banked directly is N final
+ * points on any day of the weekend.
+ */
+export function bankVP(player: MagalufPlayer, amount: number): void {
+  player.bankedVP += amount;
 }
 
 export function addIntox(player: MagalufPlayer, amount: number): void {

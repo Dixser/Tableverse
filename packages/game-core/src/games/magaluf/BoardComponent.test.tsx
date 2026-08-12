@@ -280,9 +280,9 @@ describe('MagalufBoard', () => {
           lastDraw: {
             seatID: '0',
             alcohol: 'pinta',
-            event: 'reyGuiri',
+            event: 'remontada',
             outcome: {
-              key: 'magaluf.log.reyGuiriResult',
+              key: 'magaluf.log.remontadaResult',
               params: { winners: '0,2', n: 4, vp: 3 },
             },
             pours: [],
@@ -291,7 +291,7 @@ describe('MagalufBoard', () => {
       );
       // The full standings are a second log entry, rendered by the feed only:
       // the card has room for the answer, not the table.
-      expect(screen.getByTestId('event-outcome')).toHaveTextContent('TEST_king Alice, Carol 4 3');
+      expect(screen.getByTestId('event-outcome')).toHaveTextContent('TEST_comeback Alice, Carol 4 3');
     });
 
     it('qualifies names two seats are both using, as the chat feed does', () => {
@@ -299,9 +299,9 @@ describe('MagalufBoard', () => {
         lastDraw: {
           seatID: '0',
           alcohol: 'pinta',
-          event: 'reyGuiri',
+          event: 'remontada',
           outcome: {
-            key: 'magaluf.log.reyGuiriResult',
+            key: 'magaluf.log.remontadaResult',
             params: { winners: '0,1', n: 4, vp: 3 },
           },
           pours: [],

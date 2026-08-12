@@ -103,7 +103,6 @@ export type EventId =
   // Present in more than one tier, at different frequencies
   | 'karaoke'
   | 'barraLibre'
-  | 'reyGuiri'
   | 'perdido'
   | 'chupitoCasa'
   | 'ronda'
@@ -124,6 +123,9 @@ export type EventId =
   | 'cacheo'
   | 'redada'
   | 'nada'
+  // Catch-up. Both retarget to whoever is last on points -- see EVENTS.
+  | 'colecta'
+  | 'remontada'
   // Cards that ask a question instead of announcing an outcome. See EventCard's
   // `options` and the table in `spec/features/034-magaluf-choices/spec.md`.
   | 'ultimaRonda'
@@ -265,7 +267,6 @@ export const EVENTS: Record<EventId, EventCard> = {
   // Shared across tiers
   karaoke: { id: 'karaoke', vp: 2 },
   barraLibre: { id: 'barraLibre' },
-  reyGuiri: { id: 'reyGuiri', vp: 3 },
   perdido: { id: 'perdido' },
   chupitoCasa: { id: 'chupitoCasa' },
   ronda: { id: 'ronda' },
@@ -316,6 +317,39 @@ export const EVENTS: Record<EventId, EventCard> = {
   cacheo: { id: 'cacheo', vp: -3 },
   redada: { id: 'redada' },
   nada: { id: 'nada' },
+
+  // --- Catch-up ------------------------------------------------------------
+
+  /**
+   * Both of these pay the seat with the fewest points to their name, and both
+   * pay it **into the bank**, unmultiplied.
+   *
+   * They exist because a weekend can be decided before it is played. A player
+   * arrested at the top of Saturday night sits out two earning phases while
+   * the leader plays both, and no card in the deck could hand back a gap that
+   * size -- so the rest of the weekend was arithmetic, not a game. Banking
+   * directly is what lets them land: `resolveNight` zeroes the round pool of
+   * anyone in a cell, so the ordinary VP path reaches everybody except the
+   * exact player these are for.
+   *
+   * They read the whole field of players still in the running -- the cell and
+   * the sofa included, the dead excluded -- rather than the room, because the
+   * standing they are settling belongs to the match and not to the venue.
+   *
+   * La colecta is the flat one and the common one: the table has a whip-round
+   * for whoever is having the worst weekend.
+   */
+  colecta: { id: 'colecta', vp: 6 },
+
+  /**
+   * La remontada is the rare one, and it is the only card in the game whose
+   * value depends on the score. It hands back a share of the distance to the
+   * leader, so it is worth almost nothing when the table is level and
+   * genuinely worth drawing when somebody has been buried. The share and the
+   * ceiling live in `COMEBACK`; a flat number could not do this job, because
+   * the size of the hole is the whole point.
+   */
+  remontada: { id: 'remontada' },
 
   // --- Choice cards --------------------------------------------------------
 

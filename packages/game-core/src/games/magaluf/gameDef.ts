@@ -50,6 +50,7 @@ import {
   addIntox,
   addResaca,
   bankRound,
+  bankVP,
   buildDeck,
   confirmableSeats,
   consumeAlcohol,
@@ -410,7 +411,7 @@ function jump(G: MagalufG, rng: Rng, seatID: string, multiplier: number): void {
     // drunkest night anybody will ever bring to it.
     player.totalIntoxSurvived += player.intox;
     bankedVP = bankRound(G, seatID, multiplier);
-    player.bankedVP += outcome.legendVP;
+    bankVP(player, outcome.legendVP);
     addResaca(player, outcome.resaca);
     log(G, 'piscina', { actor: seatID, d, roll: outcome.roll, vp: outcome.legendVP }, 'special');
     // The ordinary survivor's line, reused: from here the night reads the same

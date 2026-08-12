@@ -196,10 +196,17 @@ the card. A few change the structure of the turn:
 - **Ambulance** — the most intoxicated player at the table is taken away:
   −5 Intoxication, **Hangover +3**, and their phase ends.
 - **You wake up with nothing** — you lose all your items.
-- **King of the tourists** — +3 points to **the most intoxicated player
-  still at the party**, not to whoever drank the most times. Everyone tied
-  at the top is paid. It is the only card that pays you for being wrecked:
-  creeping toward the limit stops being pure risk.
+- **The whip-round** — the table has a collection for **whoever has the
+  fewest points**: +6 points **straight to the bank**.
+- **The comeback** — whoever has the fewest points is handed back **half of
+  what the leader is up on them**, to a maximum of 20, also straight to the
+  bank. It pays nothing if the table is level.
+
+Both count **banked points plus the points you have at risk**, and both
+reach everyone still in the running — including a player in a cell or one
+who has gone home. They are for exactly the player who is not in the room.
+Not the dead: their weekend is over. If two players tie at the bottom, both
+are paid.
 - **Dealer** — you are offered a piece of contraband and decide whether to
   take it. See below.
 

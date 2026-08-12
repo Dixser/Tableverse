@@ -3,7 +3,7 @@ import { Client } from 'boardgame.io/client';
 
 import type { EventId, EventOption, ItemId, PhaseId } from './cards.js';
 import { ALCOHOL, eventOptions, PHASE_IDS } from './cards.js';
-import { LIMIT_DECK, PHASE_RULES } from './constants.js';
+import { COMEBACK, LIMIT_DECK, PHASE_RULES } from './constants.js';
 import { HIDDEN_LIMIT, magalufGameDef, type MagalufG } from './gameDef.js';
 import { magalufModule } from './index.js';
 import { clampSettings, DEFAULT_SETTINGS } from './settings.js';
@@ -883,74 +883,107 @@ describe('magaluf gameDef', () => {
       expect(sober.outcome?.key).toBe('magaluf.log.karaokeResult');
     });
 
-    it('names the Rey del guiri and ranks the whole table behind them', () => {
-      const { client, outcome } = drawEventCard('reyGuiri', (g) => {
-        g.players['0']!.intox = 2;
-        g.players['1']!.intox = 9;
-        g.players['2']!.intox = 5;
+    it('hands the whip-round to the seat with the fewest points, into the bank', () => {
+      const { client, outcome } = drawEventCard('colecta', (g) => {
+        g.players['0']!.bankedVP = 40;
+        g.players['1']!.bankedVP = 12;
+        g.players['2']!.bankedVP = 30;
       });
 
-      // Seat 0 opens, so its cana takes it to 3 -- still behind both.
-      expect(outcome?.key).toBe('magaluf.log.reyGuiriResult');
+      expect(outcome?.key).toBe('magaluf.log.colectaResult');
       expect(outcome?.params?.winners).toBe('1');
-      expect(outcome?.params?.n).toBe(9);
-      expect(G(client).players['1']!.roundVP).toBeGreaterThan(0);
-
-      // The standings ride as their own entry, so the card can stay short and
-      // the feed still gets the whole table, highest first.
-      expect(lastEntry(client, 'reyGuiriRanking')?.params).toEqual({
-        ranking: '1,2,0',
-        rankingValues: '9,5,3',
-      });
+      // Banked, not put at risk: the point is a floor, not another gamble.
+      expect(G(client).players['1']!.bankedVP).toBe(18);
+      expect(G(client).players['1']!.roundVP).toBe(0);
     });
 
-    it('pays for what you drank, not for how many times you drank', () => {
-      // The rule this replaced. Play is clockwise and nearly every turn is a
-      // drink, so the seat that opened the phase held the drink count or was
-      // level with the table -- the card paid for the chair. Four small ones
-      // now lose to two big ones, which is a decision rather than a position.
-      const { outcome } = drawEventCard('reyGuiri', (g) => {
-        g.players['0']!.drinksThisPhase = 4;
-        g.players['0']!.intox = 4;
-        g.players['1']!.drinksThisPhase = 2;
-        g.players['1']!.intox = 11;
-        g.players['2']!.drinksThisPhase = 2;
-        g.players['2']!.intox = 6;
-      });
-      expect(outcome?.params?.winners).toBe('1');
-    });
-
-    it('crowns nobody who has already gone home', () => {
-      const { client, outcome } = drawEventCard('reyGuiri', (g) => {
-        // Far and away the worst state at the table, and out of the venue --
-        // the same population every other "drunkest" card reaches.
-        g.players['1']!.status = 'withdrawn';
-        g.players['1']!.intox = 30;
-        g.players['2']!.intox = 5;
+    it('ranks on banked plus what is still on the table', () => {
+      const { outcome } = drawEventCard('colecta', (g) => {
+        // Seat 1 has banked least but is having the night of their life; seat 2
+        // has more in the bank and nothing riding on tonight. Reading the bank
+        // alone would hand the collection to the player who is really ahead.
+        g.players['0']!.bankedVP = 30;
+        g.players['1']!.bankedVP = 5;
+        g.players['1']!.roundVP = 40;
+        g.players['2']!.bankedVP = 20;
       });
       expect(outcome?.params?.winners).toBe('2');
-      expect(lastEntry(client, 'reyGuiriRanking')?.params).toEqual({
-        ranking: '2,0',
-        rankingValues: '5,1',
+    });
+
+    it('reaches a player sitting the phase out in a cell', () => {
+      // The whole reason these cards bank directly. `resolveNight` throws away
+      // an arrested player's round pool -- asserted over in *the police* -- so
+      // the ordinary VP path reaches everybody except the seat having the worst
+      // weekend at the table, which is the seat this card is for.
+      const { client, outcome } = drawEventCard('colecta', (g) => {
+        g.players['0']!.bankedVP = 40;
+        g.players['1']!.status = 'arrested';
+        g.players['1']!.bankedVP = 5;
+        g.players['2']!.bankedVP = 30;
+      });
+      expect(outcome?.params?.winners).toBe('1');
+      expect(G(client).players['1']!.bankedVP).toBe(11);
+    });
+
+    it('passes over a player whose weekend is already over', () => {
+      const { client, outcome } = drawEventCard('colecta', (g) => {
+        // Bottom of the table by a mile, and past helping.
+        g.players['0']!.bankedVP = 40;
+        g.players['1']!.status = 'dead';
+        g.players['1']!.bankedVP = 0;
+        g.players['2']!.bankedVP = 20;
+      });
+      expect(outcome?.params?.winners).toBe('2');
+      expect(G(client).players['1']!.bankedVP).toBe(0);
+    });
+
+    it('pays every seat tied at the bottom', () => {
+      const { client, outcome } = drawEventCard('colecta', (g) => {
+        g.players['0']!.bankedVP = 40;
+        g.players['1']!.bankedVP = 20;
+        g.players['2']!.bankedVP = 20;
+      });
+      expect(outcome?.params?.winners).toBe('1,2');
+      expect(G(client).players['1']!.bankedVP).toBe(26);
+      expect(G(client).players['2']!.bankedVP).toBe(26);
+    });
+
+    it('hands back half the gap on a Remontada, and shows its working', () => {
+      const { client, outcome } = drawEventCard('remontada', (g) => {
+        g.players['0']!.bankedVP = 19; // the cana on the way in takes it to 20
+        g.players['1']!.bankedVP = 6;
+        g.players['2']!.bankedVP = 14;
+      });
+
+      // Leader 20, last place 6, so the gap is 14 and half of it is 7.
+      expect(outcome?.key).toBe('magaluf.log.remontadaResult');
+      expect(outcome?.params?.winners).toBe('1');
+      expect(outcome?.params?.n).toBe(14);
+      expect(outcome?.params?.vp).toBe(7);
+      expect(G(client).players['1']!.bankedVP).toBe(13);
+
+      // The standings are the card's arithmetic, so the feed gets them whole.
+      expect(lastEntry(client, 'remontadaRanking')?.params).toEqual({
+        ranking: '0,2,1',
+        rankingValues: '20,14,6',
       });
     });
 
-    it('joins tied kings rather than picking one by seat order', () => {
-      const tied = drawEventCard('reyGuiri', (g) => {
-        // Seat 0 starts one behind so its cana lands it level with the others.
-        g.players['0']!.intox = 6;
-        g.players['1']!.intox = 7;
-        g.players['2']!.intox = 7;
+    it('caps the Remontada rather than handing the weekend back', () => {
+      const { outcome } = drawEventCard('remontada', (g) => {
+        g.players['0']!.bankedVP = 99;
       });
-      expect(tied.outcome?.params?.winners).toBe('0,1,2');
+      // A gap of 100 would otherwise pay 50, which is a third of a winning score.
+      expect(outcome?.params?.vp).toBe(COMEBACK.maxVP);
     });
 
-    it('crowns nobody when the whole venue is still sober', () => {
-      const { outcome } = drawEventCard('reyGuiri', (g) => {
-        // Agua on the way in, so even the drawer is still on zero.
-        stack(g, ['agua'], ['reyGuiri']);
+    it('says so rather than paying nothing when the table is level', () => {
+      const { outcome } = drawEventCard('remontada', (g) => {
+        for (const id of g.activeSeatIDs) g.players[id]!.bankedVP = 10;
       });
-      expect(outcome?.key).toBe('magaluf.log.reyGuiriNobody');
+      // Seat 0's own drink puts it one clear, and half of one gap rounds to
+      // nothing. A card that silently paid zero would read as a bug.
+      expect(outcome?.key).toBe('magaluf.log.remontadaNobody');
     });
 
     it('records who the ambulance took and how far gone they were', () => {

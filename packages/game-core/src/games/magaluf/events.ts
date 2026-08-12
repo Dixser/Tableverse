@@ -10,17 +10,24 @@
  * **partying**. A player who has gone home is not raided — which also closes
  * a loophole: otherwise you could hold contraband, withdraw early, and hope a
  * Redada banked your VP and cancelled your limit check for free.
+ *
+ * The two catch-up events are the deliberate opposite: they reach every seat
+ * still in the running, room or no room, because the player they exist for is
+ * typically the one sitting out a phase. See `standings`.
  */
 
 import type { EventEffects, EventId, EventOption } from './cards.js';
 import { EVENTS, eventOptions } from './cards.js';
+import { COMEBACK } from './constants.js';
 import type { Rng } from './rng.js';
 import { dayMultipliers } from './settings.js';
 import type { MagalufG } from './state.js';
 import {
   addIntox,
   addResaca,
+  alive,
   arrest,
+  bankVP,
   drawAlcohol,
   drunkestSeat,
   dropContraband,
@@ -34,6 +41,35 @@ import {
   rankingParams,
   rankSeats,
 } from './state.js';
+
+/**
+ * The match standings, highest first: banked plus what is still on the table.
+ *
+ * Banked alone would be the wrong number to rank on — a player halfway through
+ * a huge night has not banked any of it yet and would read as destitute — and
+ * at-risk alone forgets the whole weekend so far. What a seat is worth right
+ * now is both, which is also what the board already shows on every panel.
+ *
+ * Ranked over `alive`, not `partying`: this is a fact about the match, and the
+ * player it usually concerns is the one who is not in the room.
+ */
+function standings(G: MagalufG): { seatID: string; value: number }[] {
+  return rankSeats(G, (p) => p.bankedVP + p.roundVP, alive(G));
+}
+
+/**
+ * Everyone tied at the bottom of a ranking.
+ *
+ * Shared rather than picking one name, for the reason Rey del guiri's rework
+ * recorded: `rankSeats` settles a tie by seat number, so taking the last entry
+ * would quietly decide a payout by where somebody is sitting.
+ */
+function lastPlace(
+  ranked: { seatID: string; value: number }[],
+): { seatID: string; value: number }[] {
+  const bottom = ranked[ranked.length - 1]?.value;
+  return bottom === undefined ? [] : ranked.filter((r) => r.value === bottom);
+}
 
 /**
  * Applies one card — or one branch of one — to the drawing player.
@@ -138,35 +174,50 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
       break;
     }
 
-    case 'reyGuiri': {
-      // Intoxication, not the drink count. Play goes clockwise and almost
-      // every turn is a drink, so the seat that opened the phase was always
-      // one ahead or level with the table -- the card paid for sitting in the
-      // right chair, and when it did not, it paid everyone at once. What you
-      // drank spreads 1 to 6 per card; how many times you drank barely spreads
-      // at all. Ranking the same number Karaoke and the Ambulancia already use
-      // also means "the drunkest" is one thing across the whole deck.
-      const ranked = rankSeats(G, (p) => p.intox, partying(G));
-      const most = ranked[0]?.value ?? 0;
-      if (most > 0) {
-        const winners = ranked.filter((r) => r.value === most);
-        for (const { seatID: id } of winners) gainVP(G.players[id]!, card.vp ?? 0);
-        // Two entries, not one. The result is what the card shows -- short
-        // enough to sit under a tile -- and the standings are a second line
-        // that only the feed renders, where there is room for the whole table
-        // and somewhere to scroll back to it.
-        logOutcome(
-          G,
-          'reyGuiriResult',
-          { winners: winners.map((w) => w.seatID).join(','), n: most, vp: card.vp ?? 0 },
-          'success',
-        );
-        log(G, 'reyGuiriRanking', rankingParams(ranked));
-      } else {
-        // Everyone still in the venue is stone sober, so there is no king.
-        // Worth saying: otherwise the card looks like it failed to resolve.
-        logOutcome(G, 'reyGuiriNobody');
+    // --- Catch-up --------------------------------------------------------
+    // Both read `standings`, which ranks everyone still in the running rather
+    // than everyone still in the room: the seat these cards exist for is
+    // usually the one that is not in the room. Both pay into the bank, because
+    // `resolveNight` throws away the round pool of anyone in a cell.
+
+    case 'colecta': {
+      const ranked = standings(G);
+      const trailing = lastPlace(ranked);
+      if (trailing.length === 0) break;
+      for (const { seatID: id } of trailing) bankVP(G.players[id]!, card.vp ?? 0);
+      logOutcome(
+        G,
+        'colectaResult',
+        { winners: trailing.map((r) => r.seatID).join(','), vp: card.vp ?? 0 },
+        'success',
+      );
+      break;
+    }
+
+    case 'remontada': {
+      const ranked = standings(G);
+      const trailing = lastPlace(ranked);
+      const leader = ranked[0]?.value ?? 0;
+      const gap = leader - (trailing[0]?.value ?? 0);
+      const vp = Math.min(Math.floor(gap / COMEBACK.gapDivisor), COMEBACK.maxVP);
+      if (vp <= 0) {
+        // A level table has nothing to hand back, and a card that silently did
+        // nothing would read as a bug rather than as a compliment.
+        logOutcome(G, 'remontadaNobody');
+        break;
       }
+      for (const { seatID: id } of trailing) bankVP(G.players[id]!, vp);
+      // Two entries, the same split Rey del guiri used: the result is short
+      // enough to sit under a tile, and the standings are a second line only
+      // the feed renders -- which here is also the card showing its working,
+      // since the payout is derived from exactly that table.
+      logOutcome(
+        G,
+        'remontadaResult',
+        { winners: trailing.map((r) => r.seatID).join(','), n: gap, vp },
+        'success',
+      );
+      log(G, 'remontadaRanking', rankingParams(ranked));
       break;
     }
 

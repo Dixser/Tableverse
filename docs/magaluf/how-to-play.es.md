@@ -177,10 +177,16 @@ dicen en la carta. Algunos cambian la estructura del turno:
 - **Ambulancia** — se llevan al jugador más borracho de la mesa: −5 de
   Intoxicación, **Resaca +3**, y se le acaba la fase.
 - **Despiertas sin nada** — pierdes todos tus objetos.
-- **Rey del guiri** — +3 puntos para **el jugador más intoxicado de los que
-  siguen de fiesta**, no para quien más veces haya bebido. Si hay empate
-  cobran todos. Es la única carta que te paga por ir cargado: acercarte al
-  límite deja de ser solo riesgo.
+- **La colecta** — la mesa hace un bote para **quien menos puntos tenga**:
+  +6 puntos **directos al banco**.
+- **La remontada** — a quien menos puntos tenga le devuelven **la mitad de
+  lo que le saca el primero**, hasta un máximo de 20, también directo al
+  banco. Si la mesa va igualada no paga nada.
+
+Las dos cuentan los puntos **del banco más los que llevas en juego**, y las
+dos alcanzan a todo el que siga vivo: también a quien esté en el calabozo o
+ya se haya ido a casa. Son precisamente para quien no está en la sala. A los
+muertos no: su fin de semana ya se acabó. Si hay empate abajo, cobran todos.
 - **Camello** — te ofrece una pieza de contrabando y decides tú si te la
   llevas. Ver más abajo.
 

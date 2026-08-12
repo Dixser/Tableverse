@@ -61,7 +61,7 @@ void i18n.use(initReactI18next).init({
           // the chat feed's business and has its own tests.
           log: {
             barraLibreResult: 'TEST_open_bar {{actor}} {{n}} {{vp}}',
-            reyGuiriResult: 'TEST_king {{winners}} {{n}} {{vp}}',
+            remontadaResult: 'TEST_comeback {{winners}} {{n}} {{vp}}',
           },
           phase: { tardeo: 'TEST_tardeo', noche: 'TEST_noche', after: 'TEST_after' },
           day: { viernes: 'TEST_friday', sabado: 'TEST_saturday', domingo: 'TEST_sunday' },
