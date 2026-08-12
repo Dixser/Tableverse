@@ -119,8 +119,14 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
     // Each of these four is printed as a rule rather than a number, so each
     // reports what the rule actually came to — see `logOutcome`.
     case 'karaoke': {
-      const top = drunkestSeat(G);
-      const doubled = top === seatID;
+      // Joint-drunkest counts. `drunkestSeat` answers with a single name and
+      // settles a tie by seat order, which quietly withheld the double from a
+      // drawer who was level with the worst state at the table -- the same
+      // positional rule Rey del guiri was reworked to remove, one card over.
+      // The Ambulancia keeps that helper: it removes exactly one player from
+      // the phase, so it has no way to honour a tie.
+      const most = rankSeats(G, (p) => p.intox, partying(G))[0]?.value ?? 0;
+      const doubled = most > 0 && player.intox === most;
       const vp = doubled ? (card.vp ?? 0) * 2 : (card.vp ?? 0);
       gainVP(player, vp);
       logOutcome(

@@ -863,6 +863,26 @@ describe('magaluf gameDef', () => {
       expect(plain.outcome?.params?.vp).toBe(2);
     });
 
+    it('doubles Karaoke for a drawer who is level with the worst at the table', () => {
+      // Seat 0 opens and its cana lands it exactly on seat 2's total. Deciding
+      // that by seat number is the rule Rey del guiri was reworked to remove.
+      const tied = drawEventCard('karaoke', (g) => {
+        g.players['0']!.intox = 6;
+        g.players['2']!.intox = 7;
+      });
+      expect(tied.outcome?.key).toBe('magaluf.log.karaokeDrunkest');
+      expect(tied.outcome?.params?.vp).toBe(4);
+    });
+
+    it('does not double Karaoke for a sober table', () => {
+      // Nobody can be the drunkest when nobody is drunk. Agua is the only card
+      // that leaves the drawer on zero after turning an event over.
+      const sober = drawEventCard('karaoke', (g) => {
+        stack(g, ['agua'], ['karaoke']);
+      });
+      expect(sober.outcome?.key).toBe('magaluf.log.karaokeResult');
+    });
+
     it('names the Rey del guiri and ranks the whole table behind them', () => {
       const { client, outcome } = drawEventCard('reyGuiri', (g) => {
         g.players['0']!.intox = 2;

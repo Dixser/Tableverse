@@ -71,6 +71,28 @@ deterministic tiebreak available here — seat order, drink count — reintroduc
 exactly the positional bias this feature removes, and on intoxication a tie is
 now uncommon rather than the expected outcome.
 
+## Addendum: Karaoke's tie
+
+Not asked for in the playtest note, and separable — it is its own commit, and
+dropping it leaves the rest of this feature intact.
+
+Karaoke doubles the drawer's +2 when the drawer is the drunkest, and asked
+`drunkestSeat` for a single name to compare against. That helper resolves a tie
+by seat order, so a drawer who was *level* with the worst state at the table
+was quietly denied the double because somebody in a lower-numbered chair held
+the same number. That is the same invisible positional rule as the one above,
+on the card sitting next to it and reading the same stat, so it is fixed the
+same way: the drawer doubles when their intoxication equals the top value among
+partying seats.
+
+A `most > 0` guard comes with it. Under the old code a table where everybody
+was on zero still had a "drunkest" — the first partying seat — so a drawer who
+had somehow reached the card sober could double for it. Nobody is the drunkest
+when nobody is drunk.
+
+This makes Karaoke marginally more generous. That is the intended direction:
+the payout should follow the state of the player, not their seat number.
+
 ## Non-goals / deferred
 
 - **The Ambulancia's tiebreak.** It keeps `drunkestSeat`, which resolves a tie
@@ -94,3 +116,5 @@ now uncommon rather than the expected outcome.
   intoxicated it is.
 - AC4 — With every partying seat on zero intoxication the card reports
   `reyGuiriNobody` and pays nobody.
+- AC5 (addendum) — Karaoke doubles for a drawer tied at the top intoxication,
+  and does not double when every partying seat is on zero.

@@ -20,3 +20,9 @@
 
 - [x] 6. **Full suite.** `npm run test:unit` 1090 passed, `npm run typecheck`
       clean, `npm run lint` unchanged from `main`.
+
+- [x] 7. **Addendum, separate commit: Karaoke's tie.** Doubles on equal-highest
+      intoxication among partying seats instead of asking `drunkestSeat` for
+      one name, plus the `most > 0` guard. `drunkestSeat` stays for the
+      Ambulancia.
+      **Verify:** AC5 — 2 tests. Suite 1092 passed.
