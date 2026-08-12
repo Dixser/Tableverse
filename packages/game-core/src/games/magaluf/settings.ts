@@ -23,6 +23,29 @@ import { BALCONY_DICE, DAY_VP_MULTIPLIER, DEFAULT_BALCONY_DIE } from './constant
 
 export type LimitRevealAt = PhaseId | 'never';
 
+/**
+ * How long a cell holds you.
+ *
+ * `'day'` is the original rule and stays the default: arrested, and out for
+ * every remaining phase of that day. `'phase'` releases you at the next venue.
+ *
+ * A dial rather than a decision because the table is split on it and both
+ * readings are defensible. `'day'` makes the Redada the real threat that makes
+ * carrying contraband a genuine bet — which only became a fair bet at all once
+ * the Camello started asking. `'phase'` keeps a bad card from ending somebody's
+ * evening at eight o'clock.
+ *
+ * Worth knowing before turning it to `'phase'`: an arrest banks the round pool
+ * on the spot, so a shorter sentence turns the Redada into a partial hedge —
+ * this day's points so far are locked in at the day's rate and cannot be lost
+ * to the limit check, and you are back in the next venue to earn more. It is
+ * not directly exploitable, since nobody chooses when a Redada appears, but it
+ * does mean the card can land as a mixed blessing rather than a punishment.
+ */
+export type ArrestScope = 'phase' | 'day';
+
+export const ARREST_SCOPE_OPTIONS: readonly ArrestScope[] = ['phase', 'day'];
+
 export const LIMIT_REVEAL_OPTIONS: readonly LimitRevealAt[] = [
   'tardeo',
   'noche',
@@ -42,6 +65,8 @@ export interface MagalufSettings {
   limitShift: number;
   saturdayMultiplier: number;
   sundayMultiplier: number;
+  /** How long an arrest keeps you out. See `ArrestScope`. */
+  arrestLasts: ArrestScope;
 }
 
 interface NumericRange {
@@ -50,7 +75,10 @@ interface NumericRange {
   fallback: number;
 }
 
-const RANGES: Record<keyof Omit<MagalufSettings, 'limitRevealAt' | 'balconyDie'>, NumericRange> = {
+const RANGES: Record<
+  keyof Omit<MagalufSettings, 'limitRevealAt' | 'balconyDie' | 'arrestLasts'>,
+  NumericRange
+> = {
   limitShift: { min: -10, max: 10, fallback: 0 },
   saturdayMultiplier: { min: 1, max: 3, fallback: DAY_VP_MULTIPLIER[1]! },
   sundayMultiplier: { min: 1, max: 4, fallback: DAY_VP_MULTIPLIER[2]! },
@@ -62,6 +90,8 @@ export const DEFAULT_SETTINGS: MagalufSettings = {
   limitShift: 0,
   saturdayMultiplier: RANGES.saturdayMultiplier.fallback,
   sundayMultiplier: RANGES.sundayMultiplier.fallback,
+  // The rule as shipped. A host opts in to the shorter sentence.
+  arrestLasts: 'day',
 };
 
 function clampNumber(raw: unknown, range: NumericRange): number {
@@ -89,6 +119,11 @@ export function clampSettings(raw: Partial<MagalufSettings> | undefined): Magalu
     limitShift: Math.round(clampNumber(raw?.limitShift, RANGES.limitShift)),
     saturdayMultiplier: clampNumber(raw?.saturdayMultiplier, RANGES.saturdayMultiplier),
     sundayMultiplier: clampNumber(raw?.sundayMultiplier, RANGES.sundayMultiplier),
+    // Same shape as limitRevealAt: an unrecognised value is not the nearest
+    // valid one, it is no answer at all, so it falls back to the default.
+    arrestLasts: ARREST_SCOPE_OPTIONS.includes(raw?.arrestLasts as ArrestScope)
+      ? (raw?.arrestLasts as ArrestScope)
+      : DEFAULT_SETTINGS.arrestLasts,
   };
 }
 
@@ -135,6 +170,12 @@ export const magalufSettingsSchema: JSONSchema = {
       minimum: RANGES.sundayMultiplier.min,
       maximum: RANGES.sundayMultiplier.max,
       title: 'Sunday points multiplier (1-4)',
+    },
+    arrestLasts: {
+      type: 'string',
+      enum: [...ARREST_SCOPE_OPTIONS],
+      default: DEFAULT_SETTINGS.arrestLasts,
+      title: 'A police raid keeps you out for the rest of the (phase / day)',
     },
   },
 };

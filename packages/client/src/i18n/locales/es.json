@@ -625,11 +625,12 @@
       "remontadaRanking": "Puntos ahora mismo — {{ranking}}",
       "remontadaNobody": "La remontada — pero aquí no se descuelga nadie todavía.",
       "ambulanciaResult": "{{actor}} era el más borracho con {{n}} y se lo llevan.",
-      "arrested": "Detienen a {{actor}}: banca sus PV y se le acaba el día.",
+      "arrested": "Detienen a {{actor}}: banca sus PV y se lo llevan.",
       "searched": "Cachean a {{actor}}.",
       "skipped": "{{actor}} se ha perdido y pierde el turno.",
       "survived": "{{actor}} sobrevive la noche y guarda {{vp}} PV.",
       "sleptInCell": "{{actor}} duerme la mona en el calabozo.",
+      "released": "{{actor}} sale del calabozo y se reengancha a la fiesta.",
       "piscina": "¡{{actor}} cae en la piscina! {{d}} por encima del límite: +{{vp}} PV de leyenda.",
       "cemento": "{{actor}} no llega a la piscina. {{d}} por encima del límite.",
       "awaitingTable": "Esperando a que todos estén listos…"

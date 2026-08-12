@@ -261,11 +261,17 @@ function startPhase(G: MagalufG, rng: Rng, phaseIndex: number, opener: number): 
 
   if (G.settings.limitRevealAt === PHASE_IDS[phaseIndex]) G.limitRevealed = true;
 
+  // How long the cell holds you is the host's call; 'day' is the shipped rule.
+  // 'dead' survives either way -- the concrete is not a setting.
+  const releasesArrested = G.settings.arrestLasts === 'phase';
+
   for (const id of G.activeSeatIDs) {
     const player = G.players[id]!;
-    // 'arrested' and 'dead' both survive the phase boundary: a cell holds you
-    // until morning, and the concrete holds you rather longer.
     if (player.status === 'withdrawn') player.status = 'partying';
+    if (releasesArrested && player.status === 'arrested') {
+      player.status = 'partying';
+      log(G, 'released', { actor: id });
+    }
     // Cleared for everybody, the arrested and the dead included, because the
     // counter restarts at zero each venue: a seat still carrying last venue's
     // sequence number would outrank this venue's real last-out.

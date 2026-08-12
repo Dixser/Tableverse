@@ -1457,6 +1457,59 @@ describe('magaluf gameDef', () => {
       expect(dealThenRaid(1).status).toBe('partying');
     });
 
+    describe('how long the cell holds you (host setting)', () => {
+      /** Raided on the way into the Tardeo, then played on to the Noche. */
+      function raidThenNextVenue(arrestLasts: 'phase' | 'day') {
+        const client = makeClient(3, (g) => {
+          g.settings = { ...g.settings, arrestLasts };
+          g.players[g.turnSeatID]!.items = ['porro'];
+          stack(g, Array<string>(8).fill('cana'), ['redada']);
+        });
+        const seat = G(client).turnSeatID;
+        drinkAndReveal(client, seat);
+        expect(G(client).players[seat]!.status).toBe('arrested');
+
+        play(client, alwaysWithdraw, (g) => g.phase === 1);
+        return { client, seat };
+      }
+
+      it('keeps them in until morning by default', () => {
+        const { client, seat } = raidThenNextVenue('day');
+        expect(G(client).players[seat]!.status).toBe('arrested');
+        expect(G(client).log.some((e) => e.key === 'magaluf.log.released')).toBe(false);
+      });
+
+      it('lets them out at the next venue when the host asks for it', () => {
+        const { client, seat } = raidThenNextVenue('phase');
+        const player = G(client).players[seat]!;
+        expect(player.status).toBe('partying');
+        // Released into a fresh venue, not into the one they were taken from.
+        expect(player.drinksThisPhase).toBe(0);
+        expect(
+          G(client).log.some(
+            (e) => e.key === 'magaluf.log.released' && e.params?.actor === seat,
+          ),
+        ).toBe(true);
+      });
+
+      it('puts a released player back under the night’s limit check', () => {
+        // The free pass belongs to whoever is still in the cell at midnight.
+        // Someone let out at eight o'clock drank the rest of the night like
+        // everybody else and answers for it like everybody else.
+        const client = makeClient(3, (g) => {
+          g.settings = { ...g.settings, arrestLasts: 'phase' };
+          g.limit = 0;
+          g.players[g.turnSeatID]!.items = ['porro'];
+          stack(g, Array<string>(8).fill('cana'), ['redada']);
+        });
+        const seat = G(client).turnSeatID;
+        drinkAndReveal(client, seat);
+
+        play(client, alwaysDrink, (g) => g.day !== 0);
+        expect(G(client).jumps.some((j) => j.seatID === seat)).toBe(true);
+      });
+    });
+
     it('charges no aguafiestas penalty to an arrested player (AC14)', () => {
       const client = makeClient(3, (g) => {
         g.players[g.turnSeatID]!.items = ['farlopa'];
@@ -1554,6 +1607,14 @@ describe('magaluf gameDef', () => {
       expect(broken.limitShift).toBe(DEFAULT_SETTINGS.limitShift);
       expect(broken.saturdayMultiplier).toBe(DEFAULT_SETTINGS.saturdayMultiplier);
       expect(broken.limitRevealAt).toBe(DEFAULT_SETTINGS.limitRevealAt);
+    });
+
+    it('falls back to the default sentence for an unrecognised arrest scope', () => {
+      expect(clampSettings({ arrestLasts: 'forever' } as never).arrestLasts).toBe(
+        DEFAULT_SETTINGS.arrestLasts,
+      );
+      expect(clampSettings({} as never).arrestLasts).toBe('day');
+      expect(clampSettings({ arrestLasts: 'phase' } as never).arrestLasts).toBe('phase');
     });
 
     it('refuses a die that does not exist rather than clamping to the nearest', () => {

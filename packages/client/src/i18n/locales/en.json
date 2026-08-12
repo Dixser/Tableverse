@@ -625,11 +625,12 @@
       "remontadaRanking": "Points right now — {{ranking}}",
       "remontadaNobody": "The comeback — but nobody is off the pace yet.",
       "ambulanciaResult": "{{actor}} was the drunkest at {{n}} and gets taken away.",
-      "arrested": "{{actor}} is arrested: banks their VP, day over.",
+      "arrested": "{{actor}} is arrested: their VP is banked and they are taken away.",
       "searched": "{{actor}} is searched.",
       "skipped": "{{actor}} is lost and misses a turn.",
       "survived": "{{actor}} survives the night and banks {{vp}} VP.",
       "sleptInCell": "{{actor}} sleeps it off in a cell.",
+      "released": "{{actor}} is let out of the cell and rejoins the party.",
       "piscina": "{{actor}} lands in the pool! {{d}} over the limit: +{{vp}} VP for the legend.",
       "cemento": "{{actor}} does not reach the pool. {{d}} over the limit.",
       "awaitingTable": "Waiting for everyone to be ready…"

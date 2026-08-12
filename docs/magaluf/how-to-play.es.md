@@ -161,9 +161,17 @@ decisión que tomaste tú.
   puntos.
 - **Redada.** Todo jugador de fiesta que lleve contrabando es **detenido**:
   sus puntos en juego pasan al banco inmediatamente con el multiplicador del
-  día, se queda fuera del resto de fases de ese día, no paga penalización por
-  aguafiestas y **no tiene comprobación de límite esa noche**. Sale a la
-  mañana siguiente. Si nadie lleva contrabando, no pasa nada.
+  día, se queda fuera, no paga penalización por aguafiestas y **no tiene
+  comprobación de límite esa noche** si sigue en el calabozo a medianoche. Si
+  nadie lleva contrabando, no pasa nada.
+
+  **Cuánto dura la detención lo decide el anfitrión** al crear la sala:
+
+  - *Día* (por defecto) — te pierdes el resto de fases de ese día y sales a la
+    mañana siguiente.
+  - *Fase* — sales en el siguiente local y te reenganchas a la noche. Ojo:
+    entonces sí te toca la comprobación de límite, porque a medianoche ya no
+    estás detenido.
 
 ## 10. Eventos que conviene conocer de antemano
 

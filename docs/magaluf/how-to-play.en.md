@@ -179,10 +179,18 @@ made yourself.
   it and loses 3 points.
 - **Police raid.** Every player at the party holding contraband is
   **arrested**: their points at risk are banked immediately at the day's
-  multiplier, they are out for all remaining phases of that day, they pay no
-  party pooper penalty, and they face **no limit check that night**. They are
-  released the following morning. If nobody is holding contraband, nothing
-  happens.
+  multiplier, they are out, they pay no party pooper penalty, and they face
+  **no limit check that night** if they are still in the cell at midnight. If
+  nobody is holding contraband, nothing happens.
+
+  **How long the cell holds you is the host's call**, set when the room is
+  created:
+
+  - *Day* (default) — you miss every remaining phase of that day and are
+    released the following morning.
+  - *Phase* — you are let out at the next venue and rejoin the night. Note
+    that you then do face the limit check, because you are no longer in a cell
+    at midnight.
 
 ## 10. Events worth knowing in advance
 
