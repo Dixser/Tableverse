@@ -133,7 +133,14 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
     }
 
     case 'reyGuiri': {
-      const ranked = rankSeats(G, (p) => p.drinksThisPhase);
+      // Intoxication, not the drink count. Play goes clockwise and almost
+      // every turn is a drink, so the seat that opened the phase was always
+      // one ahead or level with the table -- the card paid for sitting in the
+      // right chair, and when it did not, it paid everyone at once. What you
+      // drank spreads 1 to 6 per card; how many times you drank barely spreads
+      // at all. Ranking the same number Karaoke and the Ambulancia already use
+      // also means "the drunkest" is one thing across the whole deck.
+      const ranked = rankSeats(G, (p) => p.intox, partying(G));
       const most = ranked[0]?.value ?? 0;
       if (most > 0) {
         const winners = ranked.filter((r) => r.value === most);
@@ -150,8 +157,8 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
         );
         log(G, 'reyGuiriRanking', rankingParams(ranked));
       } else {
-        // Nobody has drunk anything yet, so there is no king. Worth saying:
-        // otherwise the card looks like it failed to resolve.
+        // Everyone still in the venue is stone sober, so there is no king.
+        // Worth saying: otherwise the card looks like it failed to resolve.
         logOutcome(G, 'reyGuiriNobody');
       }
       break;

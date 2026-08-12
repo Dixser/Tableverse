@@ -307,12 +307,20 @@ export function logOutcome(
   }
 }
 
-/** Seats ranked by a public number, highest first; ties broken by seat order. */
+/**
+ * Seats ranked by a public number, highest first; ties broken by seat order.
+ *
+ * `seats` narrows the field — a card that only reaches the people still in the
+ * venue ranks `partying(G)` rather than the whole table. The seat-order
+ * tiebreak is for display only: a caller that pays out reads the top *value*
+ * and awards everyone holding it, so nobody wins for sitting in a low chair.
+ */
 export function rankSeats(
   G: MagalufG,
   value: (player: MagalufPlayer) => number,
+  seats: readonly string[] = G.activeSeatIDs,
 ): { seatID: string; value: number }[] {
-  return G.activeSeatIDs
+  return seats
     .map((seatID) => ({ seatID, value: value(G.players[seatID]!) }))
     .sort((a, b) => b.value - a.value || Number(a.seatID) - Number(b.seatID));
 }

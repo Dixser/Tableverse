@@ -865,38 +865,72 @@ describe('magaluf gameDef', () => {
 
     it('names the Rey del guiri and ranks the whole table behind them', () => {
       const { client, outcome } = drawEventCard('reyGuiri', (g) => {
-        g.players['0']!.drinksThisPhase = 1;
-        g.players['1']!.drinksThisPhase = 5;
-        g.players['2']!.drinksThisPhase = 3;
+        g.players['0']!.intox = 2;
+        g.players['1']!.intox = 9;
+        g.players['2']!.intox = 5;
       });
 
-      // Seat 0 opens, so its own drink takes it to 2 -- still behind both.
+      // Seat 0 opens, so its cana takes it to 3 -- still behind both.
       expect(outcome?.key).toBe('magaluf.log.reyGuiriResult');
       expect(outcome?.params?.winners).toBe('1');
-      expect(outcome?.params?.n).toBe(5);
+      expect(outcome?.params?.n).toBe(9);
       expect(G(client).players['1']!.roundVP).toBeGreaterThan(0);
 
       // The standings ride as their own entry, so the card can stay short and
       // the feed still gets the whole table, highest first.
       expect(lastEntry(client, 'reyGuiriRanking')?.params).toEqual({
         ranking: '1,2,0',
-        rankingValues: '5,3,2',
+        rankingValues: '9,5,3',
+      });
+    });
+
+    it('pays for what you drank, not for how many times you drank', () => {
+      // The rule this replaced. Play is clockwise and nearly every turn is a
+      // drink, so the seat that opened the phase held the drink count or was
+      // level with the table -- the card paid for the chair. Four small ones
+      // now lose to two big ones, which is a decision rather than a position.
+      const { outcome } = drawEventCard('reyGuiri', (g) => {
+        g.players['0']!.drinksThisPhase = 4;
+        g.players['0']!.intox = 4;
+        g.players['1']!.drinksThisPhase = 2;
+        g.players['1']!.intox = 11;
+        g.players['2']!.drinksThisPhase = 2;
+        g.players['2']!.intox = 6;
+      });
+      expect(outcome?.params?.winners).toBe('1');
+    });
+
+    it('crowns nobody who has already gone home', () => {
+      const { client, outcome } = drawEventCard('reyGuiri', (g) => {
+        // Far and away the worst state at the table, and out of the venue --
+        // the same population every other "drunkest" card reaches.
+        g.players['1']!.status = 'withdrawn';
+        g.players['1']!.intox = 30;
+        g.players['2']!.intox = 5;
+      });
+      expect(outcome?.params?.winners).toBe('2');
+      expect(lastEntry(client, 'reyGuiriRanking')?.params).toEqual({
+        ranking: '2,0',
+        rankingValues: '5,1',
       });
     });
 
     it('joins tied kings rather than picking one by seat order', () => {
-      const { outcome } = drawEventCard('reyGuiri', (g) => {
-        for (const id of g.activeSeatIDs) g.players[id]!.drinksThisPhase = 4;
-      });
-      // Seat 0's own drink puts it one ahead of the other two.
-      expect(outcome?.params?.winners).toBe('0');
-
       const tied = drawEventCard('reyGuiri', (g) => {
-        g.players['0']!.drinksThisPhase = 3;
-        g.players['1']!.drinksThisPhase = 4;
-        g.players['2']!.drinksThisPhase = 4;
+        // Seat 0 starts one behind so its cana lands it level with the others.
+        g.players['0']!.intox = 6;
+        g.players['1']!.intox = 7;
+        g.players['2']!.intox = 7;
       });
       expect(tied.outcome?.params?.winners).toBe('0,1,2');
+    });
+
+    it('crowns nobody when the whole venue is still sober', () => {
+      const { outcome } = drawEventCard('reyGuiri', (g) => {
+        // Agua on the way in, so even the drawer is still on zero.
+        stack(g, ['agua'], ['reyGuiri']);
+      });
+      expect(outcome?.key).toBe('magaluf.log.reyGuiriNobody');
     });
 
     it('records who the ambulance took and how far gone they were', () => {

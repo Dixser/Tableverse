@@ -196,6 +196,10 @@ the card. A few change the structure of the turn:
 - **Ambulance** — the most intoxicated player at the table is taken away:
   −5 Intoxication, **Hangover +3**, and their phase ends.
 - **You wake up with nothing** — you lose all your items.
+- **King of the tourists** — +3 points to **the most intoxicated player
+  still at the party**, not to whoever drank the most times. Everyone tied
+  at the top is paid. It is the only card that pays you for being wrecked:
+  creeping toward the limit stops being pure risk.
 - **Dealer** — you are offered a piece of contraband and decide whether to
   take it. See below.
 
