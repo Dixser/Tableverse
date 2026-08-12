@@ -571,9 +571,9 @@
       "cacheo": "Stop-and-search — everyone holding contraband discards it and loses 3 VP.",
       "redada": "Police raid — everyone holding contraband spends the night in a cell.",
       "nada": "Nothing happens — the party goes on.",
-      "camelloPorro": "Dealer — you get a Joint.",
-      "camelloPastis": "Dealer — you get MDMA.",
-      "camelloFarlopa": "Dealer — you get Cocaine.",
+      "camelloPorro": "Dealer — he offers you a Joint. Take it, or leave it.",
+      "camelloPastis": "Dealer — he offers you MDMA. Take it, or leave it.",
+      "camelloFarlopa": "Dealer — he offers you Cocaine. Take it, or leave it.",
       "ultimaRonda": "Last round — someone puts a drink in your hand. Sink it now, or promise them tomorrow.",
       "resacon": "Rough one — you could sit this out and sleep some of it off, at a price.",
       "invitacion": "You are owed a favour — take the cash, or take the food.",
@@ -596,7 +596,11 @@
       "doblar": "Double it — drink another card at double VP",
       "pasar": "Pass — nothing happens",
       "colarse": "Go now — +7 VP, but you leave the phase",
-      "hacerCola": "Stay where you are — nothing happens"
+      "hacerCola": "Stay where you are — nothing happens",
+      "pillarPorro": "Take it — you pick up a Joint (contraband)",
+      "pillarPastis": "Take it — you pick up MDMA (contraband)",
+      "pillarFarlopa": "Take it — you pick up Cocaine (contraband)",
+      "dejarlo": "Leave it — nothing happens"
     },
     "log": {
       "dayStart": "A new day begins:",

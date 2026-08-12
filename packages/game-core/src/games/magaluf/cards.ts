@@ -112,11 +112,12 @@ export type EventId =
   | 'kebabEvent'
   | 'aguaEvent'
   | 'redbullEvent'
-  // One card per item the dealer can hand over, rather than one card that
-  // rolls between three. At a real table the odds of getting a joint versus a
+  // One card per item the dealer can offer, rather than one card that rolls
+  // between three. At a real table the odds of being offered a joint versus a
   // gram have to be the number of cards in the deck, not a die nobody would
   // think to roll -- and it buys a mix that can differ per venue, which a
-  // single random pick could never express.
+  // single random pick could never express. Each one asks before it hands
+  // anything over; see the cards themselves.
   | 'camelloPorro'
   | 'camelloPastis'
   | 'camelloFarlopa'
@@ -151,7 +152,11 @@ export type EventOptionId =
   | 'doblar'
   | 'pasar'
   | 'colarse'
-  | 'hacerCola';
+  | 'hacerCola'
+  | 'pillarPorro'
+  | 'pillarPastis'
+  | 'pillarFarlopa'
+  | 'dejarlo';
 
 /**
  * What a card — or one branch of a card — does.
@@ -282,9 +287,32 @@ export const EVENTS: Record<EventId, EventCard> = {
   kebabEvent: { id: 'kebabEvent', givesItem: 'kebab' },
   aguaEvent: { id: 'aguaEvent', givesItem: 'botella' },
   redbullEvent: { id: 'redbullEvent', givesItem: 'redbull' },
-  camelloPorro: { id: 'camelloPorro', givesItem: 'porro' },
-  camelloPastis: { id: 'camelloPastis', givesItem: 'pastis' },
-  camelloFarlopa: { id: 'camelloFarlopa', givesItem: 'farlopa' },
+  // The dealer offers; he does not hand over. Contraband used to arrive
+  // unasked, so a Redada two seats later arrested you for a joint you never
+  // agreed to carry — the punishment landed on the player who had made no
+  // decision at all. Now the police only ever collect from someone who chose
+  // to be holding, which is the difference between a bad beat and a bad call.
+  camelloPorro: {
+    id: 'camelloPorro',
+    options: [
+      { id: 'pillarPorro', givesItem: 'porro' },
+      { id: 'dejarlo' },
+    ],
+  },
+  camelloPastis: {
+    id: 'camelloPastis',
+    options: [
+      { id: 'pillarPastis', givesItem: 'pastis' },
+      { id: 'dejarlo' },
+    ],
+  },
+  camelloFarlopa: {
+    id: 'camelloFarlopa',
+    options: [
+      { id: 'pillarFarlopa', givesItem: 'farlopa' },
+      { id: 'dejarlo' },
+    ],
+  },
   cacheo: { id: 'cacheo', vp: -3 },
   redada: { id: 'redada' },
   nada: { id: 'nada' },

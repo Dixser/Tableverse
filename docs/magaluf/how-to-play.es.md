@@ -153,6 +153,10 @@ elegir otro dado antes de empezar la partida.
 Hay dos cartas de Evento con policía. **Las dos alcanzan solo a los jugadores
 que siguen de fiesta**: a quien ya se ha ido a casa no le pasa nada.
 
+El contrabando nunca llega solo: la única forma de llevarlo encima es haber
+dicho que sí a un Camello. Las dos cartas de policía cobran, entonces, de una
+decisión que tomaste tú.
+
 - **Cacheo.** Todo jugador de fiesta que lleve contrabando lo tira y pierde 3
   puntos.
 - **Redada.** Todo jugador de fiesta que lleve contrabando es **detenido**:
@@ -173,7 +177,8 @@ dicen en la carta. Algunos cambian la estructura del turno:
 - **Ambulancia** — se llevan al jugador más borracho de la mesa: −5 de
   Intoxicación, **Resaca +3**, y se le acaba la fase.
 - **Despiertas sin nada** — pierdes todos tus objetos.
-- **Camello** — recibes una pieza de contrabando.
+- **Camello** — te ofrece una pieza de contrabando y decides tú si te la
+  llevas. Ver más abajo.
 
 ### Cartas que te hacen una pregunta
 
@@ -200,6 +205,10 @@ hace que la suerte te dé una decisión en vez de un resultado.
   (con toda su Intoxicación), o pasas.
 - **Colarte** — irte ya por +7 puntos pero **abandonando la fase**,
   renunciando al Último en Pie, o quedarte donde estás.
+- **Camello** — pillar lo que te ofrece (Porro, Pastis o Farlopa, según la
+  carta) o dejarlo y que no pase nada. **Nadie te obliga a llevar
+  contrabando**: si lo llevas encima cuando salga la policía, es porque tú
+  decidiste llevarlo.
 
 ## 11. Cómo se gana
 

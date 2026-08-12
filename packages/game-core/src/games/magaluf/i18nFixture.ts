@@ -30,6 +30,8 @@ void i18n.use(initReactI18next).init({
             aguantar: 'TEST_hold_it_in',
             subirALaTerraza: 'TEST_go_up',
             quedarseAbajo: 'TEST_stay_down',
+            pillarFarlopa: 'TEST_take_the_coke',
+            dejarlo: 'TEST_leave_it',
           },
           item: {
             kebab: 'TEST_kebab',

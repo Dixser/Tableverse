@@ -171,6 +171,10 @@ different die before the game starts.
 Two Event cards involve the police. **Both reach only players who are still at
 the party** — anyone who has already gone home is not affected.
 
+Contraband never simply arrives: the only way to be holding any is to have
+said yes to a Dealer. Both police cards therefore collect on a decision you
+made yourself.
+
 - **Stop-and-search.** Every player at the party holding contraband discards
   it and loses 3 points.
 - **Police raid.** Every player at the party holding contraband is
@@ -192,7 +196,8 @@ the card. A few change the structure of the turn:
 - **Ambulance** — the most intoxicated player at the table is taken away:
   −5 Intoxication, **Hangover +3**, and their phase ends.
 - **You wake up with nothing** — you lose all your items.
-- **Dealer** — you receive a piece of contraband.
+- **Dealer** — you are offered a piece of contraband and decide whether to
+  take it. See below.
 
 ### Cards that ask you a question
 
@@ -215,6 +220,10 @@ the table can do. You choose; nobody else may choose for you.
   (at its full Intoxication), or pass.
 - **Queue-jump** — leave now for +7 points, **abandoning the phase** and any
   claim to Last One Standing, or stay where you are.
+- **Dealer** — take what he is offering (a Joint, MDMA or Cocaine, depending
+  on the card) or leave it and nothing happens. **Nobody makes you carry
+  contraband**: if you are holding when the police turn up, it is because you
+  chose to be.
 
 ## 11. Winning
 

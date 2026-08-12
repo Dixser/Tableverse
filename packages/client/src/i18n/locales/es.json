@@ -571,9 +571,9 @@
       "cacheo": "Cacheo — todo el que lleve algo ilegal lo tira y pierde 3 PV.",
       "redada": "Redada — todo el que lleve algo ilegal pasa la noche en el calabozo.",
       "nada": "No pasa nada — sigue la fiesta.",
-      "camelloPorro": "Camello — consigues un Porro.",
-      "camelloPastis": "Camello — consigues Pastis.",
-      "camelloFarlopa": "Camello — consigues Farlopa.",
+      "camelloPorro": "Camello — te ofrece un Porro. Pillarlo, o dejarlo.",
+      "camelloPastis": "Camello — te ofrece Pastis. Pillarlo, o dejarlo.",
+      "camelloFarlopa": "Camello — te ofrece Farlopa. Pillarla, o dejarlo.",
       "ultimaRonda": "Última ronda — te ponen una copa en la mano. Métetela ya, o promételes mañana.",
       "resacon": "Vas fino — podrías quedarte quieto y dormir un poco, pero cuesta.",
       "invitacion": "Te deben una — coge el dinero, o coge la comida.",
@@ -596,7 +596,11 @@
       "doblar": "Doblar — bebes otra carta al doble de PV",
       "pasar": "Pasar — no pasa nada",
       "colarse": "Irte ya — +7 PV, pero abandonas la fase",
-      "hacerCola": "Quedarte donde estás — no pasa nada"
+      "hacerCola": "Quedarte donde estás — no pasa nada",
+      "pillarPorro": "Pillarlo — te llevas un Porro (contrabando)",
+      "pillarPastis": "Pillarlo — te llevas Pastis (contrabando)",
+      "pillarFarlopa": "Pillarla — te llevas Farlopa (contrabando)",
+      "dejarlo": "Dejarlo — no pasa nada"
     },
     "log": {
       "dayStart": "Empieza el día:",

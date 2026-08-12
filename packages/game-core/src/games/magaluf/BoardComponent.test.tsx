@@ -490,6 +490,26 @@ describe('MagalufBoard', () => {
       renderBoard(choiceG('0'), null, false);
       expect(screen.getByTestId('event-choice-waiting')).toBeInTheDocument();
     });
+
+    it('asks before the Camello hands anything over', () => {
+      // The contraband cards go through the same panel as any other question,
+      // so nobody is holding on a Redada without having pressed a button.
+      renderBoard(
+        makeG({
+          lastDraw: {
+            seatID: '0',
+            alcohol: 'pinta',
+            event: 'camelloFarlopa',
+            outcome: null,
+            pours: [],
+          },
+          pendingChoice: { seatID: '0', eventId: 'camelloFarlopa', endsTurn: true },
+        }),
+        '0',
+      );
+      expect(screen.getByTestId('choose-pillarFarlopa')).toHaveTextContent('TEST_take_the_coke');
+      expect(screen.getByTestId('choose-dejarlo')).toHaveTextContent('TEST_leave_it');
+    });
   });
 
   describe('player state', () => {

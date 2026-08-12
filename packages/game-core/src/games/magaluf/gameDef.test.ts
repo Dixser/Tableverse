@@ -1061,6 +1061,29 @@ describe('magaluf gameDef', () => {
       expect(G(client).pendingChoice).toBeNull();
     });
 
+    it('hands the Camello’s contraband over only when the player takes it', () => {
+      const took = drawChoice('camelloPorro');
+      actAs(took.client, took.seat).chooseEventOption!(0);
+      expect(G(took.client).players[took.seat]!.items).toEqual(['porro']);
+
+      const left = drawChoice('camelloPorro');
+      actAs(left.client, left.seat).chooseEventOption!(1);
+      expect(G(left.client).players[left.seat]!.items).toEqual([]);
+      // Nothing else either: declining is a plain pass, not a consolation.
+      expect(G(left.client).players[left.seat]!.roundVP).toBe(ALCOHOL.cana!.vp);
+    });
+
+    it('offers each Camello its own item', () => {
+      for (const [eventId, item] of [
+        ['camelloPastis', 'pastis'],
+        ['camelloFarlopa', 'farlopa'],
+      ] as const) {
+        const { client, seat } = drawChoice(eventId);
+        actAs(client, seat).chooseEventOption!(0);
+        expect(G(client).players[seat]!.items).toEqual([item]);
+      }
+    });
+
     it('logs the card and the branch, in that order', () => {
       const { client, seat } = drawChoice('vomitona');
       actAs(client, seat).chooseEventOption!(0);
@@ -1322,6 +1345,29 @@ describe('magaluf gameDef', () => {
       const seat = G(client).turnSeatID;
       drinkAndReveal(client, seat);
       expect(G(client).players[seat]!.status).toBe('partying');
+    });
+
+    it('only ever arrests a player who chose to be holding', () => {
+      // The playtest sequence that prompted this rule: one seat is handed a
+      // joint, the next seat draws the Redada, and the first seat goes to the
+      // cell for an item they were never asked about. Now the Camello asks --
+      // so declining has to survive the same sequence untouched.
+      function dealThenRaid(branch: 0 | 1) {
+        const client = makeClient(3, (g) => {
+          stack(g, Array<string>(8).fill('cana'), ['camelloPorro', 'redada']);
+        });
+        const dealt = G(client).turnSeatID;
+        drinkAndReveal(client, dealt);
+        actAs(client, dealt).chooseEventOption!(branch);
+
+        const raider = G(client).turnSeatID;
+        expect(raider).not.toBe(dealt);
+        drinkAndReveal(client, raider);
+        return G(client).players[dealt]!;
+      }
+
+      expect(dealThenRaid(0).status).toBe('arrested');
+      expect(dealThenRaid(1).status).toBe('partying');
     });
 
     it('charges no aguafiestas penalty to an arrested player (AC14)', () => {
