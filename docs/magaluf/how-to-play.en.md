@@ -1,6 +1,12 @@
 # Magaluf — How to Play
 
-**3 to 6 players.** You are on a three-day trip to Magaluf. Every drink earns
+**3 to 6 players** — or 2 to 10 while the game is in playtesting. Two is a
+demo of the core loop rather than a real game: half the Event cards reach
+"everyone still at the party", and with one other person that stops being a
+threat. Above six the rules are unchanged but a phase gets long, and the decks
+start coming round twice in a single venue.
+
+You are on a three-day trip to Magaluf. Every drink earns
 you points and brings you closer to the state in which people go out onto a
 balcony. Whoever has banked the most points on Monday morning wins. Not
 everybody reaches Monday morning.

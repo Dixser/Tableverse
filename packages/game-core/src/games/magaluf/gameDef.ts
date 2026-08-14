@@ -924,8 +924,8 @@ function validateMagalufSetupData(
 ): string | undefined {
   const claimed = setupData?.claimedSeatIDs;
   if (claimed === undefined) return undefined;
-  if (!Array.isArray(claimed) || claimed.length < 3) {
-    return 'magaluf-v1: needs at least 3 claimed seats';
+  if (!Array.isArray(claimed) || claimed.length < 2) {
+    return 'magaluf-v1: needs at least 2 claimed seats';
   }
   if (claimed.length > numPlayers) {
     return `magaluf-v1: ${claimed.length} claimed seats exceeds ${numPlayers} engine seats`;

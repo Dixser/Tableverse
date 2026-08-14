@@ -633,6 +633,8 @@
       "released": "{{actor}} is let out of the cell and rejoins the party.",
       "piscina": "{{actor}} lands in the pool! {{d}} over the limit: +{{vp}} VP for the legend.",
       "cemento": "{{actor}} does not reach the pool. {{d}} over the limit.",
+      "reshuffledAlcohol": "The bar runs dry — {{n}} drink cards are shuffled back in.",
+      "reshuffledEvent": "The event deck runs out — {{n}} cards are shuffled back in.",
       "awaitingTable": "Waiting for everyone to be ready…"
     },
     "status": {

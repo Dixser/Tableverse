@@ -1,6 +1,12 @@
 # Magaluf — Cómo se juega
 
-**De 3 a 6 jugadores.** ¡Bienvenidos a Magaluf!. España es el paraíso de la fiesta y el alcohol barato, y vas a amortizar cada segundo y cada copa de este fin de semana. Bebe, líala, intenta pillar cacho, sigue bebiendo, pero cuidado, el alcohol puede hacerte creer que saltar del quinto piso a la piscina del hotel es una idea genial para cerrar la noche. El objetivo del juego es simple: intenta ser el guiri más fiestero sin acabar con los dientes en el bordillo.
+**De 3 a 6 jugadores** — o de 2 a 10 mientras el juego está en pruebas. A dos
+es una demo del bucle principal más que una partida de verdad: media baraja de
+Eventos afecta a «todos los que sigan de fiesta», y con una sola persona más
+eso deja de dar miedo. Por encima de seis las reglas no cambian, pero cada fase
+se alarga y los mazos empiezan a dar la vuelta dos veces en el mismo local.
+
+¡Bienvenidos a Magaluf!. España es el paraíso de la fiesta y el alcohol barato, y vas a amortizar cada segundo y cada copa de este fin de semana. Bebe, líala, intenta pillar cacho, sigue bebiendo, pero cuidado, el alcohol puede hacerte creer que saltar del quinto piso a la piscina del hotel es una idea genial para cerrar la noche. El objetivo del juego es simple: intenta ser el guiri más fiestero sin acabar con los dientes en el bordillo.
 
 ---
 

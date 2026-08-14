@@ -9,12 +9,21 @@ import { magalufSettingsSchema } from './settings.js';
 export const magalufModule: GameModule<MagalufG> = {
   id: 'magaluf-v1',
   displayName: 'Magaluf',
-  // 2 players is structurally unbalanced rather than merely untuned: forced-
-  // consumption events hit everyone still partying, so a two-person table
-  // generates almost no unavoidable intoxication and every drink becomes a
-  // choice you can decline. See spec/features/032-magaluf-rules/spec.md.
-  minPlayers: 3,
-  maxPlayers: 6,
+  // Opened up for playtesting, deliberately wider than the tuned range.
+  //
+  // 2 is still structurally unbalanced rather than merely untuned, for the
+  // reason 032 recorded: forced-consumption events hit everyone still
+  // partying, so a two-person table generates almost no unavoidable
+  // intoxication and every drink becomes a choice you can decline. It is
+  // allowed anyway because it is the cheapest way to show somebody the core
+  // loop, and the engine has no rule that needs a third seat.
+  //
+  // 10 is the other end of the same bet: nothing breaks, but a phase is nine
+  // laps long and the decks now reshuffle mid-venue (see `drawAlcohol`), which
+  // changes what card-counting is worth. Both ends are here to be measured,
+  // not because either is claimed to be good. 3–6 remains the tuned range.
+  minPlayers: 2,
+  maxPlayers: 10,
   gameDef: magalufGameDef,
   settingsSchema: magalufSettingsSchema,
 };

@@ -1645,9 +1645,9 @@ describe('magaluf gameDef', () => {
       expect(() =>
         magalufGameDef.setup!(
           { ctx: { numPlayers: 6 }, random: fakeRandom } as never,
-          { claimedSeatIDs: ['0', '1'] } as never,
+          { claimedSeatIDs: ['0'] } as never,
         ),
-      ).toThrow(/at least 3/);
+      ).toThrow(/at least 2/);
     });
   });
 
@@ -2000,8 +2000,17 @@ describe('magaluf gameDef', () => {
   });
 
   describe('decks (AC21)', () => {
-    it('never needs a mid-phase reshuffle in a full match at maxPlayers', () => {
-      const client = makeClient(magalufModule.maxPlayers);
+    /** Every alcohol card the current phase deals, deck plus discard. */
+    function alcoholTotal(g: MagalufG): number {
+      const counts = PHASE_RULES[PHASE_IDS[g.phase] as PhaseId].alcohol;
+      return Object.values(counts).reduce((sum, n) => sum + n, 0);
+    }
+
+    it('never needs a mid-phase reshuffle at the top of the tuned range', () => {
+      // 6, not maxPlayers: the decks are sized against the tuned table and this
+      // is the assertion that keeps them that way. Ten seats is a playtest
+      // setting that deliberately outdraws them -- see the test below.
+      const client = makeClient(6);
       let reshuffled = false;
       play(client, alwaysDrink, (g) => {
         // A reshuffle is the only way the discard can shrink while a phase runs.
@@ -2009,6 +2018,32 @@ describe('magaluf gameDef', () => {
         return false;
       });
       expect(reshuffled).toBe(false);
+      expect(G(client).finished).toBe(true);
+    });
+
+    it('reshuffles the discard and plays on when a deck runs out at maxPlayers', () => {
+      const client = makeClient(magalufModule.maxPlayers);
+      play(client, alwaysDrink, (g) => {
+        // No card is ever lost or duplicated: every draw moves one card from
+        // the deck to the discard, and a reshuffle moves the whole discard back.
+        expect(g.alcoholDeck.length + g.alcoholDiscard.length).toBe(alcoholTotal(g));
+        return false;
+      });
+
+      const g = G(client);
+      // The whole point of the test: ten seats drink past a 34-card Tardeo deck,
+      // and the weekend still reaches Monday rather than deadlocking on an
+      // empty deck.
+      expect(g.log.some((e) => e.key === 'magaluf.log.reshuffledAlcohol')).toBe(true);
+      expect(g.finished).toBe(true);
+    });
+
+    it('plays a whole weekend at minPlayers', () => {
+      // Two seats is structurally soft rather than broken -- see index.ts. This
+      // asserts only that nothing in the engine needs a third player: no rule
+      // here targets "somebody else", so a two-hander must still reach Monday.
+      const client = makeClient(magalufModule.minPlayers);
+      play(client, alwaysDrink);
       expect(G(client).finished).toBe(true);
     });
   });

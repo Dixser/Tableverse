@@ -360,28 +360,52 @@ export function buildDeck<T extends string>(counts: Partial<Record<T, number>>):
 }
 
 /**
- * Reshuffling the discard should never actually happen: every phase deck is
- * larger than the maximum possible draws at `maxPlayers`. It is handled
- * rather than asserted because a deck running dry mid-phase would otherwise
- * deadlock the match.
+ * The empty-deck rule, shared by both decks: shuffle the discard and carry on.
+ *
+ * Up to six players this never fired — every phase deck is larger than the
+ * maximum possible draws at six seats, which is what the old comment here
+ * claimed and what the AC21 test proved. Raising `maxPlayers` to 10 makes it a
+ * real part of the game rather than a deadlock guard: the Tardeo deals 34
+ * alcohol cards against a table that can drink 40 before closing time, so a
+ * ten-seat venue runs the deck out and goes round again.
+ *
+ * It is logged for that reason. At a physical table somebody visibly sweeps the
+ * discards up, and a phase where the same Pecera comes round twice should not
+ * look like the app repeating itself.
+ *
+ * Returns null only if there is nothing anywhere — every card is in play, which
+ * no deck in this game is small enough to allow.
  */
+function refill<T extends string>(
+  G: MagalufG,
+  deck: T[],
+  discard: T[],
+  rng: Rng,
+  logKey: 'reshuffledAlcohol' | 'reshuffledEvent',
+): { deck: T[]; discard: T[] } | null {
+  if (deck.length > 0) return { deck, discard };
+  if (discard.length === 0) return null;
+  log(G, logKey, { n: discard.length });
+  return { deck: rng.shuffle(discard), discard: [] };
+}
+
 export function drawAlcohol(G: MagalufG, rng: Rng): AlcoholCard | null {
-  if (G.alcoholDeck.length === 0) {
-    if (G.alcoholDiscard.length === 0) return null;
-    G.alcoholDeck = rng.shuffle(G.alcoholDiscard);
-    G.alcoholDiscard = [];
-  }
+  const refilled = refill(G, G.alcoholDeck, G.alcoholDiscard, rng, 'reshuffledAlcohol');
+  if (!refilled) return null;
+  G.alcoholDeck = refilled.deck;
+  G.alcoholDiscard = refilled.discard;
+
   const id = G.alcoholDeck.pop()!;
   G.alcoholDiscard.push(id);
   return ALCOHOL[id]!;
 }
 
 export function drawEvent(G: MagalufG, rng: Rng): EventId | null {
-  if (G.eventDeck.length === 0) {
-    if (G.eventDiscard.length === 0) return null;
-    G.eventDeck = rng.shuffle(G.eventDiscard);
-    G.eventDiscard = [];
-  }
+  const refilled = refill(G, G.eventDeck, G.eventDiscard, rng, 'reshuffledEvent');
+  if (!refilled) return null;
+  G.eventDeck = refilled.deck;
+  G.eventDiscard = refilled.discard;
+
   const id = G.eventDeck.pop()!;
   G.eventDiscard.push(id);
   return id;
