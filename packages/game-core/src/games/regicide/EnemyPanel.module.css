@@ -28,14 +28,12 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-}
-
-.discardGroup {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
+  /* Containing block for DiscardPileZone's contents popover, which pins both
+     its edges to this row so it comes out exactly panel-wide and always on
+     screen (DiscardPileZone.module.css's .popover explains why nothing
+     narrower works). Anchoring it to the pile's own small box instead would
+     leave it a third of the panel's width on a phone. */
+  position: relative;
 }
 
 .stats {
@@ -49,14 +47,6 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-}
-
-.suitsRules {
-  border: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  padding: var(--space-2);
-  gap: var(--space-2);
 }
 
 .mainStats {

@@ -42,6 +42,7 @@ void i18n.use(initReactI18next).init({
             C: 'TEST_C',
           },
           suitsRules: {
+            help: 'TEST_suit_rules_help',
             S: 'TEST_suit_rule_S',
             H: 'TEST_suit_rule_H',
             D: 'TEST_suit_rule_D',
@@ -94,6 +95,7 @@ void i18n.use(initReactI18next).init({
           },
           discardedCards: {
             title: 'TEST_discarded_cards_title',
+            toggle: 'TEST_discard_toggle {{count}}',
             empty: 'TEST_discarded_cards_empty',
           },
           handCounts: {

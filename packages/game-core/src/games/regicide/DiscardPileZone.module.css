@@ -1,20 +1,66 @@
 .zone {
+  /* In flow this is just the pressable stack -- the popover is out of flow
+     and deliberately pinned to the decks row rather than to this box, so this
+     must NOT become a containing block (see .popover). It exists so the
+     "was that press inside the pile?" check can scope to the trigger and the
+     open popover together. */
+  display: inline-flex;
+}
+
+.trigger {
+  /* The stack is the affordance; the button is only here to make it
+     pressable, so it contributes no box of its own. */
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.popover {
+  position: absolute;
+  /* Both edges pinned to the decks row (EnemyPanel's `.decks`, the nearest
+     positioned ancestor -- see its own note), so the popover is exactly as
+     wide as the panel's content and cannot land off screen.
+     Two rejected alternatives, for the next person tempted by them:
+     sizing from the viewport (`100vw` minus the board's insets) put the left
+     edge 1px off a 375px screen, since the board is not inset symmetrically
+     and CSS here has no way to know that; pinning to `.zone` instead was
+     safe but only 209px wide on a phone -- three cards a row -- because the
+     Tavern stack eats the left third of the row. The cap keeps a
+     desktop-width row from stretching this the whole way across. */
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  max-width: 24rem;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  min-width: 0;
+  /* The pile only grows -- it ends a full match holding most of the deck --
+     so the list scrolls inside a bounded box instead of becoming the tall
+     thing it was extracted from. */
+  max-height: min(60vh, 22rem);
+  overflow-y: auto;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
 }
 
-.zone p {
+.title {
   margin: 0;
   font-weight: 600;
+  font-size: 0.85rem;
 }
 
 .cards {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  min-height: 4rem;
+  /* Tighter than the space-2 this row used inline: at the popover's width a
+     4px gap fits five compact tiles per row instead of four, which is a
+     fifth fewer rows to scroll through on a late-game pile. */
+  gap: var(--space-1);
   align-items: center;
 }
 

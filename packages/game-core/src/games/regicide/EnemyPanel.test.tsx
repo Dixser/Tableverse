@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import './i18nFixture.js';
 import { EnemyPanel } from './EnemyPanel.js';
 import type { FaceCard, NumberCard } from './deck.js';
@@ -112,10 +112,21 @@ describe('EnemyPanel', () => {
     expect(screen.getByText('5')).toBeInTheDocument();
   });
 
-  it('also renders every discarded card next to the discard pile count, not just the count', () => {
+  it('keeps every discarded card one press away from the pile, rather than laid out in the panel', () => {
     renderPanel();
+    // Closed by default: the pile grows all match and used to reach ten
+    // wrapped rows of cards, which was the board's biggest scroll cost on a
+    // phone. DiscardPileZone owns the open/close mechanics and its own
+    // tests; this only pins down that the panel still routes the whole pile
+    // through it rather than printing the cards itself.
     for (const card of fiveDiscards) {
-      expect(screen.getByRole('button', { name: `TEST_${card.suit} ${card.rank}` })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: `TEST_${card.suit} ${card.rank}` })).toBeNull();
+    }
+    fireEvent.click(screen.getByTestId('discard-pile-toggle'));
+    for (const card of fiveDiscards) {
+      expect(
+        screen.getByRole('button', { name: `TEST_${card.suit} ${card.rank}` }),
+      ).toBeInTheDocument();
     }
   });
 
@@ -145,6 +156,17 @@ describe('EnemyPanel', () => {
   it('the Castle deck stack never goes negative and empties out at the 12th (final) enemy', () => {
     renderPanel({ enemyNumber: 12 });
     expect(screen.getByLabelText('TEST_castle_count 0')).toBeInTheDocument();
+  });
+
+  it('keeps the suit powers behind the `?` help rather than printing them into the panel', () => {
+    renderPanel();
+    // The four powers used to be four permanent lines of panel height, which
+    // on a phone pushed the hand below the fold. They now live in
+    // SuitRulesHelp's hover/tap overlay, which costs no layout height.
+    const trigger = screen.getByTestId('suit-rules-help');
+    const tip = screen.getByRole('tooltip');
+    expect(tip.id).toBe(trigger.getAttribute('aria-describedby'));
+    expect(screen.getByText('TEST_suit_rule_C')).toBeInTheDocument();
   });
 
   it('renders nothing enemy-specific when currentEnemy is null', () => {

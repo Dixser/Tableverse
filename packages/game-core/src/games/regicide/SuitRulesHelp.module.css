@@ -1,0 +1,76 @@
+.wrap {
+  /* Containing block for .tip -- the overlay is positioned against the `?`
+     itself so the trigger can sit anywhere in the enemy row. */
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.trigger {
+  /* 2rem square: big enough to be a comfortable thumb target on a phone,
+     small enough not to compete with the enemy card next to it. */
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-weight: 700;
+  line-height: 1;
+  /* Help, not a move: every actual move lives in the action bar. */
+  cursor: help;
+}
+
+.trigger:hover,
+.trigger:focus-visible {
+  color: var(--color-text);
+  border-color: var(--color-accent);
+}
+
+.tip {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  z-index: 2;
+  margin: 0;
+  padding: var(--space-2);
+  /* max-content so the four rules never wrap mid-phrase on a wide screen,
+     clamped to the viewport so a narrow phone gets a scroll-free box that
+     stays on screen instead of running off the right edge. */
+  width: max-content;
+  max-width: min(22rem, calc(100vw - 2 * var(--space-3)));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+  font-size: 0.85rem;
+  text-align: left;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms ease;
+}
+
+.wrap:hover .tip,
+.wrap:focus-within .tip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.suit {
+  flex: none;
+}
+
+.rule {
+  margin: 0;
+  color: var(--color-text-muted);
+}

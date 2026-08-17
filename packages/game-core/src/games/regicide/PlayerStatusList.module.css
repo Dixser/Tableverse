@@ -50,3 +50,50 @@
   border-color: var(--color-text-muted);
   opacity: 0.4;
 }
+
+/* A phone can't fit a seat's full hand capacity at the full slot size: two
+   players means 7 slots (deck.ts's MAX_HAND_SIZE) and only ~240px is left
+   beside the name on a 375px screen, so each seat's row wrapped onto two
+   lines -- four lines of slots for a 2-player game.
+   2.25rem is the size to aim for, but it is not on its own enough: 7 of them
+   still measure 264px. So the slots are laid out as flexible boxes capped at
+   that size -- they take the full 2.25rem whenever the seat count leaves room
+   (3 and 4 players do) and share out what there is when it doesn't (2 players
+   land at 2rem). One row at any seat count and any width, with no breakpoint
+   here needing to know either number. */
+@media (max-width: 768px) {
+  /* Sized to the 6rem floor it already declares, instead of to its text. A
+     label like "SomeName (Seat 1)" is 153px laid out on one line, and since
+     the row has free space nothing was making it give that back -- it just
+     left the slots 24px each. Wrapping the label to two lines costs no row
+     height (two lines is still shorter than a slot) and buys the slots a
+     third of their width back. */
+  .name {
+    flex: 0 1 6rem;
+  }
+
+  .cards {
+    flex-wrap: nowrap;
+    /* Has to claim the row's leftover width outright, because the slots below
+       no longer have a size of their own to add up to -- left to size itself
+       from that content this collapses to nothing and takes them with it. */
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .cardHeld {
+    /* Basis 0 and no width, rather than a definite width and a shrink factor:
+       a flex item with a real width contributes that width to the row's
+       min-content size even when it is allowed to shrink, so a
+       no-longer-wrapping row of 7 made the whole board 25px wider than the
+       column it sits in instead of letting the slots give way. The `width`
+       reset matters as much as the basis -- .cardHeld's own 3.25rem above
+       otherwise keeps being that contribution, merely clamped to the cap. */
+    flex: 1 1 0;
+    width: auto;
+    max-width: 2.25rem;
+    /* Held constant while the width flexes, so a seat's row never changes
+       height depending on how many cards it holds. */
+    height: 3rem;
+  }
+}

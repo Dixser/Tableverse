@@ -5,6 +5,7 @@ import { isSuitImmune } from './gameDef.js';
 import { CardTile } from './CardTile.js';
 import { DeckStack } from './DeckStack.js';
 import { DiscardPileZone } from './DiscardPileZone.js';
+import { SuitRulesHelp } from './SuitRulesHelp.js';
 import styles from './EnemyPanel.module.css';
 
 export interface EnemyPanelProps {
@@ -32,8 +33,9 @@ export interface EnemyPanelProps {
   /** `G.discardPile` -- full contents, not just a size (spec.md's original
    * "discard pile only ever shows a count" decision is superseded here:
    * players asked to see what's actually cycled out, e.g. to reason about
-   * what's left in the Tavern deck). The DeckStack count next to it is
-   * still shown -- see DiscardPileZone -- this doesn't replace it. */
+   * what's left in the Tavern deck). DiscardPileZone owns both halves of
+   * this pile -- its count stack and the contents behind a press on it --
+   * so this panel just hands the array over. */
   discardPile: Card[];
   /** Only used to decide whether to show the "Defeated" badge -- the
    * actual N-of-M/Confirm/force-advance controls are GameMount's generic
@@ -96,6 +98,7 @@ export function EnemyPanel({
               <CardTile card={currentEnemy} />
               <span>{t('regicide.enemy.health', { remaining, max: health })}</span>
             </div>
+            <SuitRulesHelp />
           </div>
           <div className={styles.stats}>
             <div className={styles.damageColumn}>
@@ -103,12 +106,6 @@ export function EnemyPanel({
               <span> {t('regicide.enemy.shieldTotal', { value: spadeShieldTotal })}</span>
               <span>{t('regicide.enemy.damageYouWillTake', { value: damageYouWillTake })}</span>
             </div>
-          </div>
-          <div className={styles.suitsRules}>
-            <p>{t('regicide.suits.S')} {t('regicide.suitsRules.S')}</p>
-            <p>{t('regicide.suits.H')} {t('regicide.suitsRules.H')}</p>
-            <p>{t('regicide.suits.D')} {t('regicide.suitsRules.D')}</p>
-            <p>{t('regicide.suits.C')} {t('regicide.suitsRules.C')}</p>
           </div>
         </div>
       )}
@@ -119,14 +116,7 @@ export function EnemyPanel({
           ariaLabel={t('regicide.decks.tavernCount', { count: tavernCount })}
           variant="tavern"
         />
-        <div className={styles.discardGroup}>
-          <DeckStack
-            count={discardPile.length}
-            ariaLabel={t('regicide.decks.discardCount', { count: discardPile.length })}
-            variant="discard"
-          />
-          <DiscardPileZone discardPile={discardPile} />
-        </div>
+        <DiscardPileZone discardPile={discardPile} />
       </div>
     </div>
   );

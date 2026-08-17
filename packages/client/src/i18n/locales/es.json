@@ -263,6 +263,7 @@
       "C": "♣️"
     },
     "suitsRules": {
+      "help": "Poderes de los palos",
       "S": "Otorga X escudo",
       "H": "Cura X cartas",
       "D": "Roba X cartas",
@@ -310,6 +311,7 @@
     },
     "discardedCards": {
       "title": "Pila de descarte",
+      "toggle": "Pila de descarte: {{count}} — ver las cartas",
       "empty": "Todavía no se ha descartado ninguna carta."
     },
     "handCounts": {

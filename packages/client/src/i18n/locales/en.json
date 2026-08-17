@@ -263,10 +263,11 @@
       "C": "♣️"
     },
     "suitsRules": {
+      "help": "Suit powers",
       "S": "Grants X shield",
       "H": "Heal X cards",
       "D": "Draw X cards",
-      "C": "Duoble damage"
+      "C": "Double damage"
     },
     "faceRanks": {
       "J": "J",
@@ -310,6 +311,7 @@
     },
     "discardedCards": {
       "title": "Discarded cards",
+      "toggle": "Discard pile: {{count}} — show the cards",
       "empty": "No cards discarded yet."
     },
     "handCounts": {
