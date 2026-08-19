@@ -45,7 +45,14 @@ cuál ha salido:
 
 | Límites posibles (provisionales)|
 |---|
-| 16 / 19 / 22 / 25 / 28 |
+| Todos los números del 16 al 28 |
+
+Son trece cartas, una por valor, no unas pocas separadas: conocer la baraja te
+dice el rango y nada más.
+
+**El anfitrión fija los dos extremos** al crear la sala, entre 5 y 40. Si pone
+el mismo número en los dos, el límite es fijo y lo conoce todo el mundo, que es
+otro juego bastante más frío.
 
 Provisionalmente, el límite se revela **al empezar el After**. El anfitrión puede
 configurar que se revele antes, o que no se revele nunca.
@@ -78,25 +85,35 @@ como copas tuyas en esta fase.
 
 ## 5. Topes de fase y salidas
 
-| Fase | Copas máx. | Copas mín. | Penalización por aguafiestas | Bonus de Último en Pie |
+| Fase | Copas máx. | Copas mín. | Penalización por aguafiestas | Bonus de Cierrabares |
 |---|---|---|---|---|
-| Tardeo | 4 | 2 | −2 puntos | +2 puntos |
-| Noche | 5 | 3 | −4 puntos | +3 puntos |
-| After | 4 | 1 | −5 puntos | +5 puntos |
+| Tardeo | 4 | 2 | −2 puntos | +3 puntos |
+| Noche | 5 | 3 | −4 puntos | +6 puntos |
+| After | 4 | 1 | −5 puntos | +9 puntos |
 
 - Llegar al **máximo** te manda a casa automáticamente: cierran el local.
 - Retirarte con **menos copas que el mínimo** te cuesta la penalización por
   aguafiestas.
-- El bonus de **Último en Pie** es para quien **empiece una ronda siendo el
-  único que queda de fiesta**, y solo si ha cumplido el mínimo de copas. Se
-  paga una vez por fase, y la fase continúa después: puedes seguir bebiendo
-  solo.
+- El **Cierrabares** se resuelve al cerrar el local y es para el único jugador
+  que haya bebido **estrictamente más copas que nadie** en esa fase. Se anuncia
+  al terminar la fase, y los puntos entran en tus puntos en juego como
+  cualquier otro, así que siguen dependiendo de la comprobación de límite de
+  esa noche.
 
-  Ojo a lo que significa: quedarte solo *a mitad* de ronda no basta. Los demás
-  se han ido antes que tú, así que tienes que jugar un turno más tú solo —con
-  la Intoxicación que eso conlleva— para llegar al principio de la siguiente
-  ronda y cobrarlo. Si toda la mesa llega al cierre en la misma ronda, nadie
-  ha estado solo y nadie cobra.
+  Tres cosas a tener en cuenta.
+
+  **Si hay empate no cobra nadie.** Ni el primero en llegar, ni el de la
+  izquierda: nadie. Con los topes en 4 / 5 / 4, un bar peleado de verdad acaba
+  en empate más veces de las que parece, y por eso merece la pena esa última
+  copa cuando crees que alguien te ha igualado.
+
+  **Sigue haciendo falta el mínimo de copas.** Irte por debajo del mínimo ya te
+  cuesta la penalización por aguafiestas, y una misma cosa no puede castigarte
+  y premiarte a la vez. Así que una fase en la que nadie llegue al mínimo no la
+  cobra nadie, por mucho que uno fuera por delante.
+
+  **Cuentan todos**, te hayas ido pronto, te haya echado el portero o hayas
+  acabado la fase en el calabozo. Lo que bebiste, bebiste.
 - Que te eche el portero, que te lleve la ambulancia o que te detengan no
   cuenta como retirarse, y nunca cuesta la penalización por aguafiestas.
 
@@ -122,30 +139,39 @@ Al final de cada día se comprueba el límite a todo jugador vivo que no esté e
 el calabozo.
 
 **Igual o por debajo del límite:** sobrevives la noche. Tus puntos en juego
-pasan al banco, multiplicados por el ritmo del día y redondeados:
+pasan al banco tal cual: un punto del viernes vale lo mismo que uno del
+domingo.
 
-| Día | Multiplicador |
-|---|---|
-| Viernes | ×1 |
-| Sábado | ×1,5 |
-| Domingo | ×2,25 |
+El fin de semana subía antes (×1,5 el sábado, ×2,25 el domingo). Ya no: hacía
+que el viernes casi no mereciera la pena jugarlo con cabeza, y le daba el fin
+de semana a quien fuera por delante cuando llegaba el multiplicador gordo en
+vez de a quien mejor jugara. Esa subida vive ahora en el Cierrabares (+3 / +6 /
++9 según la fase), que hay que **ganárselo** contra la mesa.
+
+**El anfitrión que prefiera el fin de semana de antes puede recuperarlo**: los
+multiplicadores del sábado y del domingo siguen siendo opciones de sala.
 
 **Por encima del límite:** vas al balcón. Llamamos **`d`** a cuánto te has
 pasado (Intoxicación − Límite; siempre al menos 1).
 
-Tiras **1d6**. Sobrevives si sacas **estrictamente más que `d`**.
+Tiras **1d6**. Sobrevives si sacas **estrictamente más que `d`** — **o si
+sacas un 6**, que siempre salva.
 
 - **Piscina.** Sobrevives, y la noche sobrevive contigo. Tus puntos en juego
-  pasan al banco con el multiplicador del día, igual que si no te hubieras
-  pasado, conservas tus objetos y además guardas **3 + `d`** puntos como
-  leyenda de Magaluf (este bonus no se multiplica). Te llevas **Resaca +4** y
-  sigues jugando.
+  pasan al banco igual que si no te hubieras pasado, conservas tus objetos y
+  además guardas **3 + `d`** puntos como leyenda de Magaluf. Te llevas
+  **Resaca +4** y sigues jugando.
 - **Cemento.** Estás muerto. **Pierdes todos los puntos en juego de hoy y
   todos tus objetos**, y no participas en el resto del fin de semana. Los
   puntos que guardaste noches anteriores siguen siendo tuyos.
 
-Con un d6, una `d` de 6 o más no se puede sobrevivir. El anfitrión puede
-elegir otro dado antes de empezar la partida.
+Así que una `d` de 6 o más no es muerte segura: te queda el propio 6, una
+entre seis, pero el salto sigue siendo un salto por muy pasado que vayas.
+(Antes era insalvable, y aun así la mesa tiraba un dado cuya respuesta ya
+estaba decidida desde que salió la carta de límite.)
+
+El anfitrión puede elegir otro dado antes de empezar. Sea cual sea, **su cara
+más alta siempre salva**: en un d10 necesitas un 10, y en un d20 un 20.
 
 ## 8. A la mañana siguiente
 
@@ -164,7 +190,9 @@ dicho que sí a un Camello. Las dos cartas de policía cobran, entonces, de una
 decisión que tomaste tú.
 
 - **Cacheo.** Todo jugador de fiesta que lleve contrabando lo tira y pierde 3
-  puntos.
+  puntos **por cada objeto** que llevara. Dos porros son seis puntos; un porro,
+  un pastis y una farlopa son nueve. Antes llevar un alijo costaba exactamente
+  lo mismo que llevar un solo porro.
 - **Redada.** Todo jugador de fiesta que lleve contrabando es **detenido**:
   sus puntos en juego pasan al banco inmediatamente con el multiplicador del
   día, se queda fuera, no paga penalización por aguafiestas y **no tiene
@@ -227,8 +255,9 @@ hace que la suerte te dé una decisión en vez de un resultado.
 - **Te deben una** — cobrarla (+3 puntos) o pillar un Kebab.
 - **Doble o nada** — bebes una carta de Alcohol más al **doble** de puntos
   (con toda su Intoxicación), o pasas.
-- **Colarte** — irte ya por +7 puntos pero **abandonando la fase**,
-  renunciando al Último en Pie, o quedarte donde estás.
+- **Colarte** — irte ya por +7 puntos pero **abandonando la fase**, o quedarte
+  donde estás. Las copas que ya llevas siguen contando para el Cierrabares; lo
+  que pierdes es la opción de sumar más.
 - **Camello** — pillar lo que te ofrece (Porro, Pastis o Farlopa, según la
   carta) o dejarlo y que no pase nada. **Nadie te obliga a llevar
   contrabando**: si lo llevas encima cuando salga la policía, es porque tú
@@ -264,7 +293,7 @@ Responde de memoria antes de tu primera partida.
    formas de conocerla?
 8. Usas Farlopa y la copa extra es un Cubata (3 de Intoxicación). ¿Cuánta
    Intoxicación te llevas y qué más te cuesta?
-9. En el After los demás se han ido a mitad de ronda y tú llevas una copa.
-   ¿Qué te queda por hacer exactamente para cobrar el Último en Pie?
+9. El After cierra contigo y otro jugador a 3 copas cada uno, y el resto con
+   menos. ¿Quién cobra el Cierrabares y cuánto es?
 10. Mueres el sábado por la noche con 40 puntos en el banco. ¿Cuál es tu
     puntuación final?

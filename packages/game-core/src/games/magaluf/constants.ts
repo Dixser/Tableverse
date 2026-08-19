@@ -14,41 +14,68 @@ export interface PhaseRules {
   /** Drinks required to leave without the Aguafiestas penalty. */
   minDrinks: number;
   earlyExitPenalty: number;
-  /** Requires meeting `minDrinks` — otherwise two Porros buy the bonus. */
-  lastStandingBonus: number;
+  /**
+   * Cierrabares — paid at closing time to the one player who drank strictly
+   * more than anybody else this phase. Ties pay nobody. Still gated on
+   * `minDrinks`: the Aguafiestas penalty already punishes leaving under it,
+   * and the same act must not be punished and rewarded at once.
+   */
+  cierrabaresBonus: number;
   alcohol: Record<string, number>;
   events: Partial<Record<EventId, number>>;
 }
 
 /**
- * One deck, the same every day.
+ * The drinking limit is drawn from a contiguous band, not from a handful of
+ * spaced cards.
  *
- * It used to narrow across the weekend — Friday 26–29 down to Sunday 14–26 —
- * on the theory that the danger should rise. Playtesting showed that punishes
- * the unlucky twice over: `resaca` is already an intoxication floor carried
- * forward, so the player who drew a Vomitona on Friday met Sunday's 14 with
- * capacity they never chose to spend, was forced out of every phase early, and
- * lost the day the 2.25× multiplier makes decisive. The comeback was gone by
- * Saturday lunchtime.
+ * It used to be five cards three apart — 16, 19, 22, 25, 28 — which meant a
+ * player who had read the rules held better information than the board was
+ * willing to admit. The phase header has only ever shown the *band* ("between
+ * 16 and 28"), on the principle that the deck is printed-on-the-box public
+ * data and the drawn card is not; but with five known values a table could
+ * narrow the hidden number to one of five, while the header implied thirteen.
+ * Filling the band in makes the header exactly true.
  *
- * So the weekend's arc is carried entirely by DAY_VP_MULTIPLIER below — which
- * is what that constant's own comment already claimed — and the limit is one
- * honest spread you learn once. Lowering it never did much to the death rate
- * anyway: players scale their drinking to whatever capacity they have. What
- * kills people is being wrong about the number while it is face-down, and a
- * five-card 16–28 spread is plenty wrong enough.
+ * It also makes the band host-settable, which is what `limitShift` was
+ * clumsily approximating: shifting a fixed spread up and down could move where
+ * the danger sat but never how wide it was. Two numbers say both.
+ *
+ * The band it used to narrow across the weekend — Friday 26–29 down to Sunday
+ * 14–26 — on the theory that the danger should rise. Playtesting showed that
+ * punishes the unlucky twice over: `resaca` is already an intoxication floor
+ * carried forward, so the player who drew a Vomitona on Friday met Sunday's 14
+ * with capacity they never chose to spend and was forced out of every phase
+ * early. One honest spread you learn once is the better object.
  */
-export const LIMIT_DECK = [16, 19, 22, 25, 28];
+export const DEFAULT_LIMIT_MIN = 16;
+export const DEFAULT_LIMIT_MAX = 28;
+
+/**
+ * How far a host may drag either end. The old `limitShift` was ±10 on a 16–28
+ * spread, so 6–38 was already reachable; this is that, rounded to numbers a
+ * person would type.
+ */
+export const LIMIT_BOUNDS = { min: 5, max: 40 } as const;
 
 /**
  * Multiplier on everything banked at the end of each day.
  *
- * Without this the weekend has no arc: a shrinking limit does not make later
- * days more dangerous because players simply drink less to match, so danger
- * has to come from temptation instead. It also stops Friday's banked VP
- * dominating the final score.
+ * Flat, as of the 041 playtest. It used to run 1 / 1.5 / 2.25 to give the
+ * weekend an arc, and the arc it gave was the wrong one: Sunday paid so much
+ * better than Friday that Friday stopped being worth playing carefully, and a
+ * player who lost a night early could not be caught up with by anyone who had
+ * merely played worse on the day that counted.
+ *
+ * The escalation moved to Cierrabares instead (3 / 6 / 9 across the phases in
+ * PHASE_RULES). That is a better-shaped incentive for the same job: it rises
+ * through the night, but it has to be *won* against the table rather than
+ * collected by whoever happens to be ahead when Sunday arrives.
+ *
+ * Kept as an array, and Saturday and Sunday stay host-settable, so a table
+ * that liked the old weekend can dial 1.5 / 2.25 straight back in.
  */
-export const DAY_VP_MULTIPLIER = [1, 1.5, 2.25];
+export const DAY_VP_MULTIPLIER = [1, 1, 1];
 
 export const BALCONING = {
   /** Legend bonus is `legendBase + d`, banked only if you survive. */
@@ -60,14 +87,20 @@ export const BALCONING = {
 /**
  * How many faces the balcony die has. The whole survival curve, in one
  * physical object: you survive by rolling strictly higher than how far over
- * the limit you went, so a dN gives `(N − d) / N` and becomes impossible at
- * `d = N`.
+ * the limit you went — **or by rolling the die's top face, which always
+ * clears.** So a dN gives `(N − d) / N`, floored at `1 / N`.
  *
- * d6 is the default on evidence: at 8,000 simulated games it kills 48.8% of
- * the players who go over and leaves 33.3% of the table dead by Monday, which
- * is within noise of the hand-tuned continuous curve it replaces. d4 is the
- * nastier table (40.5% dead by Monday); d10 and above stop being lethal
- * enough to earn the theme.
+ * That floor is the 041 playtest's doing, and it costs the constant its old
+ * elegance on purpose. `d ≥ N` used to be arithmetically unsurvivable, and
+ * the engine still made you pick the die up and roll it before telling you so.
+ * A dead certainty dressed as a gamble is the worst of both: it reads as bad
+ * luck when it was settled the moment you drew. A natural max keeps the jump a
+ * jump all the way out.
+ *
+ * The lethality figures this constant used to quote — 48.8% of jumpers, 33.3%
+ * of the table dead by Monday at 8,000 simulated games — were measured against
+ * the old unfloored curve and no longer describe the game. Both numbers now
+ * fall; by how much is a question for the next playtest, not for a comment.
  */
 export const BALCONY_DICE = [4, 6, 8, 10, 12, 20] as const;
 export const DEFAULT_BALCONY_DIE = 6;
@@ -101,6 +134,12 @@ export const ITEM_EFFECTS = {
  * These are a starting point for the next playtest, not a settled tuning. The
  * dial to turn first is the card counts in PHASE_RULES, which move how often
  * the pair fires at all; these two move only what it pays when it does.
+ *
+ * Both probe figures above are now stale in the same direction: they were
+ * measured with the 1 / 1.5 / 2.25 weekend, which inflated late scores and so
+ * inflated both the median winner and the median gap. A flat weekend plus
+ * Cierrabares should compress the winning score and widen the spread of who is
+ * behind. Re-probe before turning either dial.
  */
 export const COMEBACK = { gapDivisor: 2, maxVP: 20 } as const;
 
@@ -109,7 +148,7 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
     maxDrinks: 4,
     minDrinks: 2,
     earlyExitPenalty: 2,
-    lastStandingBonus: 2,
+    cierrabaresBonus: 3,
     alcohol: {
       cana: 6,
       tinto: 5,
@@ -162,7 +201,7 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
     maxDrinks: 5,
     minDrinks: 3,
     earlyExitPenalty: 4,
-    lastStandingBonus: 3,
+    cierrabaresBonus: 6,
     alcohol: {
       cana: 2,
       pinta: 2,
@@ -224,7 +263,7 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
     // play on Sunday.
     minDrinks: 1,
     earlyExitPenalty: 5,
-    lastStandingBonus: 5,
+    cierrabaresBonus: 9,
     alcohol: {
       cubata: 3,
       chupito: 3,

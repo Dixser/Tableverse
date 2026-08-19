@@ -52,17 +52,24 @@ Everyone's numbers are visible to everyone, all the time.
 
 ## 3. The Drinking Limit
 
-Each morning one **Limit card** is drawn face-down, from the same five-card
-deck every day. It is the same number for every player, and it is **the only
-hidden information in the game**. You know what the deck contains; you do not
-know which card came out:
+Each morning one **Limit card** is drawn face-down, from the same deck every
+day. It is the same number for every player, and it is **the only hidden
+information in the game**. You know what the deck contains; you do not know
+which card came out:
 
 | Possible limits, every day |
 |---|
-| 16 / 19 / 22 / 25 / 28 |
+| Every number from 16 to 28 |
 
-The deck does not change across the weekend. What makes the later days matter
-is the points multiplier (section 7), not a smaller number.
+That is thirteen cards, one for each value — not a handful of spaced ones, so
+knowing the deck tells you the range and nothing more.
+
+**The host sets both ends** when the room is created, anywhere from 5 to 40.
+Setting them to the same number gives a fixed limit everybody knows, which is
+a different and much colder game.
+
+The deck does not change across the weekend. What makes the later phases
+matter is the Cierrabares bonus (section 5), not a smaller number.
 
 By default the limit is revealed at the **start of the Afterparty**. The host
 can change this to reveal it earlier, or never.
@@ -97,25 +104,35 @@ for this phase.
 
 ## 5. Phase caps and exits
 
-| Phase | Max drinks | Min drinks | Party pooper penalty | Last one standing bonus |
+| Phase | Max drinks | Min drinks | Party pooper penalty | Cierrabares bonus |
 |---|---|---|---|---|
-| Day drinking | 4 | 2 | −2 points | +2 points |
-| Clubbing | 5 | 3 | −4 points | +3 points |
-| Afterparty | 4 | 1 | −5 points | +5 points |
+| Day drinking | 4 | 2 | −2 points | +3 points |
+| Clubbing | 5 | 3 | −4 points | +6 points |
+| Afterparty | 4 | 1 | −5 points | +9 points |
 
 - Reaching the **maximum** sends you home automatically: closing time.
 - Withdrawing with **fewer than the minimum** drinks costs you the party
   pooper penalty.
-- The **last one standing** bonus goes to whoever **begins a round as the only
-  player still at the party**, and only if they have met the drink minimum. It
-  is paid once per phase, and the phase carries on afterwards — you may keep
-  drinking alone.
+- **Cierrabares** — *the one who closes the bar* — is settled when the venue
+  closes and goes to the single player who drank **strictly more than anybody
+  else** that phase. It is announced at the end of the phase, and the points
+  go into your points at risk like any others, so they still ride on that
+  night's limit check.
 
-  Note what that requires. Being left alone *part-way* through a round is not
-  enough: the others went home before you, so you have to take one more solo
-  turn — and the Intoxication that comes with it — to reach the start of the
-  next round and collect. If the whole table hits closing time on the same
-  round, nobody was ever alone and nobody is paid.
+  Three things to note.
+
+  **A tie pays nobody.** Not the highest seat, not the player who got there
+  first — nobody. With the drink caps at 4 / 5 / 4 a seriously contested bar
+  ends level surprisingly often, which is what makes one more drink worth
+  taking when you think somebody has matched you.
+
+  **You still have to meet the drink minimum.** Leaving under it already costs
+  you the party pooper penalty, and one act should not be punished and
+  rewarded at the same time. So a phase where nobody reaches the minimum pays
+  nobody, however far ahead the leader was.
+
+  **Everyone is counted**, whether they walked out early, were thrown out, or
+  spent the end of the phase in a cell. What you drank is what you drank.
 - Being thrown out by the bouncer, taken away by ambulance or arrested is not
   a withdrawal, and never costs the party pooper penalty.
 
@@ -141,18 +158,23 @@ At the end of each day, every surviving player who is not in a cell is checked
 against the limit.
 
 **At or below the limit:** you survive the night. Your points at risk are
-banked, multiplied by the day's rate and rounded:
+banked at face value — a point earned on Friday is worth a point on Sunday.
 
-| Day | Multiplier |
-|---|---|
-| Friday | ×1 |
-| Saturday | ×1.5 |
-| Sunday | ×2.25 |
+The weekend used to escalate (×1.5 on Saturday, ×2.25 on Sunday). It does not
+any more: it made Friday barely worth playing carefully, and it handed the
+weekend to whoever happened to be ahead when the big multiplier arrived rather
+than to whoever played best. The escalation lives in the Cierrabares bonus
+instead (+3 / +6 / +9 across the phases), which has to be won against the
+table rather than simply collected.
+
+**A host who liked the old weekend can put it back** — the Saturday and Sunday
+multipliers are still room settings.
 
 **Above the limit:** you go to the balcony. Let **`d`** be how far over you
 went (Intoxication − Limit; always at least 1).
 
-Roll **1d6**. You survive if the roll is **strictly higher than `d`**.
+Roll **1d6**. You survive if the roll is **strictly higher than `d`** — **or
+if you roll a 6**, which always clears.
 
 - **Pool.** You survive, and the night survives with you. Your points at risk
   bank at the day's multiplier exactly as they would have below the limit, you
@@ -162,8 +184,13 @@ Roll **1d6**. You survive if the roll is **strictly higher than `d`**.
   all of your items**, and take no further part in the weekend. The points you
   banked on previous nights remain yours.
 
-On a d6, a `d` of 6 or more cannot be survived. The host may choose a
-different die before the game starts.
+So a `d` of 6 or more is not certain death: you are down to the 6 itself, one
+chance in six, but the jump is a real jump however far over you went. (It used
+to be unsurvivable, which meant the table rolled a die whose answer had
+already been decided the moment the limit card came up.)
+
+The host may choose a different die before the game starts. Whatever the die,
+its **highest face always clears** — on a d10 you need a 10, on a d20 a 20.
 
 ## 8. The next morning
 
@@ -182,7 +209,9 @@ said yes to a Dealer. Both police cards therefore collect on a decision you
 made yourself.
 
 - **Stop-and-search.** Every player at the party holding contraband discards
-  it and loses 3 points.
+  it and loses **3 points for each item** they were carrying. Two joints is
+  six points; a joint, some MDMA and a wrap is nine. Carrying a stash used to
+  cost exactly what carrying one joint cost.
 - **Police raid.** Every player at the party holding contraband is
   **arrested**: their points at risk are banked immediately at the day's
   multiplier, they are out, they pay no party pooper penalty, and they face
@@ -243,8 +272,9 @@ the table can do. You choose; nobody else may choose for you.
 - **You are owed a favour** — take the cash (+3 points) or take a Kebab.
 - **Double or nothing** — drink one more Alcohol card at **double** points
   (at its full Intoxication), or pass.
-- **Queue-jump** — leave now for +7 points, **abandoning the phase** and any
-  claim to Last One Standing, or stay where you are.
+- **Queue-jump** — leave now for +7 points, **abandoning the phase**, or stay
+  where you are. Your drinks so far still count towards Cierrabares; what you
+  give up is the chance to add to them.
 - **Dealer** — take what he is offering (a Joint, MDMA or Cocaine, depending
   on the card) or leave it and nothing happens. **Nobody makes you carry
   contraband**: if you are holding when the police turn up, it is because you
@@ -280,7 +310,6 @@ Answer these from memory before your first game.
    are the two ways of learning it?
 8. You use Cocaine and the extra drink is a Rum & coke (3 Intoxication). How
    much Intoxication do you take, and what else does it cost you?
-9. Everyone else has gone home mid-round in the Afterparty and you have had
-   one drink. What exactly do you still have to do to collect the Last One
-   Standing bonus?
+9. The Afterparty closes with you and one other player both on 3 drinks, and
+   everyone else on fewer. Who collects Cierrabares, and how much is it?
 10. You die on Saturday night with 40 banked points. What is your final score?

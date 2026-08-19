@@ -1,21 +1,21 @@
 import { useTranslation } from 'react-i18next';
 import { DAY_IDS, PHASE_IDS } from './cards.js';
 import { PHASE_RULES } from './constants.js';
-import { limitRange } from './limitScale.js';
+import type { LimitBand } from './limitScale.js';
 import styles from './PhaseHeader.module.css';
 
 export interface PhaseHeaderProps {
   day: number;
   phase: number;
   dayMultiplier: number;
-  limitShift: number;
+  /** The public band the limit is drawn from. Never the drawn limit itself. */
+  band: LimitBand;
   /** The real limit, or null while it is still face-down for this viewer. */
   limit: number | null;
 }
 
-export function PhaseHeader({ day, phase, dayMultiplier, limitShift, limit }: PhaseHeaderProps) {
+export function PhaseHeader({ day, phase, dayMultiplier, band, limit }: PhaseHeaderProps) {
   const { t } = useTranslation();
-  const band = limitRange(limitShift);
   // The two numbers that decide when you may leave and when the venue throws
   // you out. They are printed on the phase table in the rules and were the one
   // thing a player had to remember rather than read.
@@ -36,13 +36,11 @@ export function PhaseHeader({ day, phase, dayMultiplier, limitShift, limit }: Ph
           ({t('magaluf.board.phaseDrinks', { min: rules.minDrinks, max: rules.maxDrinks })})
         </span>
       </span>
-      <span className={styles.chip}>
-        {t('magaluf.board.dayMultiplier', { multiplier: dayMultiplier })}
-      </span>
 
       {limit === null ? (
-        // The band, not the number. Public information either way: the deck is
-        // fixed and the shift is a visible room setting.
+        // The band, not the number. Public information either way: the two
+        // ends of the band are a visible room setting, and every integer
+        // between them is a card.
         <span className={styles.limitHidden} data-testid="limit-chip-hidden">
           {t('magaluf.board.limitBetween', { min: band.min, max: band.max })}
         </span>

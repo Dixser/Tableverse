@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { Ctx } from 'boardgame.io';
 import './i18nFixture.js';
 import { MagalufBoard } from './BoardComponent.js';
@@ -34,8 +34,7 @@ function makeG(overrides: Partial<MagalufG> = {}): MagalufG {
     lastDraw: null,
     pendingEvent: null,
     pendingChoice: null,
-    roundAnchor: 0,
-    lastStandingAwarded: false,
+    cierrabares: null,
     pendingAdvance: null,
     roundConfirm: null,
     hostPlayerID: null,
@@ -605,6 +604,25 @@ describe('MagalufBoard', () => {
       expect(screen.getByTestId('limit-chip-known')).toHaveTextContent('27');
     });
 
+  describe('the cierrabares banner', () => {
+    it('names who closed the bar, on what, and for how much', () => {
+      renderBoard(makeG({ cierrabares: { seatID: '1', drinks: 5, vp: 6 } }));
+
+      expect(screen.getByTestId('cierrabares-banner')).toBeTruthy();
+      expect(screen.getByText('TEST_cierrabares_won Bob 5 6')).toBeTruthy();
+    });
+
+    /**
+     * Null covers two different things — mid-phase, and a phase whose drink
+     * count tied — and neither of them is an award to show. The tie gets a log
+     * line instead, which is the right weight for a non-event.
+     */
+    it('shows nothing at all when there is no award', () => {
+      renderBoard(makeG({ cierrabares: null }));
+      expect(screen.queryByTestId('cierrabares-banner')).toBeNull();
+    });
+  });
+
     it('shows a risk badge matching poolChance for a seat over the limit (AC16)', () => {
       const G = makeG({ limit: 20, limitRevealed: true });
       G.players['0']!.intox = 22; // d = 2 on a d6 -> 4/6 = 67%
@@ -649,6 +667,34 @@ describe('MagalufBoard', () => {
       // reveal itself -- including a viewer who joined after the weekend's.
       renderBoard(makeG({ jumps: [jump(), jump({ seatID: '2' })] }));
       expect(screen.queryByTestId('balcony-overlay')).toBeNull();
+    });
+
+    /**
+     * The instruction has to agree with the badge beside it. Past `d = die` no
+     * roll beats `d` and only the top face clears, so "you need more than 49"
+     * printed next to a 17% chance reads as a death sentence for a jump that
+     * is still live.
+     */
+    describe('what it tells you to roll', () => {
+      it('names the number to beat while beating it is possible', () => {
+        atBalcony([jump({ d: 2, die: 6 })]);
+        expect(screen.getByTestId('balcony-target')).toHaveTextContent('TEST_target d6 over 2');
+      });
+
+      it('names the top face once that is the only thing left', () => {
+        atBalcony([jump({ d: 49, die: 6 })]);
+        expect(screen.getByTestId('balcony-target')).toHaveTextContent('TEST_target_max d6');
+        // And the odds it sits next to are the floor, not zero.
+        expect(screen.getByTestId('balcony-odds')).toHaveTextContent('17');
+      });
+
+      it('switches over exactly at d === die', () => {
+        atBalcony([jump({ d: 5, die: 6 })]);
+        expect(screen.getByTestId('balcony-target')).toHaveTextContent('TEST_target d6 over 5');
+        cleanup();
+        atBalcony([jump({ d: 6, die: 6 })]);
+        expect(screen.getByTestId('balcony-target')).toHaveTextContent('TEST_target_max d6');
+      });
     });
 
     it('shows the odds but not the outcome before the die is turned (AC20)', () => {

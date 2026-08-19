@@ -9,16 +9,22 @@
  * night, the items and the rest of the weekend.
  *
  * **The roll is a die, because this is a tabletop game.** One sentence:
- * *roll a dN and survive if you beat how far over the limit you went.*
+ * *roll a dN and survive if you beat how far over the limit you went — or if
+ * you roll the top face, which always clears.*
  *
- * That is not a simplification of the old continuous formula, it IS the old
- * formula. `base − (d − 1) × decay` with `base = (N−1)/N` and `decay = 1/N`
- * collapses to exactly `(N − d) / N`, which is the probability of rolling
- * above `d` on a dN. The curve was always die-shaped; it was just carrying
- * two invented constants instead of naming the object that produces it.
+ * The die replaced a continuous formula it happened to reproduce exactly:
+ * `base − (d − 1) × decay` with `base = (N−1)/N` and `decay = 1/N` collapses
+ * to `(N − d) / N`, the probability of rolling above `d` on a dN. That
+ * identity is now broken, deliberately. The natural max floors survival at
+ * `1 / N` where the formula went to zero, so this is a die that no formula was
+ * ever secretly behind — which is the right way round for a game meant to be
+ * played with the physical object.
  *
- * Dropping them also kills the last unphysical probability in the rules and
- * takes two unbounded number inputs out of the settings form.
+ * Why break it: at `d ≥ N` the old rule was arithmetically certain death, and
+ * the engine still dealt you the roll first. Playtesters read that as the dice
+ * being cruel when in fact the outcome was fixed the moment they drew. The top
+ * face keeps the jump a real jump the whole way out, and it costs the house
+ * very little — one face in N, in the band where almost nobody goes.
  */
 
 import { BALCONING } from './constants.js';
@@ -34,12 +40,15 @@ import type { MagalufSettings } from './settings.js';
  */
 export function poolChance(d: number, settings: MagalufSettings): number {
   const faces = settings.balconyDie;
-  return Math.min(1, Math.max(0, (faces - d) / faces));
+  // The natural max is always one of the winning faces, so the chance never
+  // reaches zero however far over you went. Still capped at 1: `d` is always
+  // at least 1, but the cap costs nothing and states the range.
+  return Math.min(1, Math.max(1 / faces, (faces - d) / faces));
 }
 
 /** True when this roll clears the terrace. The only rule that matters. */
-export function survivesRoll(roll: number, d: number): boolean {
-  return roll > d;
+export function survivesRoll(roll: number, d: number, faces: number): boolean {
+  return roll > d || roll === faces;
 }
 
 /** Banked immediately on surviving. Scales with how far gone you were. */
@@ -54,7 +63,15 @@ export function legendBonus(d: number): number {
  * forfeits the pool, what a jumper actually risks is
  * `poolChance × (pool × dayMultiplier)` against a certain `pool × multiplier`
  * for stopping under the limit. The bonus is the sweetener on top, and on a d6
- * it peaks at ~3.3 VP — small enough that the pool still decides the call.
+ * it peaks at ~3.3 VP just over the limit — small enough that the pool still
+ * decides the call.
+ *
+ * One wrinkle the natural-max floor introduces: past `d = N` the chance stops
+ * falling while `legendBonus` keeps climbing, so this figure starts rising
+ * again and eventually passes that early peak. It is not the exploit it looks
+ * like — the pool, which dwarfs the bonus, is still being staked at a flat
+ * `1 / N` — but the bonus alone does reward going absurdly over, and if a
+ * table ever finds a way to reach those values on purpose, cap it here.
  */
 export function jumpExpectedValue(d: number, settings: MagalufSettings): number {
   return poolChance(d, settings) * legendBonus(d);
@@ -70,7 +87,7 @@ export interface JumpOutcome {
 
 export function resolveJump(d: number, settings: MagalufSettings, rng: Rng): JumpOutcome {
   const roll = rng.die(settings.balconyDie);
-  const survived = survivesRoll(roll, d);
+  const survived = survivesRoll(roll, d, settings.balconyDie);
   return {
     roll,
     survived,

@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
-import { limitRange, meterPercent } from './limitScale.js';
+import { meterPercent, type LimitBand } from './limitScale.js';
 import styles from './IntoxMeter.module.css';
 
 export interface IntoxMeterProps {
   intox: number;
   resaca: number;
-  limitShift: number;
+  /** The public band the limit is drawn from. Never the drawn limit itself. */
+  band: LimitBand;
   /** The real limit, or null while it is still face-down for this viewer. */
   limit: number | null;
 }
@@ -21,10 +22,9 @@ export interface IntoxMeterProps {
  * shows the *band* it could fall in; once known, the band is replaced by a
  * single hard marker.
  */
-export function IntoxMeter({ intox, resaca, limitShift, limit }: IntoxMeterProps) {
+export function IntoxMeter({ intox, resaca, band, limit }: IntoxMeterProps) {
   const { t } = useTranslation();
-  const pct = (value: number) => `${meterPercent(value, limitShift)}%`;
-  const band = limitRange(limitShift);
+  const pct = (value: number) => `${meterPercent(value, band)}%`;
   const over = limit !== null && intox > limit;
 
   return (

@@ -1,0 +1,24 @@
+/* Reads as a small award card rather than another status chip: it is the one
+   thing on the board that says a phase is over and somebody won it. */
+.banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-gold);
+  background: color-mix(in srgb, var(--color-gold) 12%, transparent);
+}
+
+.title {
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+
+.detail {
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}

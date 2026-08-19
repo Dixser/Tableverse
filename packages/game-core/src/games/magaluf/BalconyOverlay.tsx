@@ -72,9 +72,14 @@ export function BalconyOverlay({
               {t('magaluf.board.balconyOdds', { percent })}
             </p>
             {/* The rule, spelled out, because it is the whole tension: beat
-                the number you went over by. */}
+                the number you went over by. Past `d = die` no roll can do
+                that and only the top face clears, so "you need more than 49"
+                would read as a death sentence next to a 17% badge. Same rule,
+                stated the way it actually applies. */}
             <p className={styles.numbers} data-testid="balcony-target">
-              {t('magaluf.board.balconyTarget', { die: jump.die, over: jump.d })}
+              {jump.d >= jump.die
+                ? t('magaluf.board.balconyTargetMax', { die: jump.die })
+                : t('magaluf.board.balconyTarget', { die: jump.die, over: jump.d })}
             </p>
             {/* What is riding on the roll, not what is already gone: the pool
                 is only forfeited by the concrete. */}

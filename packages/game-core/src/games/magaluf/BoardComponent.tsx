@@ -7,8 +7,10 @@ import { dayMultipliers } from './settings.js';
 import type { MagalufG } from './state.js';
 import { ActionBar } from './ActionBar.js';
 import { BalconyOverlay } from './BalconyOverlay.js';
+import { CierrabaresBanner } from './CierrabaresBanner.js';
 import { DrawnCards } from './DrawnCards.js';
 import { EventChoicePanel } from './EventChoicePanel.js';
+import { limitRange } from './limitScale.js';
 import { PhaseHeader } from './PhaseHeader.js';
 import { PlayerPanel } from './PlayerPanel.js';
 import styles from './BoardComponent.module.css';
@@ -85,11 +87,18 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
 
   return (
     <div className={styles.board} data-testid="magaluf-board">
+      {/* Only ever set between closing time and the next venue opening. */}
+      {G.cierrabares && (
+        <CierrabaresBanner
+          award={G.cierrabares}
+          winnerName={nameFor(G.cierrabares.seatID)}
+        />
+      )}
       <PhaseHeader
         day={G.day}
         phase={G.phase}
         dayMultiplier={dayMultipliers(G.settings)[G.day] ?? 1}
-        limitShift={G.settings.limitShift}
+        band={limitRange(G.settings)}
         limit={limit}
       />
 
@@ -111,6 +120,7 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
           );
         })}
       </div>
+
       <DrawnCards
         lastDraw={G.lastDraw}
         drawerName={G.lastDraw ? nameFor(G.lastDraw.seatID) : null}

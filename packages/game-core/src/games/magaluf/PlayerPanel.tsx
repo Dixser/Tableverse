@@ -4,6 +4,7 @@ import { poolChance } from './balconing.js';
 import type { MagalufPlayer } from './state.js';
 import type { MagalufSettings } from './settings.js';
 import { IntoxMeter } from './IntoxMeter.js';
+import { limitRange } from './limitScale.js';
 import styles from './PlayerPanel.module.css';
 
 export interface PlayerPanelProps {
@@ -71,7 +72,7 @@ export function PlayerPanel({
       <IntoxMeter
         intox={player.intox}
         resaca={player.resaca}
-        limitShift={settings.limitShift}
+        band={limitRange(settings)}
         limit={limit}
       />
 

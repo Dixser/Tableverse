@@ -3,11 +3,12 @@ import { Client } from 'boardgame.io/client';
 
 import type { EventId, EventOption, ItemId, PhaseId } from './cards.js';
 import { ALCOHOL, eventOptions, PHASE_IDS } from './cards.js';
-import { COMEBACK, LIMIT_DECK, PHASE_RULES } from './constants.js';
+import { COMEBACK, PHASE_RULES } from './constants.js';
+import { buildLimitDeck, limitRange } from './limitScale.js';
 import { HIDDEN_LIMIT, magalufGameDef, type MagalufG } from './gameDef.js';
 import { magalufModule } from './index.js';
-import { clampSettings, DEFAULT_SETTINGS } from './settings.js';
-import { poolChance } from './balconing.js';
+import { clampSettings, dayMultipliers, DEFAULT_SETTINGS } from './settings.js';
+import { poolChance, survivesRoll } from './balconing.js';
 import { bankRound, newPlayer } from './state.js';
 
 function phaseMinimum(g: MagalufG): number {
@@ -233,17 +234,26 @@ describe('magaluf gameDef', () => {
     });
 
     it('ends the weekend early when every seat is dead (AC1)', () => {
-      // A limit below zero means everyone is over it on the very first night,
-      // and a one-faced die can never beat it -- certain death, no seed-hunting.
-      const client = makeClient(3, (g) => {
-        g.limit = -5;
-        g.settings = { ...g.settings, balconyDie: 1 };
-      });
-      play(client, alwaysWithdraw);
-      const g = G(client);
-      expect(g.activeSeatIDs.every((id) => g.players[id]!.status === 'dead')).toBe(true);
-      expect(g.day).toBe(0);
-      expect(g.finished).toBe(true);
+      // A limit below zero puts everyone over it on the very first night. What
+      // this test cannot do any more is make the landing certain: feature 041
+      // gave the die's top face an automatic clear, so every jumper keeps a
+      // 1-in-N escape however far over they went. The old trick here was a
+      // one-faced die, which now survives every single time rather than dying
+      // every single time.
+      //
+      // So it walks seeds instead. Deterministic -- the same seed wins on
+      // every run -- just no longer certain in a single game.
+      let dead: MagalufG | undefined;
+      for (let i = 0; i < 40 && !dead; i++) {
+        const client = makeClient(3, (g) => void (g.limit = -5), `all-dead-${i}`);
+        play(client, alwaysWithdraw);
+        const g = G(client);
+        if (g.activeSeatIDs.every((id) => g.players[id]!.status === 'dead')) dead = g;
+      }
+
+      expect(dead).toBeDefined();
+      expect(dead!.day).toBe(0);
+      expect(dead!.finished).toBe(true);
     });
 
   });
@@ -266,10 +276,13 @@ describe('magaluf gameDef', () => {
       expect(firstOpener('replay-me')).toBe(firstOpener('replay-me'));
     });
 
-    it('leaves the first opener at the head of the lap it anchors', () => {
+    it('hands the first turn to the seat it drew', () => {
+      // There is no lap anchor to check any more -- Cierrabares is settled off
+      // a drink count at closing time, so nothing measures rounds. What still
+      // has to hold is that the drawn opener is the seat the engine actually
+      // gives the turn to.
       const client = makeClient(3, () => {}, 'opener-seed-3');
       const g = G(client);
-      expect(g.activeSeatIDs[g.roundAnchor]).toBe(g.turnSeatID);
       expect(client.store.getState().ctx.currentPlayer).toBe(g.turnSeatID);
     });
 
@@ -301,9 +314,6 @@ describe('magaluf gameDef', () => {
 
       for (const id of atGate.roundConfirm!.pendingSeatIDs) actAs(client, id).confirmRoundReady!();
       expect(G(client).turnSeatID).toBe(expected);
-      // And the lap boundary moved with it, or Ultimo en Pie would be measured
-      // against a seat that is not the one who started the round.
-      expect(G(client).activeSeatIDs[G(client).roundAnchor]).toBe(expected);
     });
 
     /**
@@ -313,17 +323,21 @@ describe('magaluf gameDef', () => {
      * straight back round to where it started and never moves all weekend.
      */
     it('leaves the lead where it is when the whole table walks out in turn order', () => {
+      // Within a day only. Saturday opens on whoever is furthest behind, which
+      // is a different rule and has its own tests -- reading across midnight
+      // used to make this assertion depend on the opener lot falling on seat 0.
       const client = makeClient(3);
-      const openers = new Set<string>([G(client).turnSeatID]);
+      const first = G(client).turnSeatID;
+      const openers = new Set<string>([first]);
       let phase = G(client).phase;
       play(client, alwaysWithdraw, (g) => {
-        if (g.phase !== phase) {
+        if (g.day === 0 && g.phase !== phase) {
           phase = g.phase;
           openers.add(g.turnSeatID);
         }
         return g.day > 0;
       });
-      expect([...openers]).toEqual(['0']);
+      expect([...openers]).toEqual([first]);
     });
 
     it('steps over a dead seat, but never over a merely withdrawn one', () => {
@@ -692,120 +706,127 @@ describe('magaluf gameDef', () => {
   });
 
   /**
-   * Último en Pie used to be settled at endPhase and go to whoever had the
-   * highest withdrawSeq. That paid for seat position: a table that all leaves
-   * at the drink minimum leaves in turn order, so the last seat collected for
-   * free every single time. The bonus is now paid the moment somebody *opens a
-   * round* alone, which has to be bought with one more solo turn.
+   * **Cierrabares.** Two rules ago this was Último en Pie at `endPhase`, going
+   * to the highest `withdrawSeq` — which paid for seat position, because a
+   * table that all leaves at the drink minimum leaves in turn order. Feature
+   * 034 moved it to whoever *opened a round* alone, which had to be bought
+   * with a solo turn. Feature 041 found that rule paid for endurance measured
+   * in turns rather than in drinks, and settled it invisibly off lap
+   * arithmetic nobody could follow.
+   *
+   * It is now a drink count read at closing time: strictly the most drinks
+   * takes it, ties pay nobody, and the number it turns on is the one already
+   * printed on every player panel.
    */
-  describe('ultimo en pie (round-start rule)', () => {
+  describe('cierrabares (closing-time rule)', () => {
     // Cheap alcohol and inert events, so these tests measure the rule rather
     // than whatever the shuffle handed out.
     const quiet = (g: MagalufG) =>
       stack(g, Array<string>(16).fill('cana'), Array<EventId>(16).fill('nada'));
 
-    const BONUS = PHASE_RULES.tardeo.lastStandingBonus;
+    const BONUS = PHASE_RULES.tardeo.cierrabaresBonus;
 
-    it('does not pay a survivor who is only alone mid-lap', () => {
-      const client = makeClient(3, quiet);
-      const solo = G(client).turnSeatID; // seat 0 opens the Tardeo on day 0
-
-      drinkAndReveal(client, solo); // 1 drink, below the minimum of 2
-      actAs(client, '1').withdraw!();
-      actAs(client, '2').withdraw!();
-
-      // Alone, and it is their turn -- but the round turned over while they
-      // were still one drink short, so there is nothing to pay yet.
-      expect(G(client).turnSeatID).toBe(solo);
-      expect(G(client).lastStandingAwarded).toBe(false);
-      expect(G(client).players[solo]!.roundVP).toBe(ALCOHOL.cana!.vp);
-    });
-
-    it('pays once the solo seat opens a round having met the minimum', () => {
-      const client = makeClient(3, quiet);
-      const solo = G(client).turnSeatID;
-
-      drinkAndReveal(client, solo);
-      actAs(client, '1').withdraw!();
-      actAs(client, '2').withdraw!();
-      // The extra solo turn is the price of the bonus.
-      drinkAndReveal(client, solo);
-
-      expect(G(client).lastStandingAwarded).toBe(true);
-      expect(G(client).players[solo]!.roundVP).toBe(ALCOHOL.cana!.vp * 2 + BONUS);
-    });
-
-    it('pays it only once, however long the survivor keeps drinking', () => {
-      const client = makeClient(3, quiet);
-      const solo = G(client).turnSeatID;
-
-      drinkAndReveal(client, solo);
-      actAs(client, '1').withdraw!();
-      actAs(client, '2').withdraw!();
-      drinkAndReveal(client, solo);
-      const afterBonus = G(client).players[solo]!.roundVP;
-
-      // The phase carries on -- a solo player may keep pushing their luck.
-      drinkAndReveal(client, solo);
-      expect(G(client).players[solo]!.drinksThisPhase).toBe(3);
-      expect(G(client).players[solo]!.roundVP).toBe(afterBonus + ALCOHOL.cana!.vp);
-    });
-
-    /**
-     * The case the old rule got wrong in the other direction: nobody was ever
-     * alone, so nobody has earned anything. A Ronda tips every seat over the
-     * drink cap at once and closing time empties the venue in one sweep.
-     */
-    it('pays nobody when the whole table hits closing time together', () => {
+    /** Opens the Tardeo with the drink counts already set, then closes it. */
+    const closeWith = (counts: Record<string, number>) => {
       const client = makeClient(3, (g) => {
         quiet(g);
-        g.eventDeck = ['ronda'];
-        for (const id of g.activeSeatIDs) {
-          g.players[id]!.drinksThisPhase = PHASE_RULES.tardeo.maxDrinks - 1;
-        }
+        for (const [id, n] of Object.entries(counts)) g.players[id]!.drinksThisPhase = n;
       });
-      const opener = G(client).turnSeatID;
+      playToGate(client, alwaysWithdraw);
+      return client;
+    };
 
-      drinkAndReveal(client, opener);
+    it('pays the one player who drank strictly the most', () => {
+      const client = closeWith({ '0': 4, '1': 2, '2': 2 });
+      expect(G(client).cierrabares).toEqual({ seatID: '0', drinks: 4, vp: BONUS });
+    });
 
-      // The venue emptied in one sweep, so it is now holding a gate open on
-      // the next one rather than having advanced already.
-      expect(G(client).pendingAdvance).toEqual({ kind: 'phase', next: 1 });
-      expect(G(client).lastStandingAwarded).toBe(false);
+    it('pays nobody when the top count is tied', () => {
+      const client = closeWith({ '0': 4, '1': 4, '2': 2 });
+      expect(G(client).cierrabares).toBeNull();
       for (const id of G(client).activeSeatIDs) {
-        expect(G(client).log.some((e) => e.key === 'magaluf.log.ultimoEnPie' && e.params?.actor === id))
-          .toBe(false);
+        expect(G(client).players[id]!.roundVP).toBeLessThanOrEqual(0);
       }
     });
 
     /**
-     * Worth stating outright, because it is the behaviour change: a table that
-     * all drinks the minimum and leaves in turn order pays nobody. The last
-     * seat never opens a round alone -- it becomes alone mid-lap and then goes
-     * home, which is exactly the free bonus the old rule handed out.
+     * The gate the user kept, and the reason: the Aguafiestas penalty already
+     * punishes leaving under the minimum, so the same act must not be punished
+     * and rewarded at once. No runner-up is waiting underneath — the top count
+     * is at least everyone else's, so if it misses the minimum then nobody met
+     * it.
      */
-    it('pays nobody when everyone leaves at the minimum in turn order', () => {
-      const client = makeClient(3, quiet);
-      playToGate(client, moderate);
-      expect(G(client).lastStandingAwarded).toBe(false);
-      for (const id of G(client).activeSeatIDs) {
-        expect(G(client).players[id]!.roundVP).toBe(ALCOHOL.cana!.vp * PHASE_RULES.tardeo.minDrinks);
-      }
+    it('pays nobody when even the top drinker missed the phase minimum', () => {
+      const client = closeWith({ '0': 1, '1': 0, '2': 0 });
+      expect(G(client).cierrabares).toBeNull();
+      // And seat 0 is out of pocket rather than up: it left under the minimum.
+      expect(G(client).players['0']!.roundVP).toBe(-PHASE_RULES.tardeo.earlyExitPenalty);
     });
 
-    it('resets the award for each new venue', () => {
-      const client = makeClient(3, quiet);
-      const solo = G(client).turnSeatID;
+    it('puts the bonus at risk in the round pool rather than in the bank', () => {
+      const client = closeWith({ '0': 4, '1': 2, '2': 2 });
+      const winner = G(client).players['0']!;
+      // Nothing was drunk for real, so the pool is the bonus and nothing else.
+      expect(winner.roundVP).toBe(BONUS);
+      expect(winner.bankedVP).toBe(0);
+    });
 
-      drinkAndReveal(client, solo);
-      actAs(client, '1').withdraw!();
-      actAs(client, '2').withdraw!();
-      drinkAndReveal(client, solo);
-      expect(G(client).lastStandingAwarded).toBe(true);
+    it('counts a seat that went home early just the same', () => {
+      // Seat 2 out-drank the room and then left; seat 0 lingered on fewer.
+      const client = closeWith({ '0': 3, '1': 2, '2': 4 });
+      expect(G(client).cierrabares?.seatID).toBe('2');
+    });
 
-      play(client, alwaysWithdraw, (g) => g.phase === 1 && g.roundConfirm === null);
+    it('escalates across the weekend the way the multiplier used to', () => {
+      expect(PHASE_RULES.tardeo.cierrabaresBonus).toBe(3);
+      expect(PHASE_RULES.noche.cierrabaresBonus).toBe(6);
+      expect(PHASE_RULES.after.cierrabaresBonus).toBe(9);
+    });
+
+    it('clears the award when the next venue opens', () => {
+      const client = closeWith({ '0': 4, '1': 2, '2': 2 });
+      expect(G(client).cierrabares).not.toBeNull();
+
+      for (const id of G(client).roundConfirm!.pendingSeatIDs) {
+        actAs(client, id).confirmRoundReady!();
+      }
       expect(G(client).phase).toBe(1);
-      expect(G(client).lastStandingAwarded).toBe(false);
+      expect(G(client).cierrabares).toBeNull();
+    });
+
+    /**
+     * The bug the new rule exposed. `startPhase` reset `drinksThisPhase` only
+     * for seats that were `partying`, `continue`-ing past everybody else —
+     * harmless while the bonus was a lap rule, and a free win once it became a
+     * drink count. A seat that spent the last venue in a cell must not carry
+     * that venue's count into this one.
+     */
+    it('does not let a seat carry its drink count out of a cell', () => {
+      const client = makeClient(3, (g) => {
+        quiet(g);
+        // Seat 2 drank the Tardeo dry and was hauled off. Those drinks are
+        // real and count here -- what must not happen is them counting again
+        // in the venue seat 2 spends in a cell.
+        g.players['2']!.status = 'arrested';
+        g.players['2']!.drinksThisPhase = 4;
+        g.players['0']!.drinksThisPhase = 3;
+        g.players['1']!.drinksThisPhase = 2;
+      });
+      playToGate(client, alwaysWithdraw);
+      expect(G(client).cierrabares?.seatID).toBe('2');
+
+      for (const id of G(client).roundConfirm!.pendingSeatIDs) {
+        actAs(client, id).confirmRoundReady!();
+      }
+      // Still arrested under the default sentence, and zeroed all the same --
+      // the reset used to `continue` past every seat that was not partying.
+      expect(G(client).phase).toBe(1);
+      expect(G(client).players['2']!.status).toBe('arrested');
+      expect(G(client).players['2']!.drinksThisPhase).toBe(0);
+
+      // And so it cannot take the Noche, a venue it was never in.
+      playToGate(client, alwaysWithdraw);
+      expect(G(client).cierrabares).toBeNull();
     });
   });
 
@@ -824,6 +845,11 @@ describe('magaluf gameDef', () => {
     /** Draws a stacked event and returns the outcome pinned to the card. */
     function drawEventCard(eventId: EventId, setup: (g: MagalufG) => void = () => {}) {
       const client = makeClient(3, (g) => {
+        // Every test below names the other seats by number, which only ever
+        // held because the opener lot happened to fall on seat 0 under the
+        // default seed. These tests are about what a card works out, not about
+        // who drew it, so the drawer is pinned rather than left to the shuffle.
+        g.turnSeatID = '0';
         stack(g, Array<string>(8).fill('cana'), [eventId]);
         setup(g);
       });
@@ -1379,12 +1405,30 @@ describe('magaluf gameDef', () => {
       expect(G(dead.client).players['0']!.resaca).toBe(0);
     });
 
-    it('is unsurvivable once you are as far over as the die has faces', () => {
-      // d >= faces means no roll can beat it -- the "no way back" zone.
+    /**
+     * Inverts the old assertion. `d >= faces` used to be arithmetically
+     * certain death while the engine still made you roll for it, which read as
+     * cruel dice when the outcome had been settled at the draw. The die's top
+     * face now always clears, so the curve floors at one face in N instead of
+     * reaching zero.
+     */
+    it('floors survival at one face in N however far over you went', () => {
+      const d6 = { ...DEFAULT_SETTINGS, balconyDie: 6 };
       for (let d = 1; d <= 8; d++) {
-        const certain = poolChance(d, { ...DEFAULT_SETTINGS, balconyDie: 6 });
-        expect(certain).toBe(d >= 6 ? 0 : (6 - d) / 6);
+        expect(poolChance(d, d6)).toBe(d >= 5 ? 1 / 6 : (6 - d) / 6);
       }
+      // Never zero, however absurd the overshoot.
+      expect(poolChance(99, d6)).toBeCloseTo(1 / 6);
+      expect(poolChance(99, { ...DEFAULT_SETTINGS, balconyDie: 20 })).toBeCloseTo(1 / 20);
+    });
+
+    it('clears the terrace on a natural max and nowhere else in that band', () => {
+      expect(survivesRoll(6, 9, 6)).toBe(true); // the top face, miles over
+      expect(survivesRoll(5, 9, 6)).toBe(false);
+      expect(survivesRoll(1, 9, 6)).toBe(false);
+      // Below the floor the ordinary rule is doing all the work anyway.
+      expect(survivesRoll(4, 3, 6)).toBe(true);
+      expect(survivesRoll(3, 3, 6)).toBe(false);
     });
 
     it('never triggers at or exactly on the limit (AC13)', () => {
@@ -1425,6 +1469,55 @@ describe('magaluf gameDef', () => {
       play(client, alwaysWithdraw, (g) => g.day !== 0);
       expect(G(client).jumps.some((j) => j.seatID === seat)).toBe(false);
       expect(G(client).players[seat]!.status).toBe('partying'); // released
+    });
+
+    /**
+     * The Cacheo used to cost a flat 3 VP however much you were carrying,
+     * which made a stash exactly as cheap to hold as a single joint — the one
+     * card that punished contraband was indifferent to how much of it there
+     * was. It is a rate now: `cards.ts` still says `vp: -3`, but per item.
+     */
+    describe('a stop-and-search', () => {
+      /** Everyone is searched, so the whole table is stood up holding. */
+      const searchWith = (holdings: Record<string, ItemId[]>) => {
+        const client = makeClient(3, (g) => {
+          stack(g, Array<string>(8).fill('cana'), ['cacheo']);
+          g.turnSeatID = '0';
+          for (const [id, items] of Object.entries(holdings)) g.players[id]!.items = [...items];
+        });
+        drinkAndReveal(client, G(client).turnSeatID);
+        return client;
+      };
+
+      it('charges three a head, not three a search', () => {
+        const client = searchWith({
+          '1': ['porro'],
+          '2': ['porro', 'pastis', 'farlopa'],
+        });
+        expect(G(client).players['1']!.roundVP).toBe(-3);
+        expect(G(client).players['2']!.roundVP).toBe(-9);
+        // And it takes the lot, exactly as it always did.
+        expect(G(client).players['2']!.items).toEqual([]);
+      });
+
+      it('counts duplicates separately', () => {
+        // `items` is a plain list with no hand limit anywhere in the game, so
+        // two joints really are two joints -- and six points.
+        const client = searchWith({ '1': ['porro', 'porro'] });
+        expect(G(client).players['1']!.roundVP).toBe(-6);
+      });
+
+      it('leaves what is legal to hold alone', () => {
+        const client = searchWith({ '1': ['kebab', 'botella', 'redbull'] });
+        expect(G(client).players['1']!.roundVP).toBe(0);
+        expect(G(client).players['1']!.items).toEqual(['kebab', 'botella', 'redbull']);
+      });
+
+      it('reports the count and the total, or the change is invisible', () => {
+        const client = searchWith({ '1': ['porro', 'farlopa'] });
+        const line = [...G(client).log].reverse().find((e) => e.key === 'magaluf.log.searched');
+        expect(line?.params).toMatchObject({ actor: '1', count: 2, vp: -6 });
+      });
     });
 
     it('does nothing when nobody holds contraband (AC14)', () => {
@@ -1576,35 +1669,103 @@ describe('magaluf gameDef', () => {
       expect(viewFor(null).limit).toBe(HIDDEN_LIMIT);
     });
 
-    it('draws a fresh limit each morning', () => {
+    it('draws a fresh limit each morning from the host band', () => {
       const client = makeClient(3);
-      const friday = G(client).limit;
-      expect(LIMIT_DECK).toContain(friday);
+      const deck = buildLimitDeck(limitRange(G(client).settings));
+      expect(deck).toContain(G(client).limit);
       play(client, alwaysWithdraw, (g) => g.day === 1);
-      // The same deck on every day now — the weekend's arc is the multiplier.
-      expect(LIMIT_DECK).toContain(G(client).limit);
+      // The same band on every day: the weekend's arc is Cierrabares now, not
+      // a moving limit and no longer a multiplier either.
+      expect(deck).toContain(G(client).limit);
+    });
+  });
+
+  /**
+   * The weekend used to escalate 1 / 1.5 / 2.25, which meant Friday stopped
+   * being worth playing carefully and a player who lost a night early could
+   * not be caught by anyone who had merely played worse on the day that
+   * counted. The escalation moved to Cierrabares, which has to be won against
+   * the table rather than collected by whoever is ahead when Sunday arrives.
+   */
+  describe('the day multiplier', () => {
+    it('ships flat across all three days', () => {
+      expect(dayMultipliers(DEFAULT_SETTINGS)).toEqual([1, 1, 1]);
+    });
+
+    it('banks Saturday at exactly the rate it banked Friday', () => {
+      // Friday was never the question -- it was x1 under the old rule too. So
+      // this has to cross midnight to assert anything: it measures what one
+      // identical day is worth on either side of the boundary the old 1.5
+      // sat on.
+      const penalties =
+        PHASE_RULES.tardeo.earlyExitPenalty +
+        PHASE_RULES.noche.earlyExitPenalty +
+        PHASE_RULES.after.earlyExitPenalty;
+
+      // Nobody drinks, so nobody goes near the limit and every day is the same
+      // day: three venues walked out of on nothing.
+      const client = makeClient(3);
+      play(client, alwaysWithdraw, (g) => g.day === 1);
+      const afterFriday = Object.fromEntries(
+        G(client).activeSeatIDs.map((id) => [id, G(client).players[id]!.bankedVP]),
+      );
+
+      play(client, alwaysWithdraw, (g) => g.day === 2);
+      for (const id of G(client).activeSeatIDs) {
+        expect(afterFriday[id]).toBe(-penalties);
+        // At x1.5 Saturday would have cost -16 against Friday's -11.
+        expect(G(client).players[id]!.bankedVP - afterFriday[id]!).toBe(-penalties);
+      }
+    });
+
+    it('still lets a host dial the old weekend back in', () => {
+      const old = clampSettings({ saturdayMultiplier: 1.5, sundayMultiplier: 2.25 } as never);
+      expect(dayMultipliers(old)).toEqual([1, 1.5, 2.25]);
     });
   });
 
   describe('settings clamping (AC18)', () => {
     it('clamps out-of-range numbers rather than letting them reach game logic', () => {
       const wild = clampSettings({
-        limitShift: 999,
+        limitMin: 999,
+        limitMax: -999,
         saturdayMultiplier: 0,
         sundayMultiplier: 99,
       } as never);
-      expect(wild.limitShift).toBe(10);
+      expect(wild.limitMin).toBe(40);
       expect(wild.saturdayMultiplier).toBe(1);
       expect(wild.sundayMultiplier).toBe(4);
     });
 
+    /**
+     * The file's first cross-field rule, so it cannot ride on `clampNumber`
+     * with the rest. The top end gives way, which keeps a host dragging one
+     * slider past the other predictable: the number you are moving wins.
+     */
+    it('never lets the top of the limit band fall below the bottom', () => {
+      expect(clampSettings({ limitMin: 30, limitMax: 12 } as never)).toMatchObject({
+        limitMin: 30,
+        limitMax: 30,
+      });
+      // Both ends clamped into bounds first, and only then made coherent.
+      expect(clampSettings({ limitMin: 999, limitMax: 20 } as never)).toMatchObject({
+        limitMin: 40,
+        limitMax: 40,
+      });
+    });
+
+    it('accepts a band pinned to a single value', () => {
+      const fixed = clampSettings({ limitMin: 22, limitMax: 22 } as never);
+      expect(buildLimitDeck(limitRange(fixed))).toEqual([22]);
+    });
+
     it('falls back to the tuned default for a non-finite or missing value', () => {
       const broken = clampSettings({
-        limitShift: Number.NaN,
+        limitMin: Number.NaN,
         saturdayMultiplier: 'nope',
         limitRevealAt: 'brunch',
       } as never);
-      expect(broken.limitShift).toBe(DEFAULT_SETTINGS.limitShift);
+      expect(broken.limitMin).toBe(DEFAULT_SETTINGS.limitMin);
       expect(broken.saturdayMultiplier).toBe(DEFAULT_SETTINGS.saturdayMultiplier);
       expect(broken.limitRevealAt).toBe(DEFAULT_SETTINGS.limitRevealAt);
     });
@@ -1632,12 +1793,13 @@ describe('magaluf gameDef', () => {
       const fakeRandom = { Number: () => 0.5, Shuffle: <T>(deck: T[]) => deck };
       const g = magalufGameDef.setup!(
         { ctx: { numPlayers: 3 }, random: fakeRandom } as never,
-        { balconyDie: 42, limitShift: -2 } as never,
+        { balconyDie: 42, limitMin: 12, limitMax: 14 } as never,
       ) as MagalufG;
 
       expect(g.settings.balconyDie).toBe(6); // 42 is not a die, so it falls back
-      expect(g.settings.limitShift).toBe(-2);
-      expect(LIMIT_DECK.map((n) => n - 2)).toContain(g.limit); // the deck, shifted -2
+      expect(g.settings.limitMin).toBe(12);
+      expect(g.settings.limitMax).toBe(14);
+      expect([12, 13, 14]).toContain(g.limit);
     });
 
     it('rejects a claimed-seat list below the player floor', () => {
@@ -1838,10 +2000,13 @@ describe('magaluf gameDef', () => {
    */
   describe('the balcony', () => {
     /**
-     * Three seats, all six over a limit they cannot beat on a d6, and nobody
-     * ever drinks -- so the night is three certain jumps and no event card can
-     * wander in and change the count. Stops the moment the table is stood at
-     * the first balcony, before anybody has looked over the railing.
+     * Three seats, all six over the limit, and nobody ever drinks -- so the
+     * night is three certain *jumps* and no event card can wander in and
+     * change the count. (Three certain deaths is what it used to be. A d of 6
+     * on a d6 is now survivable on the top face, which none of these tests
+     * depend on: they are about the walk, not the landing.) Stops the moment
+     * the table is stood at the first balcony, before anybody has looked over
+     * the railing.
      */
     function tableAtTheBalcony(host: string | null = null) {
       const client = makeClient(3, (g) => {
@@ -1870,6 +2035,71 @@ describe('magaluf gameDef', () => {
         const view = magalufGameDef.playerView!({ G: g, ctx: {} as never, playerID: seat });
         expect((view as MagalufG).balcony).toEqual(g.balcony);
       }
+    });
+
+    /**
+     * The whole night's dice are cast in `resolveNight`, before the first
+     * balcony renders — so the log had already narrated every outcome while
+     * the table was still being walked through them one at a time. Anyone
+     * glancing at the chat knew who was dead before the jumper had turned
+     * their own die over, which made the overlay ceremony over a spoiler.
+     */
+    describe('what the log gives away', () => {
+      const JUMP_KEYS = ['magaluf.log.piscina', 'magaluf.log.cemento', 'magaluf.log.survived'];
+      const jumpLines = (client: TestClient) =>
+        G(client).log.filter((e) => JUMP_KEYS.includes(e.key));
+
+      it('says nothing about a jump the table has not been walked past yet', () => {
+        const client = tableAtTheBalcony();
+        // Three dice already rolled, three outcomes already in G.jumps.
+        expect(G(client).jumps).toHaveLength(3);
+        expect(jumpLines(client)).toEqual([]);
+
+        // Not even once the jumper has turned their own die face-up: the
+        // overlay is showing it, and the feed catches up as the table moves on.
+        const jumper = G(client).jumps[0]!.seatID;
+        actAs(client, jumper).revealJump!();
+        expect(jumpLines(client)).toEqual([]);
+      });
+
+      it('writes each jump once, in order, as the table steps past it', () => {
+        const client = tableAtTheBalcony();
+        const jumps = [...G(client).jumps];
+
+        const seen: number[] = [];
+        for (let guard = 0; guard < 20 && G(client).balcony; guard++) {
+          watchBalcony(client);
+          seen.push(jumpLines(client).length);
+        }
+
+        expect(G(client).balcony).toBeNull();
+        // Monotonic: the feed only ever gains lines, never re-narrates.
+        expect(seen).toEqual([...seen].sort((a, b) => a - b));
+
+        // Exactly one outcome line per jump -- piscina pairs with a survived
+        // line, so a survivor contributes two and a death one.
+        for (const jump of jumps) {
+          const mine = jumpLines(client).filter((e) => e.params?.actor === jump.seatID);
+          expect(mine.map((e) => e.key)).toEqual(
+            jump.survived
+              ? ['magaluf.log.piscina', 'magaluf.log.survived']
+              : ['magaluf.log.cemento'],
+          );
+        }
+      });
+
+      it('still records the jumps the host skipped past', () => {
+        // The escape hatch drops the rest of the night in one go. Losing the
+        // record with it would be worse than the spoiler this change fixes.
+        const client = tableAtTheBalcony('0');
+        expect(jumpLines(client)).toEqual([]);
+
+        actAs(client, '0').skipBalcony!();
+        expect(G(client).balcony).toBeNull();
+        for (const jump of G(client).jumps) {
+          expect(jumpLines(client).some((e) => e.params?.actor === jump.seatID)).toBe(true);
+        }
+      });
     });
 
     it('lets only the jumper turn the die over (AC20)', () => {

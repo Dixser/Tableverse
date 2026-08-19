@@ -19,7 +19,14 @@
 
 import type { JSONSchema } from '../../types.js';
 import type { PhaseId } from './cards.js';
-import { BALCONY_DICE, DAY_VP_MULTIPLIER, DEFAULT_BALCONY_DIE } from './constants.js';
+import {
+  BALCONY_DICE,
+  DAY_VP_MULTIPLIER,
+  DEFAULT_BALCONY_DIE,
+  DEFAULT_LIMIT_MAX,
+  DEFAULT_LIMIT_MIN,
+  LIMIT_BOUNDS,
+} from './constants.js';
 
 export type LimitRevealAt = PhaseId | 'never';
 
@@ -61,8 +68,13 @@ export interface MagalufSettings {
    * playable with cardboard and a die.
    */
   balconyDie: number;
-  /** Shifts every day's limit deck by the same amount. */
-  limitShift: number;
+  /**
+   * The band the drinking limit is drawn from, inclusive at both ends. Every
+   * integer between them is a card. `limitMin === limitMax` is legal and means
+   * a fixed, publicly known limit every day.
+   */
+  limitMin: number;
+  limitMax: number;
   saturdayMultiplier: number;
   sundayMultiplier: number;
   /** How long an arrest keeps you out. See `ArrestScope`. */
@@ -79,7 +91,8 @@ const RANGES: Record<
   keyof Omit<MagalufSettings, 'limitRevealAt' | 'balconyDie' | 'arrestLasts'>,
   NumericRange
 > = {
-  limitShift: { min: -10, max: 10, fallback: 0 },
+  limitMin: { min: LIMIT_BOUNDS.min, max: LIMIT_BOUNDS.max, fallback: DEFAULT_LIMIT_MIN },
+  limitMax: { min: LIMIT_BOUNDS.min, max: LIMIT_BOUNDS.max, fallback: DEFAULT_LIMIT_MAX },
   saturdayMultiplier: { min: 1, max: 3, fallback: DAY_VP_MULTIPLIER[1]! },
   sundayMultiplier: { min: 1, max: 4, fallback: DAY_VP_MULTIPLIER[2]! },
 };
@@ -87,7 +100,8 @@ const RANGES: Record<
 export const DEFAULT_SETTINGS: MagalufSettings = {
   limitRevealAt: 'after',
   balconyDie: DEFAULT_BALCONY_DIE,
-  limitShift: 0,
+  limitMin: RANGES.limitMin.fallback,
+  limitMax: RANGES.limitMax.fallback,
   saturdayMultiplier: RANGES.saturdayMultiplier.fallback,
   sundayMultiplier: RANGES.sundayMultiplier.fallback,
   // The rule as shipped. A host opts in to the shorter sentence.
@@ -106,6 +120,13 @@ function clampNumber(raw: unknown, range: NumericRange): number {
 export function clampSettings(raw: Partial<MagalufSettings> | undefined): MagalufSettings {
   const revealAt = raw?.limitRevealAt;
   const die = raw?.balconyDie;
+  // The first cross-field rule in this file, so it cannot live in `clampNumber`
+  // with the rest: each end is clamped into the legal bounds on its own, and
+  // only then is the pair made coherent. The top end gives way, which keeps a
+  // host dragging one slider past the other predictable — the number you are
+  // moving is the one that wins.
+  const limitMin = Math.round(clampNumber(raw?.limitMin, RANGES.limitMin));
+  const limitMax = Math.max(limitMin, Math.round(clampNumber(raw?.limitMax, RANGES.limitMax)));
   return {
     limitRevealAt: LIMIT_REVEAL_OPTIONS.includes(revealAt as LimitRevealAt)
       ? (revealAt as LimitRevealAt)
@@ -116,7 +137,8 @@ export function clampSettings(raw: Partial<MagalufSettings> | undefined): Magalu
     balconyDie: BALCONY_DICE.includes(die as (typeof BALCONY_DICE)[number])
       ? (die as number)
       : DEFAULT_BALCONY_DIE,
-    limitShift: Math.round(clampNumber(raw?.limitShift, RANGES.limitShift)),
+    limitMin,
+    limitMax,
     saturdayMultiplier: clampNumber(raw?.saturdayMultiplier, RANGES.saturdayMultiplier),
     sundayMultiplier: clampNumber(raw?.sundayMultiplier, RANGES.sundayMultiplier),
     // Same shape as limitRevealAt: an unrecognised value is not the nearest
@@ -150,12 +172,19 @@ export const magalufSettingsSchema: JSONSchema = {
       default: DEFAULT_SETTINGS.balconyDie,
       title: 'Balconing die (survive by rolling above how far over you went)',
     },
-    limitShift: {
+    limitMin: {
       type: 'number',
-      default: DEFAULT_SETTINGS.limitShift,
-      minimum: RANGES.limitShift.min,
-      maximum: RANGES.limitShift.max,
-      title: 'Drinking limit adjustment (-10 to +10)',
+      default: DEFAULT_SETTINGS.limitMin,
+      minimum: RANGES.limitMin.min,
+      maximum: RANGES.limitMin.max,
+      title: `Lowest possible drinking limit (${LIMIT_BOUNDS.min}-${LIMIT_BOUNDS.max})`,
+    },
+    limitMax: {
+      type: 'number',
+      default: DEFAULT_SETTINGS.limitMax,
+      minimum: RANGES.limitMax.min,
+      maximum: RANGES.limitMax.max,
+      title: `Highest possible drinking limit (${LIMIT_BOUNDS.min}-${LIMIT_BOUNDS.max}, never below the lowest)`,
     },
     saturdayMultiplier: {
       type: 'number',

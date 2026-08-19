@@ -32,6 +32,7 @@ import {
   drunkestSeat,
   dropContraband,
   gainVP,
+  countContraband,
   hasContraband,
   leavePhase,
   log,
@@ -271,10 +272,15 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
     case 'cacheo': {
       for (const id of partying(G)) {
         const target = G.players[id]!;
-        if (!hasContraband(target)) continue;
+        // Counted before it is dropped, and priced per item: `card.vp` is a
+        // rate here, not a total. Holding a stash used to cost exactly what
+        // holding one joint cost, which made stockpiling free.
+        const count = countContraband(target);
+        if (count === 0) continue;
+        const lost = (card.vp ?? 0) * count;
         dropContraband(target);
-        gainVP(target, card.vp ?? 0);
-        log(G, 'searched', { actor: id }, 'failure');
+        gainVP(target, lost);
+        log(G, 'searched', { actor: id, count, vp: lost }, 'failure');
       }
       break;
     }

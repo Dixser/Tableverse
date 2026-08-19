@@ -187,6 +187,14 @@ export interface PendingChoice {
   endsTurn: boolean;
 }
 
+/** What the board shows about the bar that just closed. */
+export interface Cierrabares {
+  seatID: string;
+  /** The winning drink count, so the panel can show what it took. */
+  drinks: number;
+  vp: number;
+}
+
 export interface MagalufG extends RoundConfirmG {
   /** Seats claimed by a real user at match start; the platform always creates maxPlayers engine seats. */
   activeSeatIDs: string[];
@@ -211,12 +219,11 @@ export interface MagalufG extends RoundConfirmG {
   /** Non-null while a face-up choice card is waiting on its drawer. */
   pendingChoice: PendingChoice | null;
   /**
-   * Index of the seat that opened the current phase. The lap boundary Último
-   * en Pie is measured against — see `advanceTurn`.
+   * Who closed the bar this phase, or `null` when the count tied or nobody met
+   * the drink minimum. Set at closing time and cleared when the next venue
+   * opens, so the board has something to show while the table regroups.
    */
-  roundAnchor: number;
-  /** Último en Pie is paid at most once per phase. */
-  lastStandingAwarded: boolean;
+  cierrabares: Cierrabares | null;
   /** Non-null only while a round-confirm wait is holding a transition open. */
   pendingAdvance: PendingAdvance | null;
   /** Every jump resolved this match, oldest first. Drives the board's balcony moment. */
@@ -447,6 +454,16 @@ export function addResaca(player: MagalufPlayer, amount: number): void {
 
 export function hasContraband(player: MagalufPlayer): boolean {
   return player.items.some((id) => CONTRABAND.includes(id));
+}
+
+/**
+ * How many contraband items a player is holding, duplicates counted
+ * separately. `items` is a plain list with no hand limit anywhere in the game,
+ * so two Porros really are two Porros — and since the Cacheo taxes per item,
+ * the difference is six points.
+ */
+export function countContraband(player: MagalufPlayer): number {
+  return player.items.filter((id) => CONTRABAND.includes(id)).length;
 }
 
 export function dropContraband(player: MagalufPlayer): void {

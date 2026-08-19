@@ -38,14 +38,15 @@ import {
 import { ActivePlayers, INVALID_MOVE } from '../../vendor.js';
 import type { EventId, ItemId } from './cards.js';
 import { DAY_IDS, ITEM_IDS, PHASE_IDS } from './cards.js';
-import { ITEM_EFFECTS, LIMIT_DECK, PHASE_RULES } from './constants.js';
+import { ITEM_EFFECTS, PHASE_RULES } from './constants.js';
 import { resolveJump } from './balconing.js';
 import { eventOptions, resolveEvent, resolveEventOption } from './events.js';
 import type { Rng, BoardgameRandom } from './rng.js';
 import { fromBoardgameRandom } from './rng.js';
 import type { MagalufSettings } from './settings.js';
 import { clampSettings, dayMultipliers } from './settings.js';
-import type { MagalufG, MagalufPlayer, PendingAdvance } from './state.js';
+import { buildLimitDeck, limitRange } from './limitScale.js';
+import type { JumpRecord, MagalufG, MagalufPlayer, PendingAdvance } from './state.js';
 import {
   addIntox,
   addResaca,
@@ -100,8 +101,10 @@ const turnOrder: TurnOrderConfig<MagalufG> = {
  * remaining seat was skipping: their flags are cleared by the first sweep, so
  * taking the next partying seat outright terminates instead of looping.
  *
- * Also where a round boundary is detected, because this is the only place the
- * turn ever moves — see `awardLastStanding`.
+ * It used to detect round boundaries too, for Último en Pie. Cierrabares is
+ * settled at closing time off a drink count, so the anchor, the lap arithmetic
+ * and the once-per-phase latch it needed are all gone. Walking the turn is
+ * once again the only thing this function does.
  */
 function advanceTurn(G: MagalufG): void {
   const seats = G.activeSeatIDs;
@@ -109,16 +112,8 @@ function advanceTurn(G: MagalufG): void {
 
   const take = (index: number): void => {
     const id = seats[index]!;
-    // A lap is measured from the seat that opened the phase. Walking is always
-    // forward, so the round has turned over whenever the next seat's distance
-    // from the anchor is not further along than the current seat's — including
-    // the equal case, which is a solo player handing to themselves.
-    const offset = (i: number) => (i - G.roundAnchor + seats.length) % seats.length;
-    const newRound = offset(index) <= offset(start);
-
     G.turnSeatID = id;
     G.players[id]!.itemUsedThisTurn = false;
-    if (newRound) awardLastStanding(G, id);
   };
 
   for (let step = 1; step <= seats.length * 2; step++) {
@@ -257,7 +252,8 @@ function startPhase(G: MagalufG, rng: Rng, phaseIndex: number, opener: number): 
   G.lastDraw = null;
   G.pendingEvent = null;
   G.pendingChoice = null;
-  G.lastStandingAwarded = false;
+  // Last venue's Cierrabares comes off the board when this one opens.
+  G.cierrabares = null;
 
   if (G.settings.limitRevealAt === PHASE_IDS[phaseIndex]) G.limitRevealed = true;
 
@@ -276,8 +272,12 @@ function startPhase(G: MagalufG, rng: Rng, phaseIndex: number, opener: number): 
     // counter restarts at zero each venue: a seat still carrying last venue's
     // sequence number would outrank this venue's real last-out.
     player.withdrawSeq = -1;
-    if (player.status !== 'partying') continue;
+    // Above the `continue`, unlike the resets below it. Cierrabares counts
+    // every seat, so a seat that sat the last venue out in a cell must not
+    // carry that venue's drink count into this one and win a bar it was never
+    // in.
     player.drinksThisPhase = 0;
+    if (player.status !== 'partying') continue;
     player.skipNextTurn = false;
     player.itemUsedThisTurn = false;
   }
@@ -289,44 +289,59 @@ function startPhase(G: MagalufG, rng: Rng, phaseIndex: number, opener: number): 
     return;
   }
 
-  // The opener is also the anchor every round boundary in this phase is
-  // measured from -- see `advanceTurn`.
-  G.roundAnchor = opener;
   G.turnSeatID = G.activeSeatIDs[opener]!;
   if (G.players[G.turnSeatID]!.status !== 'partying') advanceTurn(G);
   else G.players[G.turnSeatID]!.itemUsedThisTurn = false;
 }
 
 /**
- * The bonus for opening a round as the only person still in the venue.
+ * **Cierrabares** — the one who closes the bar. Settled at closing time and
+ * paid to whoever drank strictly more than anybody else this phase.
  *
- * It used to go to whoever left last, which turned out to pay for seat
- * position rather than nerve: when the whole table withdraws at the drink
- * minimum they leave in turn order, so the last seat collected for free every
- * time. Being alone at a *round boundary* has to be bought — the second-to-last
- * player leaves mid-lap, and the survivor has to take one more solo turn, and
- * the intoxication that comes with it, to reach the start of the next one.
- * Anyone who wanted to contest it could have drunk one more themselves.
+ * This replaces Último en Pie, which paid for being alone in the venue at a
+ * round boundary. That rule had two problems the playtest found. It paid for
+ * *endurance measured in turns* rather than in drinks, so a player who nursed
+ * a Porro through a solo lap collected while the player who had actually
+ * out-drunk them did not. And it fired invisibly, mid-phase, off lap
+ * arithmetic nobody at the table could follow — the log line was the first
+ * anyone knew of it.
  *
- * A table that all hits closing time on the same lap now pays nobody. That is
- * the rule working: nobody was ever alone to begin with.
+ * A drink count fixes both. It is the number already printed on every player
+ * panel, so the race is legible while it is being run, and it is settled once,
+ * in the open, when the venue closes.
  *
- * The `minDrinks` gate survives from the old version for the old reason —
- * without it a player could hold two Porros and idle their way to the bonus
- * without drinking anything.
+ * **Ties pay nobody.** With `maxDrinks` capping the phase at 4/5/4 a contested
+ * bar will often end level, and that is the rule working rather than a hole in
+ * it: the bonus is for out-drinking the table, and matching it is not
+ * out-drinking it. It makes the last drink of a tied phase worth taking.
+ *
+ * **The `minDrinks` gate survives**, for a new reason. The Aguafiestas penalty
+ * already punishes leaving under the minimum, and paying the bonus to somebody
+ * who took that penalty would punish and reward one act at once. There is no
+ * ambiguity about where the gate applies: the top count is by definition at
+ * least everyone else's, so if it fails the minimum then nobody met it and no
+ * runner-up is waiting underneath.
+ *
+ * Every seat is counted, however its phase ended — withdrawn, arrested, at the
+ * cap. What you drank is what you drank.
  */
-function awardLastStanding(G: MagalufG, seatID: string): void {
-  if (G.lastStandingAwarded) return;
-  if (partying(G).length !== 1) return;
-
+function awardCierrabares(G: MagalufG): void {
   const rules = phaseRules(G);
-  const player = G.players[seatID]!;
-  if (player.status !== 'partying') return;
-  if (player.drinksThisPhase < rules.minDrinks) return;
+  const counts = G.activeSeatIDs.map((id) => G.players[id]!.drinksThisPhase);
+  const top = Math.max(...counts, 0);
 
-  G.lastStandingAwarded = true;
-  gainVP(player, rules.lastStandingBonus);
-  log(G, 'ultimoEnPie', { actor: seatID, vp: rules.lastStandingBonus }, 'success');
+  if (top < rules.minDrinks || counts.filter((n) => n === top).length !== 1) {
+    G.cierrabares = null;
+    log(G, 'cierrabaresNobody', {}, 'round');
+    return;
+  }
+
+  const seatID = G.activeSeatIDs[counts.indexOf(top)]!;
+  // Into the round pool, not the bank: this was earned tonight, so it rides on
+  // tonight's limit check like everything else earned tonight.
+  gainVP(G.players[seatID]!, rules.cierrabaresBonus);
+  G.cierrabares = { seatID, drinks: top, vp: rules.cierrabaresBonus };
+  log(G, 'cierrabares', { actor: seatID, drinks: top, vp: rules.cierrabaresBonus }, 'success');
 }
 
 /**
@@ -336,8 +351,12 @@ function awardLastStanding(G: MagalufG, seatID: string): void {
  * may stand the whole table at a balcony before any gate opens.
  */
 function endPhase(G: MagalufG, rng: Rng): void {
-  // Último en Pie is not settled here any more: it is paid the moment somebody
-  // opens a round alone, which is a thing that happens mid-phase or not at all.
+  // Before the branch, because the After has no round-confirm wait to fall
+  // into — it goes straight to the balcony — and the bar still closed. The
+  // drink counts are intact here: they are cleared by the next `startPhase`,
+  // never by this one.
+  awardCierrabares(G);
+
   if (G.phase < PHASE_IDS.length - 1) {
     holdFor(G, { kind: 'phase', next: G.phase + 1 });
     return;
@@ -368,9 +387,10 @@ function startDay(G: MagalufG, rng: Rng, day: number): void {
   G.day = day;
   G.limitRevealed = false;
 
-  // Shuffle the five limit cards and turn one face-down, exactly as a table
-  // would. Not an index into an array with a random number.
-  G.limit = rng.shuffle(LIMIT_DECK)[0]! + G.settings.limitShift;
+  // Shuffle the limit cards and turn one face-down, exactly as a table would.
+  // Not an index into an array with a random number. The deck is every integer
+  // in the host's band, so it is thirteen cards at the default 16–28.
+  G.limit = rng.shuffle(buildLimitDeck(limitRange(G.settings)))[0]!;
 
   for (const id of G.activeSeatIDs) {
     const player = G.players[id]!;
@@ -419,16 +439,13 @@ function jump(G: MagalufG, rng: Rng, seatID: string, multiplier: number): void {
     bankedVP = bankRound(G, seatID, multiplier);
     bankVP(player, outcome.legendVP);
     addResaca(player, outcome.resaca);
-    log(G, 'piscina', { actor: seatID, d, roll: outcome.roll, vp: outcome.legendVP }, 'special');
-    // The ordinary survivor's line, reused: from here the night reads the same
-    // as anybody else's, which is exactly the claim the rule now makes.
-    log(G, 'survived', { actor: seatID, vp: bankedVP }, 'success');
   } else {
     player.roundVP = 0;
     player.items = [];
     player.status = 'dead';
-    log(G, 'cemento', { actor: seatID, d, roll: outcome.roll }, 'failure');
   }
+
+  // Nothing is logged here. See `logJump`.
 
   G.jumps.push({
     day: G.day,
@@ -793,6 +810,33 @@ interface BalconyCtx {
   events: { setPhase(phase: string): void };
 }
 
+/**
+ * Writes a resolved jump into the log — at the moment the table finds out,
+ * which is not the moment the die was cast.
+ *
+ * `resolveNight` rolls every jump of the night up front and then stands the
+ * table at the first balcony to walk through them one at a time. That is the
+ * right order for the engine (the outcome cannot drift while the overlay is
+ * open) and it was the wrong order for the feed: the log narrated all of it
+ * before the first roll had been turned face-up, so anybody glancing at the
+ * chat already knew who was dead. The overlay was ceremony over a spoiler.
+ *
+ * So the record is written from `leaveBalcony`, as each jump is left behind,
+ * and it reads from the `JumpRecord` rather than from live player state —
+ * which is why it can be written late at all: the record is a snapshot, and
+ * nothing between the roll and the reveal can change what it says.
+ */
+function logJump(G: MagalufG, jump: JumpRecord): void {
+  if (jump.survived) {
+    log(G, 'piscina', { actor: jump.seatID, d: jump.d, roll: jump.roll, vp: jump.legendVP }, 'special');
+    // The ordinary survivor's line, reused: from here the night reads the same
+    // as anybody else's, which is exactly the claim the rule now makes.
+    log(G, 'survived', { actor: jump.seatID, vp: jump.bankedVP }, 'success');
+  } else {
+    log(G, 'cemento', { actor: jump.seatID, d: jump.d, roll: jump.roll }, 'failure');
+  }
+}
+
 /** The jump on screen, or null if the table is not at a balcony. */
 function balconyJump(G: MagalufG) {
   if (!G.balcony) return null;
@@ -804,6 +848,14 @@ function balconyJump(G: MagalufG) {
  * end — at which point the night finally settles into a gate or the gameover.
  */
 function leaveBalcony(G: MagalufG, nextIndex: number, events: BalconyCtx['events']): void {
+  // Everything being stepped past goes into the log now, in order. Written
+  // here rather than in `revealJump` because this is the one path both the
+  // ordinary walk and the host's skip go through, which makes "exactly once
+  // per jump" fall out of the control flow instead of needing a flag.
+  for (let i = G.balcony?.index ?? 0; i < Math.min(nextIndex, G.jumps.length); i++) {
+    logJump(G, G.jumps[i]!);
+  }
+
   if (nextIndex < G.jumps.length) {
     G.balcony = { index: nextIndex, revealed: false };
     return;
@@ -961,8 +1013,7 @@ export const magalufGameDef: Game<MagalufG, Record<string, unknown>, MagalufSetu
       lastDraw: null,
       pendingEvent: null,
       pendingChoice: null,
-      roundAnchor: 0,
-      lastStandingAwarded: false,
+      cierrabares: null,
       pendingAdvance: null,
       roundConfirm: null,
       hostPlayerID: setupData?.hostPlayerID ?? null,
