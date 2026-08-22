@@ -147,7 +147,7 @@ export { eventOptions };
 export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng: Rng): void {
   const card = EVENTS[eventId];
   const player = G.players[seatID]!;
-  log(G, 'event', { actor: seatID, descriptionKey: `magaluf.event.${eventId}` });
+  log(G, 'event', { actor: seatID, descriptionKey: `magaluf.event.${eventId}.title` });
 
   if (card.options) return;
 

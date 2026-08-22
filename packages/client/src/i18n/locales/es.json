@@ -484,26 +484,198 @@
   },
   "magaluf": {
     "alcohol": {
-      "cana": "Caña",
-      "tinto": "Tinto de verano",
-      "clara": "Clara",
-      "pinta": "Pinta",
-      "vino": "Copa de vino",
-      "vermut": "Vermut",
-      "sangria": "Jarra de sangría",
-      "mojito": "Mojito",
-      "cubata": "Cubata",
-      "chupito": "Chupito",
-      "gintonic": "Gin-tonic",
-      "coctel": "Cóctel de la casa",
-      "jager": "Jägerbomb",
-      "cargada": "Copa cargada",
-      "hierbas": "Chupito de hierbas",
-      "tequila3": "Tequila x3",
-      "absenta": "Absenta",
-      "garrafon": "Garrafón",
-      "pecera": "Pecera",
-      "agua": "Agua"
+      "cana": {
+        "title": "Caña",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Fría, pequeña y perfecta.",
+          "La primera del día siempre entra sola.",
+          "Doscientos mililitros de nada. Eso te dices.",
+          "El vaso está sudando más que tú.",
+          "Te la bebes en la barra sin sentarte.",
+          "Pides una y te ponen tres."
+        ]
+      },
+      "tinto": {
+        "title": "Tinto de verano",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Vino con gaseosa. No engaña a nadie.",
+          "Lo que pides cuando no quieres pedir cerveza.",
+          "Sabe a merienda de domingo.",
+          "Lleva una rodaja de limón que nadie se come.",
+          "Media jarra y ya te has olvidado del sol."
+        ]
+      },
+      "clara": {
+        "title": "Clara",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Medio paso atrás. Solo medio.",
+          "La bebida de quien dice que va a parar.",
+          "Cuenta como agua si no lo piensas mucho."
+        ]
+      },
+      "pinta": {
+        "title": "Pinta",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Como la caña, pero el doble y el doble de rápido.",
+          "Te la ponen en un vaso que pesa.",
+          "Se calienta antes de que llegues al final.",
+          "Aquí la ponen porque los guiris no saben pedir cañas."
+        ]
+      },
+      "vino": {
+        "title": "Copa de vino",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Alguien intentando tener clase a las cuatro de la tarde.",
+          "La carta tenía dos opciones y esta era la cara.",
+          "Lo sirven demasiado frío y da igual.",
+          "Te lo bebes mirando el mar como si entendieras de vino."
+        ]
+      },
+      "vermut": {
+        "title": "Vermut",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Con hielo, naranja y una aceituna que sobra.",
+          "La hora del vermut dura seis horas.",
+          "El de la casa, que es el de garrafa."
+        ]
+      },
+      "sangria": {
+        "title": "Jarra de sangría",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Fruta flotando encima de algo que no es vino.",
+          "Cuatro pajitas y ninguna conversación.",
+          "La jarra viene con más hielo que otra cosa."
+        ]
+      },
+      "mojito": {
+        "title": "Mojito",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Hierbabuena en los dientes toda la tarde.",
+          "Lleva tanto azúcar que no notas el ron.",
+          "Lo hacen en treinta segundos y se nota."
+        ]
+      },
+      "cubata": {
+        "title": "Cubata",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Dos dedos de refresco y el resto no.",
+          "El vaso es de plástico y está lleno hasta arriba.",
+          "No has visto qué botella ha cogido.",
+          "Sabe distinto cada vez y siempre es el mismo.",
+          "Con una pajita corta que no llega al fondo.",
+          "Te lo pone el camarero sin que pidas nada.",
+          "El hielo se ha rendido hace rato."
+        ]
+      },
+      "chupito": {
+        "title": "Chupito",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Uno. Solo uno. Nunca es uno.",
+          "A la de tres y nadie cuenta hasta tres.",
+          "De un color que no existe en la naturaleza.",
+          "Te lo bebes por no quedar mal."
+        ]
+      },
+      "gintonic": {
+        "title": "Gin-tonic",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "En copa de balón, porque aquí se hacen bien.",
+          "Con pepino. No sabes por qué lleva pepino.",
+          "Cuesta ocho euros y lo pagas sin rechistar.",
+          "El camarero lo remueve como si fuera importante.",
+          "Media copa es hielo y sigues pagando ocho euros."
+        ]
+      },
+      "coctel": {
+        "title": "Cóctel",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Lleva sombrilla y cuatro cosas que no pegan.",
+          "De la carta plastificada, el segundo por arriba.",
+          "Lo pides por la foto y está bueno igual."
+        ]
+      },
+      "jager": {
+        "title": "Jäger",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Sabe a jarabe para la tos y a todo el mundo le encanta.",
+          "Sale del grifo ese que siempre está helado.",
+          "El de al lado ya se ha pedido otro.",
+          "Nadie ha decidido esto. Ha pasado."
+        ]
+      },
+      "cargada": {
+        "title": "Copa cargada",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Le has pedido que no se cortara y no se ha cortado.",
+          "De refresco lleva el color.",
+          "La primera te la bebes en dos tragos y te callas."
+        ]
+      },
+      "hierbas": {
+        "title": "Licor de Hierbas",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Mallorquinas, dulces y traicioneras.",
+          "Te lo pone el dueño y no puedes decir que no.",
+          "Sabe a caramelo y a fin de la noche."
+        ]
+      },
+      "tequila3": {
+        "title": "Tequila",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Sal, trago, limón. En ese orden, o casi.",
+          "A estas horas ya nadie usa la sal.",
+          "La botella lleva toda la noche en la barra.",
+          "Tres seguidos, porque uno no tiene sentido."
+        ]
+      },
+      "absenta": {
+        "title": "Absenta",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Le prenden fuego y eso ya debería decirte algo.",
+          "Verde, con azúcar quemado encima.",
+          "Nadie en esta mesa sabe qué lleva."
+        ]
+      },
+      "garrafon": {
+        "title": "Garrafón",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "La botella no tiene etiqueta y el precio lo explica.",
+          "Mañana te vas a acordar de esto. Mucho."
+        ]
+      },
+      "pecera": {
+        "title": "Pecera",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Litro y medio, cinco pajitas y ninguna responsabilidad.",
+          "La traen dos camareros y todo el bar mira."
+        ]
+      },
+      "agua": {
+        "title": "Agua",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox> y <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "La decisión más inteligente que vas a tomar hoy."
+        ]
+      }
     },
     "item": {
       "kebab": "Kebab",
@@ -540,48 +712,347 @@
       "domingo": "Domingo"
     },
     "event": {
-      "ligueTardeo": "Ligue de piscina — algo es algo. +2 PV.",
-      "fiestaTardeo": "Chiringuito — +1 PV para todos los que sigan de fiesta.",
-      "peleaTardeo": "Piques de guiris — nada serio. +2 PV y +1 de Intoxicación.",
-      "chungoTardeo": "Se te cae el móvil al mar — −2 PV.",
-      "insolacion": "Insolación — seis horas al sol bebiendo. +2 de Intoxicación.",
-      "foto": "Foto para el Insta — +2 PV.",
-      "ligueNoche": "Ligue en la pista — +4 PV.",
-      "fiestaNoche": "Fiesta de la espuma — +2 PV para todos los que sigan de fiesta.",
-      "peleaNoche": "Pelea — +4 PV y +2 de Intoxicación.",
-      "chungoNoche": "Te roban la cartera — págales, o pierde todo lo que llevas encima.",
-      "gorila": "El portero te saca — te retiras de la fase, pero sin penalización.",
-      "garrafonEvent": "Te dan garrafón — +3 de Intoxicación.",
-      "ligueAfter": "Ligue del after — nadie se acordará. +6 PV.",
-      "fiestaAfter": "Amanecer en la playa — +3 PV para todos los que sigan de fiesta.",
-      "peleaAfter": "Pelea con los porteros — +6 PV y +3 de Intoxicación.",
-      "chungoAfter": "Despiertas sin nada — pierdes todos tus objetos y 4 PV.",
-      "soloVoyAMirar": "Solo voy a mirar — te asomas al balcón un momento. +6 PV.",
-      "terraza": "La terraza del quinto — la mejor fiesta del viaje. Sube, o quédate abajo tranquilo.",
-      "comaEtilico": "Coma etílico — +5 de Intoxicación.",
-      "karaoke": "Karaoke — +2 PV, o el doble si eres el más borracho.",
-      "barraLibre": "Barra libre — +1 PV por cada copa que llevas en esta fase.",
-      "perdido": "Te pierdes — pierdes tu próximo turno, pero sigues de fiesta.",
-      "chupitoCasa": "Chupito de la casa — invita la casa: bebes otra carta de alcohol.",
-      "ronda": "Ronda — todos los que sigan de fiesta beben una carta de alcohol.",
-      "vomitona": "Te sube — échalo fuera, o aguántate.",
-      "ambulancia": "Ambulancia — el más borracho se retira, −5 de Intoxicación y +3 de Resaca.",
-      "kebabEvent": "Kebab — consigues un Kebab.",
-      "aguaEvent": "Botellín — consigues una Botella de agua.",
-      "redbullEvent": "Red Bull — consigues un Red Bull.",
-      "cacheo": "Cacheo — todo el que lleve algo ilegal lo tira y pierde 3 PV por objeto.",
-      "redada": "Redada — todo el que lleve algo ilegal pasa la noche en el calabozo.",
-      "nada": "No pasa nada — sigue la fiesta.",
-      "colecta": "La colecta — hacen un bote para el que peor fin de semana lleva: +6 PV directos al banco.",
-      "remontada": "La remontada — al último de la mesa le devuelven la mitad de lo que le saca el primero, directo al banco.",
-      "camelloPorro": "Camello — te ofrece un Porro. Pillarlo, o dejarlo.",
-      "camelloPastis": "Camello — te ofrece Pastis. Pillarlo, o dejarlo.",
-      "camelloFarlopa": "Camello — te ofrece Farlopa. Pillarla, o dejarlo.",
-      "ultimaRonda": "Última ronda — te ponen una copa en la mano. Métetela ya, o promételes mañana.",
-      "resacon": "Vas fino — podrías quedarte quieto y dormir un poco, pero cuesta.",
-      "invitacion": "Te deben una — coge el dinero, o coge la comida.",
-      "dobleONada": "Doble o nada — una copa más, y vale el doble.",
-      "saltarLaCola": "Colarte — hay un fiestón empezando en otro sitio, y tendrías que irte ya."
+      "ligueTardeo": {
+        "title": "Ligue de piscina",
+        "effect": "Ganas <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Algo es algo.",
+          "Te ha dicho su nombre y ya se te ha olvidado."
+        ]
+      },
+      "fiestaTardeo": {
+        "title": "Chiringuito",
+        "effect": "<vpAll>{{vpAll}} PV</vpAll> para todos los que sigan de fiesta.",
+        "flavor": [
+          "Dos altavoces y una nevera. No hace falta más.",
+          "El camarero se sabe tu pedido y llevas aquí una hora."
+        ]
+      },
+      "peleaTardeo": {
+        "title": "Piques de guiris",
+        "effect": "Ganas <vp>{{vp}} PV</vp> y <intox>{{intox}} de Intoxicación</intox>.",
+        "flavor": [
+          "Nada serio. Mucho empujón y ninguna puñetera hostia.",
+          "Os separan dos camareros y un inflable de flamenco."
+        ]
+      },
+      "chungoTardeo": {
+        "title": "Se te cae el móvil al mar",
+        "effect": "Pierdes <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "El arroz no va a arreglar esto.",
+          "Lo ves bajar. Muy despacio. Muy claro."
+        ]
+      },
+      "insolacion": {
+        "title": "Insolación",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox>.",
+        "flavor": [
+          "Seis horas al sol bebiendo. Nadie te avisó.",
+          "Llevas la marca de las gafas hasta el domingo."
+        ]
+      },
+      "foto": {
+        "title": "Foto para el Insta",
+        "effect": "Ganas <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Cuarenta intentos para una que valga.",
+          "Sales con los ojos cerrados y aun así la subes."
+        ]
+      },
+      "ligueNoche": {
+        "title": "Ligue en la pista",
+        "effect": "Ganas <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Ninguno de los dos oye nada, pero se entiende.",
+          "Media hora bailando y ni una palabra cruzada."
+        ]
+      },
+      "fiestaNoche": {
+        "title": "Fiesta de la espuma",
+        "effect": "<vpAll>{{vpAll}} PV</vpAll> para todos los que sigan de fiesta.",
+        "flavor": [
+          "Se te ha metido en todas partes. En todas.",
+          "Pierdes una zapatilla y no la echas de menos hasta mañana."
+        ]
+      },
+      "peleaNoche": {
+        "title": "Pelea",
+        "effect": "Ganas <vp>{{vp}} PV</vp> y <intox>{{intox}} de Intoxicación</intox>.",
+        "flavor": [
+          "Ya no te acuerdas de cómo empezó.",
+          "Defendías a alguien que acababas de conocer.",
+          "Ganaste. Eso dices tú."
+        ]
+      },
+      "chungoNoche": {
+        "title": "Te roban la cartera",
+        "effect": "Elige: págales, o pierde todo lo que llevas encima.",
+        "flavor": [
+          "Tres tíos muy simpáticos hasta hace diez segundos.",
+          "Ni te has enterado. Te lo dice el de la puerta."
+        ]
+      },
+      "gorila": {
+        "title": "El portero te saca",
+        "effect": "Te retiras de la fase, pero sin penalización.",
+        "flavor": [
+          "No te dice por qué. No hay por qué.",
+          "Te levanta del suelo sin despeinarse."
+        ]
+      },
+      "garrafonEvent": {
+        "title": "Te dan garrafón",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox>.",
+        "flavor": [
+          "Eso no es ginebra. Eso no ha sido ginebra nunca.",
+          "Sabe a piscina y cuesta cuatro euros.",
+          "La botella tiene la etiqueta al revés."
+        ]
+      },
+      "ligueAfter": {
+        "title": "Ligue del after",
+        "effect": "Ganas <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Nadie se acordará. Ni tú.",
+          "Os habéis contado la vida entera. No queda nada de ella."
+        ]
+      },
+      "fiestaAfter": {
+        "title": "Amanecer en la playa",
+        "effect": "<vpAll>{{vpAll}} PV</vpAll> para todos los que sigan de fiesta.",
+        "flavor": [
+          "Sale el sol y nadie se quiere ir.",
+          "Ocho desconocidos, una manta y un altavoz sin batería."
+        ]
+      },
+      "peleaAfter": {
+        "title": "Pelea con los porteros",
+        "effect": "Ganas <vp>{{vp}} PV</vp> y <intox>{{intox}} de Intoxicación</intox>.",
+        "flavor": [
+          "Mala idea. Todo el mundo lo sabía menos tú.",
+          "Son tres y ninguno ha parpadeado.",
+          "Acabas en la acera explicándoselo a una farola."
+        ]
+      },
+      "chungoAfter": {
+        "title": "Despiertas sin nada",
+        "effect": "Pierdes <vp>{{vp}} PV</vp> y todos tus objetos.",
+        "flavor": [
+          "Los bolsillos del revés y ni idea de cuándo.",
+          "Tenías una riñonera. Estás seguro de que tenías una riñonera."
+        ]
+      },
+      "soloVoyAMirar": {
+        "title": "Solo voy a mirar",
+        "effect": "Ganas <vp>{{vp}} PV</vp>.",
+        "flavor": [
+          "Te asomas al balcón un momento. Un momento.",
+          "Desde aquí arriba se ve todo el paseo.",
+          "Solo estás mirando. Eso es lo que has dicho."
+        ]
+      },
+      "terraza": {
+        "title": "La terraza del quinto",
+        "effect": "Elige: subir, o quedarte abajo.",
+        "flavor": [
+          "La mejor fiesta del viaje, cinco pisos más arriba.",
+          "Se oye desde la calle y no hay ascensor."
+        ]
+      },
+      "comaEtilico": {
+        "title": "Coma etílico",
+        "effect": "Te llevas <intox>{{intox}} de Intoxicación</intox>.",
+        "flavor": [
+          "Ya no estás en la fiesta aunque sigas en la fiesta.",
+          "Alguien te está hablando muy despacio."
+        ]
+      },
+      "karaoke": {
+        "title": "Karaoke",
+        "effect": "Ganas <vp>{{vp}} PV</vp>, o el doble si eres el más borracho de la mesa.",
+        "flavor": [
+          "Te sabes la letra. No te sabes la canción.",
+          "Nadie te ha pedido un bis y vas por el tercero."
+        ]
+      },
+      "barraLibre": {
+        "title": "Barra libre",
+        "effect": "Ganas <vp>+1 PV</vp> por cada copa que llevas en esta fase.",
+        "flavor": [
+          "Veinte euros y vasos de plástico hasta las tres.",
+          "La cola es más larga que la barra."
+        ]
+      },
+      "perdido": {
+        "title": "Te pierdes",
+        "effect": "Pierdes tu próximo turno, pero sigues de fiesta.",
+        "flavor": [
+          "Todas las calles de aquí son la misma calle.",
+          "Llevas veinte minutos siguiendo a un grupo que no conoces."
+        ]
+      },
+      "chupitoCasa": {
+        "title": "Chupito de la casa",
+        "effect": "Bebes otra carta de alcohol.",
+        "flavor": [
+          "Invita la casa. La casa siempre invita.",
+          "Es azul. No preguntes de qué es.",
+          "Uno para ti y uno para el camarero.",
+          "Ha aparecido en la barra y nadie lo ha pedido."
+        ]
+      },
+      "ronda": {
+        "title": "Ronda",
+        "effect": "Todos los que sigan de fiesta beben una carta de alcohol.",
+        "flavor": [
+          "Pagas tú. Lo has dicho tú.",
+          "Nadie recuerda de quién era el turno.",
+          "Ocho copas y dos manos."
+        ]
+      },
+      "vomitona": {
+        "title": "Te sube",
+        "effect": "Elige: échalo fuera, o aguántate.",
+        "flavor": [
+          "Ha sido el garrafón. Seguro que ha sido el garrafón.",
+          "Estás muy callado de repente."
+        ]
+      },
+      "ambulancia": {
+        "title": "Ambulancia",
+        "effect": "El más borracho se retira, con <relief>{{relief}} de Intoxicación</relief> y <resaca>+3 de Resaca</resaca>.",
+        "flavor": [
+          "Los sanitarios ya han estado en este hotel esta noche.",
+          "Se lo llevan andando, que es lo bueno."
+        ]
+      },
+      "kebabEvent": {
+        "title": "Kebab",
+        "effect": "Consigues un <item>Kebab</item>.",
+        "flavor": [
+          "El de la esquina, el que no cierra nunca.",
+          "Te lo comes de pie y es lo mejor del viaje."
+        ]
+      },
+      "aguaEvent": {
+        "title": "Botellín",
+        "effect": "Consigues una <item>Botella de agua</item>.",
+        "flavor": [
+          "Alguien sensato te la ha puesto en la mano.",
+          "Está caliente. Da igual."
+        ]
+      },
+      "redbullEvent": {
+        "title": "Red Bull",
+        "effect": "Consigues un <item>Red Bull</item>.",
+        "flavor": [
+          "Segundo aire, comprado en una gasolinera.",
+          "A esta hora ya es desayuno."
+        ]
+      },
+      "cacheo": {
+        "title": "Cacheo",
+        "effect": "Todo el que lleve contrabando lo tira y pierde <vp>−3 PV</vp> por cada objeto.",
+        "flavor": [
+          "Contra la pared y las manos donde se vean."
+        ]
+      },
+      "redada": {
+        "title": "Redada",
+        "effect": "Todo el que lleve contrabando pasa la noche en el calabozo.",
+        "flavor": [
+          "Dos furgonetas y ninguna prisa.",
+          "La música se para antes que la gente."
+        ]
+      },
+      "nada": {
+        "title": "No pasa nada",
+        "effect": "Sigue la fiesta.",
+        "flavor": [
+          "Por una vez, nada. Disfrútalo."
+        ]
+      },
+      "colecta": {
+        "title": "La colecta",
+        "effect": "El que peor fin de semana lleva se lleva <vp>+6 PV</vp> directos al banco.",
+        "flavor": [
+          "Hacen un bote sin decírselo.",
+          "Todos ponen dos euros y nadie lo menciona nunca más."
+        ]
+      },
+      "remontada": {
+        "title": "La remontada",
+        "effect": "Al último de la mesa le devuelven la mitad de lo que le saca el primero, directo al banco.",
+        "flavor": [
+          "El fin de semana no se ha acabado hasta que se acaba.",
+          "Le queda una noche y esa cara de no haber terminado."
+        ]
+      },
+      "camelloPorro": {
+        "title": "Camello",
+        "effect": "Elige: pillar un <item>Porro</item>, o dejarlo.",
+        "flavor": [
+          "Aparece justo cuando nadie lo estaba buscando.",
+          "Lo lleva en la gorra. Todo el mundo lo sabe."
+        ]
+      },
+      "camelloPastis": {
+        "title": "Camello",
+        "effect": "Elige: pillar <item>Pastis</item>, o dejarlo.",
+        "flavor": [
+          "Te lo enseña en la palma y cierra la mano enseguida.",
+          "Dice que es de lo bueno. Eso dicen todos.",
+          "No te ha dicho el precio y ya lo estás pensando."
+        ]
+      },
+      "camelloFarlopa": {
+        "title": "Camello",
+        "effect": "Elige: pillar <item>Farlopa</item>, o dejarlo.",
+        "flavor": [
+          "Te lleva al baño sin preguntarte si quieres ir.",
+          "Habla muy rápido para ser el que vende.",
+          "A estas horas ya no hace falta que insista."
+        ]
+      },
+      "ultimaRonda": {
+        "title": "Última ronda",
+        "effect": "Elige: métetela ya, o promételes mañana.",
+        "flavor": [
+          "Te ponen una copa en la mano sin preguntar.",
+          "Cierran en diez minutos y todavía sirven."
+        ]
+      },
+      "resacon": {
+        "title": "Vas fino",
+        "effect": "Elige: quedarte quieto y dormir un poco, o seguir.",
+        "flavor": [
+          "Podrías parar. Cuesta, pero podrías.",
+          "Hay un sofá y te está mirando."
+        ]
+      },
+      "invitacion": {
+        "title": "Te deben una",
+        "effect": "Elige: coge el dinero, o coge la comida.",
+        "flavor": [
+          "Se lo prestaste el jueves y ya no se acordaba."
+        ]
+      },
+      "dobleONada": {
+        "title": "Doble o nada",
+        "effect": "Elige: una copa más, que vale el doble, o pasar.",
+        "flavor": [
+          "Nadie te obliga. Nadie te va a parar tampoco."
+        ]
+      },
+      "saltarLaCola": {
+        "title": "Colarte",
+        "effect": "Elige: irte ya y abandonar la fase, o quedarte donde estás.",
+        "flavor": [
+          "Hay un fiestón empezando en otro sitio y sales ya.",
+          "Conoces al de la puerta. Dice que ahora o nada."
+        ]
+      }
     },
     "eventOption": {
       "vomitar": "Vomitar — −4 de Intoxicación, +3 de Resaca",

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Client } from 'boardgame.io/client';
 
 import { ALCOHOL, DAY_IDS, EVENTS, ITEM_IDS, PHASE_IDS } from './cards.js';
+import { PHASE_RULES } from './constants.js';
 import { magalufGameDef, type MagalufG } from './gameDef.js';
 
 /**
@@ -29,11 +30,42 @@ function has(tree: Record<string, unknown>, dottedKey: string): boolean {
   return typeof node === 'string' && node.length > 0;
 }
 
+/**
+ * The most copies of one card any single phase deck holds.
+ *
+ * This is the number of *printed* cards a player can meet in one venue, and
+ * therefore the number of distinct flavour lines the catalogue owes: a Cubata
+ * appears seven times in the Noche, so a table can see seven of them in a row
+ * and none of them should read the same. `buildDeck` hands out variants
+ * `0..count-1`, so this is exactly the index range that has to resolve.
+ */
+function largestPrintRun(section: 'alcohol' | 'events'): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const rules of Object.values(PHASE_RULES)) {
+    for (const [id, count] of Object.entries(rules[section])) {
+      out[id] = Math.max(out[id] ?? 0, (count as number) ?? 0);
+    }
+  }
+  return out;
+}
+
 /** Every key the engine can ever name, derived from the card data itself. */
 function expectedCardKeys(): string[] {
+  const alcoholRuns = largestPrintRun('alcohol');
+  const eventRuns = largestPrintRun('events');
+
+  /** title + effect + one flavour per printed copy. */
+  const cardKeys = (kind: 'alcohol' | 'event', id: string, copies: number) => [
+    `magaluf.${kind}.${id}.title`,
+    `magaluf.${kind}.${id}.effect`,
+    // At least one, even for a card that somehow appears in no deck: a card
+    // with a title and no line under it is half a card.
+    ...Array.from({ length: Math.max(1, copies) }, (_, i) => `magaluf.${kind}.${id}.flavor.${i}`),
+  ];
+
   return [
-    ...Object.keys(ALCOHOL).map((id) => `magaluf.alcohol.${id}`),
-    ...Object.keys(EVENTS).map((id) => `magaluf.event.${id}`),
+    ...Object.keys(ALCOHOL).flatMap((id) => cardKeys('alcohol', id, alcoholRuns[id] ?? 0)),
+    ...Object.keys(EVENTS).flatMap((id) => cardKeys('event', id, eventRuns[id] ?? 0)),
     // Every branch of every choice card. A card with an unlabelled option is a
     // button nobody can read, which is worse than a missing card description.
     ...Object.values(EVENTS).flatMap((card) =>

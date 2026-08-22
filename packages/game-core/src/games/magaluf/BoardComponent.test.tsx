@@ -4,12 +4,21 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { Ctx } from 'boardgame.io';
 import './i18nFixture.js';
 import { MagalufBoard } from './BoardComponent.js';
+import type { CardInstance } from './cards.js';
 import { PHASE_RULES } from './constants.js';
 import { HIDDEN_LIMIT } from './gameDef.js';
 import { DEFAULT_SETTINGS } from './settings.js';
 import { newPlayer, type JumpRecord, type MagalufG, type MagalufPlayer } from './state.js';
 
 const NAMES = { '0': 'Alice', '1': 'Bob', '2': 'Carol' };
+
+/**
+ * A printed card from a bare id. Board tests care which card is on the table,
+ * not which printing of it, so everything defaults to the first.
+ */
+function card<T extends string>(id: T, variant = 0): CardInstance<T> {
+  return { id, variant };
+}
 
 function player(overrides: Partial<MagalufPlayer> = {}): MagalufPlayer {
   return { ...newPlayer(), ...overrides };
@@ -222,21 +231,118 @@ describe('MagalufBoard', () => {
     it('colours a drink by what it does to you, not by the sign of the number', () => {
       // Pinta adds intoxication; agua is the only card that takes it away.
       const { unmount } = renderBoard(
-        makeG({ lastDraw: { seatID: '0', alcohol: 'pinta', event: null, outcome: null, pours: [] } }),
+        makeG({ lastDraw: { seatID: '0', alcohol: card('pinta'), event: null, outcome: null, pours: [] } }),
       );
       const up = screen.getByTestId('card-pinta').querySelector('span[class*="intox"]')!;
       expect(up.className).toContain('intoxUp');
       unmount();
 
-      renderBoard(makeG({ lastDraw: { seatID: '0', alcohol: 'agua', event: null, outcome: null, pours: [] } }));
+      renderBoard(makeG({ lastDraw: { seatID: '0', alcohol: card('agua'), event: null, outcome: null, pours: [] } }));
       const down = screen.getByTestId('card-agua').querySelector('span[class*="intox"]')!;
       expect(down.className).toContain('intoxDown');
     });
   });
 
+  /**
+   * A card is four things stacked in a fixed order: what it is called, a
+   * picture, what it does, and a line that does nothing. The first and third
+   * are what make two copies the same card; the second and fourth are what
+   * make them different objects.
+   */
+  describe('the printed card', () => {
+    const drawn = (alcohol: CardInstance<string>, event: CardInstance<string> | null = null) =>
+      makeG({ lastDraw: { seatID: '0', alcohol, event: event as never, outcome: null, pours: [] } });
+
+    it('lays out title, art, effect and flavour', () => {
+      renderBoard(drawn(card('pinta')));
+
+      expect(screen.getByTestId('card-title-pinta')).toHaveTextContent('TEST_pint');
+      expect(screen.getByTestId('card-effect-pinta')).toBeInTheDocument();
+      expect(screen.getByTestId('card-flavor-pinta')).toHaveTextContent('TEST_pint_flavor_a');
+      expect(screen.getByTestId('card-art-pinta-0')).toHaveAttribute(
+        'src',
+        '/cards/magaluf/pinta01.png',
+      );
+    });
+
+    /**
+     * No artwork ships yet, so in practice every card takes this path in the
+     * running app. jsdom never loads an image and never fires `error` on its
+     * own, so the failure is fired by hand -- the assertion is about what the
+     * player sees when a file is not there, not about jsdom's network behaviour.
+     */
+    it('shows the file it is waiting for when the art is missing', () => {
+      renderBoard(drawn(card('pinta')));
+      fireEvent.error(screen.getByTestId('card-art-pinta-0'));
+
+      const placeholder = screen.getByTestId('card-art-missing-pinta-0');
+      expect(placeholder).toHaveTextContent('pinta01.png');
+      // Just the filename: the title is already rendered directly above it,
+      // and every card is in this state until artwork ships.
+      expect(placeholder).not.toHaveTextContent('TEST_pint');
+    });
+
+    it('fills the effect from the card data, not from the sentence', () => {
+      // Pinta is 2 intoxication and 2 VP in `cards.ts`; the translation only
+      // ever says `{{intox}}` and `{{vp}}`, so these numbers cannot drift from
+      // the values the engine actually applies.
+      const effect = renderBoard(drawn(card('pinta'))) && screen.getByTestId('card-effect-pinta');
+      expect(effect).toHaveTextContent('+2');
+      cleanup();
+
+      renderBoard(drawn(card('pecera')));
+      expect(screen.getByTestId('card-effect-pecera')).toHaveTextContent('+6');
+      expect(screen.getByTestId('card-effect-pecera')).toHaveTextContent('+10');
+    });
+
+    it('signs a penalty with a minus rather than a plus', () => {
+      renderBoard(drawn(card('agua')));
+      expect(screen.getByTestId('card-effect-agua')).toHaveTextContent('−1');
+    });
+
+    /** The whole point of feature 042. */
+    it('gives two copies of one card the same face and a different soul', () => {
+      renderBoard(drawn(card('cana', 0)));
+      const first = {
+        title: screen.getByTestId('card-title-cana').textContent,
+        effect: screen.getByTestId('card-effect-cana').textContent,
+        flavor: screen.getByTestId('card-flavor-cana').textContent,
+        art: screen.getByTestId('card-art-cana-0').getAttribute('src'),
+      };
+      cleanup();
+
+      renderBoard(drawn(card('cana', 1)));
+      // The same card...
+      expect(screen.getByTestId('card-title-cana').textContent).toBe(first.title);
+      expect(screen.getByTestId('card-effect-cana').textContent).toBe(first.effect);
+      // ...and a different object.
+      expect(screen.getByTestId('card-flavor-cana').textContent).not.toBe(first.flavor);
+      const art = screen.getByTestId('card-art-cana-1').getAttribute('src');
+      expect(art).not.toBe(first.art);
+      expect(art).toBe('/cards/magaluf/cana02.png');
+    });
+
+    it('falls back to the first printing when a copy has no line of its own', () => {
+      // Pecera carries one flavour line in the fixture but is asked for its
+      // third printing. A gap in the catalogue is not a broken card.
+      renderBoard(drawn(card('pecera', 2)));
+      expect(screen.getByTestId('card-flavor-pecera')).toHaveTextContent('TEST_pecera_flavor_a');
+    });
+
+    it('renders an event card with the same anatomy', () => {
+      renderBoard(drawn(card('pinta'), card('foto', 1)));
+      expect(screen.getByTestId('card-title-foto')).toHaveTextContent('TEST_photo');
+      expect(screen.getByTestId('card-flavor-foto')).toHaveTextContent('TEST_photo_flavor_b');
+      expect(screen.getByTestId('card-art-foto-1')).toHaveAttribute(
+        'src',
+        '/cards/magaluf/foto02.png',
+      );
+    });
+  });
+
   describe('the draw reveal', () => {
     it('renders the alcohol card and its event (AC6)', () => {
-      renderBoard(makeG({ lastDraw: { seatID: '1', alcohol: 'pinta', event: 'foto', outcome: null, pours: [] } }));
+      renderBoard(makeG({ lastDraw: { seatID: '1', alcohol: card('pinta'), event: card('foto'), outcome: null, pours: [] } }));
       expect(screen.getByTestId('drawn-cards')).toBeInTheDocument();
       expect(screen.getByTestId('card-pinta')).toHaveTextContent('TEST_pint');
       expect(screen.getByTestId('card-foto')).toHaveTextContent('TEST_photo');
@@ -250,7 +356,7 @@ describe('MagalufBoard', () => {
     });
 
     it('renders an alcohol card whose event was skipped', () => {
-      renderBoard(makeG({ lastDraw: { seatID: '0', alcohol: 'cana', event: null, outcome: null, pours: [] } }));
+      renderBoard(makeG({ lastDraw: { seatID: '0', alcohol: card('cana'), event: null, outcome: null, pours: [] } }));
       expect(screen.getByTestId('card-cana')).toBeInTheDocument();
       expect(screen.queryByTestId('event-facedown')).toBeNull();
     });
@@ -260,8 +366,8 @@ describe('MagalufBoard', () => {
         makeG({
           lastDraw: {
             seatID: '1',
-            alcohol: 'pinta',
-            event: 'foto',
+            alcohol: card('pinta'),
+            event: card('foto'),
             outcome: {
               key: 'magaluf.log.barraLibreResult',
               params: { actor: '1', vp: 3, n: 3 },
@@ -278,8 +384,8 @@ describe('MagalufBoard', () => {
         makeG({
           lastDraw: {
             seatID: '0',
-            alcohol: 'pinta',
-            event: 'remontada',
+            alcohol: card('pinta'),
+            event: card('remontada'),
             outcome: {
               key: 'magaluf.log.remontadaResult',
               params: { winners: '0,2', n: 4, vp: 3 },
@@ -297,8 +403,8 @@ describe('MagalufBoard', () => {
       const G = makeG({
         lastDraw: {
           seatID: '0',
-          alcohol: 'pinta',
-          event: 'remontada',
+          alcohol: card('pinta'),
+          event: card('remontada'),
           outcome: {
             key: 'magaluf.log.remontadaResult',
             params: { winners: '0,1', n: 4, vp: 3 },
@@ -326,7 +432,7 @@ describe('MagalufBoard', () => {
 
     it('renders no outcome line for a card that is just its own numbers', () => {
       renderBoard(
-        makeG({ lastDraw: { seatID: '0', alcohol: 'pinta', event: 'foto', outcome: null, pours: [] } }),
+        makeG({ lastDraw: { seatID: '0', alcohol: card('pinta'), event: card('foto'), outcome: null, pours: [] } }),
       );
       expect(screen.queryByTestId('event-outcome')).toBeNull();
     });
@@ -334,7 +440,7 @@ describe('MagalufBoard', () => {
     it('shows the event face-down while it is still owed', () => {
       renderBoard(
         makeG({
-          lastDraw: { seatID: '0', alcohol: 'pinta', event: null, outcome: null, pours: [] },
+          lastDraw: { seatID: '0', alcohol: card('pinta'), event: null, outcome: null, pours: [] },
           pendingEvent: { seatID: '0', endsTurn: true },
         }),
       );
@@ -353,13 +459,13 @@ describe('MagalufBoard', () => {
       makeG({
         lastDraw: {
           seatID: '0',
-          alcohol: 'pinta',
-          event: 'ronda',
+          alcohol: card('pinta'),
+          event: card('ronda'),
           outcome: null,
           pours: [
-            { seatID: '0', alcohol: 'cana', intox: 1, vp: 1 },
-            { seatID: '1', alcohol: 'pecera', intox: 6, vp: 5 },
-            { seatID: '2', alcohol: 'cana', intox: 1, vp: 1 },
+            { seatID: '0', alcohol: card('cana'), intox: 1, vp: 1 },
+            { seatID: '1', alcohol: card('pecera'), intox: 6, vp: 5 },
+            { seatID: '2', alcohol: card('cana'), intox: 1, vp: 1 },
           ],
         },
       });
@@ -390,7 +496,7 @@ describe('MagalufBoard', () => {
 
     it('renders nothing at all for a card that pours no drinks', () => {
       renderBoard(
-        makeG({ lastDraw: { seatID: '0', alcohol: 'pinta', event: 'foto', outcome: null, pours: [] } }),
+        makeG({ lastDraw: { seatID: '0', alcohol: card('pinta'), event: card('foto'), outcome: null, pours: [] } }),
       );
       expect(screen.queryByTestId('poured-drinks')).toBeNull();
     });
@@ -414,7 +520,7 @@ describe('MagalufBoard', () => {
   describe('the event reveal step', () => {
     const pendingG = (seatID = '0') =>
       makeG({
-        lastDraw: { seatID, alcohol: 'pinta', event: null, outcome: null, pours: [] },
+        lastDraw: { seatID, alcohol: card('pinta'), event: null, outcome: null, pours: [] },
         pendingEvent: { seatID, endsTurn: true },
       });
 
@@ -452,7 +558,7 @@ describe('MagalufBoard', () => {
     // drink would have set, which is what the engine carries through.
     const choiceG = (seatID = '0') =>
       makeG({
-        lastDraw: { seatID, alcohol: 'pinta', event: 'vomitona', outcome: null, pours: [] },
+        lastDraw: { seatID, alcohol: card('pinta'), event: card('vomitona'), outcome: null, pours: [] },
         pendingChoice: { seatID, eventId: 'vomitona', endsTurn: true },
       });
 
@@ -497,8 +603,8 @@ describe('MagalufBoard', () => {
         makeG({
           lastDraw: {
             seatID: '0',
-            alcohol: 'pinta',
-            event: 'camelloFarlopa',
+            alcohol: card('pinta'),
+            event: card('camelloFarlopa'),
             outcome: null,
             pours: [],
           },

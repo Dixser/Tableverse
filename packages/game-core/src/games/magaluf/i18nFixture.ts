@@ -17,13 +17,59 @@ void i18n.use(initReactI18next).init({
       translation: {
         room: { seatLabel: 'TEST_seat_{{seatNumber}}' },
         magaluf: {
-          alcohol: { pinta: 'TEST_pint', cana: 'TEST_small_beer', pecera: 'TEST_fishbowl' },
+          // Cards are title / effect / flavour[] now, and the effect carries
+          // the colour tags `GameCard` fills in -- so a test can assert that a
+          // number is coloured by what it does to you without reaching into
+          // production copy. Two flavour lines everywhere, so a test can tell
+          // one printing of a card from another.
+          alcohol: {
+            pinta: {
+              title: 'TEST_pint',
+              effect: 'TEST_drink <intox>{{intox}}</intox> <vp>{{vp}}</vp>',
+              flavor: ['TEST_pint_flavor_a', 'TEST_pint_flavor_b'],
+            },
+            cana: {
+              title: 'TEST_small_beer',
+              effect: 'TEST_drink <intox>{{intox}}</intox> <vp>{{vp}}</vp>',
+              flavor: ['TEST_cana_flavor_a', 'TEST_cana_flavor_b'],
+            },
+            pecera: {
+              title: 'TEST_fishbowl',
+              effect: 'TEST_drink <intox>{{intox}}</intox> <vp>{{vp}}</vp>',
+              flavor: ['TEST_pecera_flavor_a'],
+            },
+            agua: {
+              title: 'TEST_water_card',
+              effect: 'TEST_drink <intox>{{intox}}</intox> <vp>{{vp}}</vp>',
+              flavor: ['TEST_agua_flavor_a'],
+            },
+          },
           event: {
-            foto: 'TEST_photo',
-            redada: 'TEST_raid',
-            terraza: 'TEST_terrace',
-            camelloFarlopa: 'TEST_dealer_coke',
-            vomitona: 'TEST_puke',
+            foto: {
+              title: 'TEST_photo',
+              effect: 'TEST_photo_effect <vp>{{vp}}</vp>',
+              flavor: ['TEST_photo_flavor_a', 'TEST_photo_flavor_b'],
+            },
+            redada: {
+              title: 'TEST_raid',
+              effect: 'TEST_raid_effect',
+              flavor: ['TEST_raid_flavor_a'],
+            },
+            terraza: {
+              title: 'TEST_terrace',
+              effect: 'TEST_terrace_effect',
+              flavor: ['TEST_terrace_flavor_a'],
+            },
+            camelloFarlopa: {
+              title: 'TEST_dealer_coke',
+              effect: 'TEST_dealer_effect',
+              flavor: ['TEST_dealer_flavor_a'],
+            },
+            vomitona: {
+              title: 'TEST_puke',
+              effect: 'TEST_puke_effect',
+              flavor: ['TEST_puke_flavor_a'],
+            },
           },
           eventOption: {
             vomitar: 'TEST_throw_up',

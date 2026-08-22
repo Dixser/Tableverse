@@ -8,7 +8,11 @@
 
 import type { GameLogEntry, SoundCue } from '../../types.js';
 import type { RoundConfirmG } from '../../roundConfirm.js';
-import type { AlcoholCard, EventId, ItemId, PhaseId } from './cards.js';
+import type { AlcoholCard, CardInstance, EventId, ItemId, PhaseId } from './cards.js';
+
+/** A printed alcohol card; the deck holds these, not bare ids. */
+export type AlcoholInstance = CardInstance<string>;
+export type EventInstance = CardInstance<EventId>;
 import { ALCOHOL, CONTRABAND, PHASE_IDS } from './cards.js';
 import type { PhaseRules } from './constants.js';
 import { PHASE_RULES } from './constants.js';
@@ -97,8 +101,9 @@ export interface BalconyView {
  */
 export interface LastDraw {
   seatID: string;
-  alcohol: string;
-  event: EventId | null;
+  /** The printed card, so the board shows the copy that was actually drawn. */
+  alcohol: AlcoholInstance;
+  event: EventInstance | null;
   /**
    * What the event actually worked out to, for cards whose printed text is a
    * rule rather than a number — "+1 VP per drink this phase" does not tell you
@@ -128,7 +133,8 @@ export interface LastDraw {
 /** One drink somebody did not choose, with the numbers actually applied. */
 export interface PouredDrink {
   seatID: string;
-  alcohol: string;
+  /** The printed card, so a poured drink shows the copy that came off the deck. */
+  alcohol: AlcoholInstance;
   /** After halving, and after any Pastis doubling — what the seat really took. */
   intox: number;
   vp: number;
@@ -206,10 +212,10 @@ export interface MagalufG extends RoundConfirmG {
   limitRevealed: boolean;
   /** Whose turn it is. The TurnOrderConfig reads this rather than computing it. */
   turnSeatID: string;
-  alcoholDeck: string[];
-  alcoholDiscard: string[];
-  eventDeck: EventId[];
-  eventDiscard: EventId[];
+  alcoholDeck: AlcoholInstance[];
+  alcoholDiscard: AlcoholInstance[];
+  eventDeck: EventInstance[];
+  eventDiscard: EventInstance[];
   players: Record<string, MagalufPlayer>;
   withdrawCounter: number;
   /** Most recent draw, for the board's reveal. Cleared at each phase start. */
@@ -358,10 +364,14 @@ export function rankingParams(
 // Decks
 // ---------------------------------------------------------------------------
 
-export function buildDeck<T extends string>(counts: Partial<Record<T, number>>): T[] {
-  const out: T[] = [];
+export function buildDeck<T extends string>(
+  counts: Partial<Record<T, number>>,
+): CardInstance<T>[] {
+  const out: CardInstance<T>[] = [];
   for (const id of Object.keys(counts) as T[]) {
-    for (let i = 0; i < (counts[id] ?? 0); i++) out.push(id);
+    // Each copy is a different printed card: same title and effect, its own
+    // picture and its own line underneath. See `CardInstance`.
+    for (let i = 0; i < (counts[id] ?? 0); i++) out.push({ id, variant: i });
   }
   return out;
 }
@@ -383,7 +393,7 @@ export function buildDeck<T extends string>(counts: Partial<Record<T, number>>):
  * Returns null only if there is nothing anywhere — every card is in play, which
  * no deck in this game is small enough to allow.
  */
-function refill<T extends string>(
+function refill<T>(
   G: MagalufG,
   deck: T[],
   discard: T[],
@@ -396,26 +406,31 @@ function refill<T extends string>(
   return { deck: rng.shuffle(discard), discard: [] };
 }
 
-export function drawAlcohol(G: MagalufG, rng: Rng): AlcoholCard | null {
+export function drawAlcohol(G: MagalufG, rng: Rng): AlcoholInstance | null {
   const refilled = refill(G, G.alcoholDeck, G.alcoholDiscard, rng, 'reshuffledAlcohol');
   if (!refilled) return null;
   G.alcoholDeck = refilled.deck;
   G.alcoholDiscard = refilled.discard;
 
-  const id = G.alcoholDeck.pop()!;
-  G.alcoholDiscard.push(id);
-  return ALCOHOL[id]!;
+  const drawn = G.alcoholDeck.pop()!;
+  G.alcoholDiscard.push(drawn);
+  return drawn;
 }
 
-export function drawEvent(G: MagalufG, rng: Rng): EventId | null {
+/** The numbers behind a drawn card. Separate lookup, so the deck stays data. */
+export function alcoholCard(drawn: AlcoholInstance): AlcoholCard {
+  return ALCOHOL[drawn.id]!;
+}
+
+export function drawEvent(G: MagalufG, rng: Rng): EventInstance | null {
   const refilled = refill(G, G.eventDeck, G.eventDiscard, rng, 'reshuffledEvent');
   if (!refilled) return null;
   G.eventDeck = refilled.deck;
   G.eventDiscard = refilled.discard;
 
-  const id = G.eventDeck.pop()!;
-  G.eventDiscard.push(id);
-  return id;
+  const drawn = G.eventDeck.pop()!;
+  G.eventDiscard.push(drawn);
+  return drawn;
 }
 
 // ---------------------------------------------------------------------------
@@ -503,9 +518,10 @@ export function drunkestSeat(G: MagalufG): string | null {
 export function consumeAlcohol(
   G: MagalufG,
   seatID: string,
-  card: AlcoholCard,
+  drawn: AlcoholInstance,
   options: { halveIntox?: boolean } = {},
 ): { intox: number; vp: number } {
+  const card = alcoholCard(drawn);
   const player = G.players[seatID]!;
   const intox = options.halveIntox ? Math.floor(card.intox / 2) : card.intox;
 
@@ -520,7 +536,7 @@ export function consumeAlcohol(
   player.drinksThisPhase += 1;
   player.totalDrinks += 1;
 
-  log(G, 'drank', { actor: seatID, descriptionKey: `magaluf.alcohol.${card.id}`, intox, vp }, 'play');
+  log(G, 'drank', { actor: seatID, descriptionKey: `magaluf.alcohol.${card.id}.title`, intox, vp }, 'play');
   return { intox, vp };
 }
 
@@ -538,16 +554,16 @@ export function consumeAlcohol(
 export function pourDrink(
   G: MagalufG,
   seatID: string,
-  card: AlcoholCard,
+  drawn: AlcoholInstance,
   options: { halveIntox?: boolean } = {},
 ): void {
-  const applied = consumeAlcohol(G, seatID, card, options);
+  const applied = consumeAlcohol(G, seatID, drawn, options);
   // Guarded because an event can only ever pour on top of a draw that is
   // already on the table; if there is none there is nothing to attach to.
   if (!G.lastDraw) return;
   G.lastDraw = {
     ...G.lastDraw,
-    pours: [...G.lastDraw.pours, { seatID, alcohol: card.id, ...applied }],
+    pours: [...G.lastDraw.pours, { seatID, alcohol: drawn, ...applied }],
   };
 }
 

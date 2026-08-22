@@ -484,26 +484,198 @@
   },
   "magaluf": {
     "alcohol": {
-      "cana": "Small beer",
-      "tinto": "Summer red wine",
-      "clara": "Shandy",
-      "pinta": "Pint",
-      "vino": "Glass of wine",
-      "vermut": "Vermouth",
-      "sangria": "Sangría pitcher",
-      "mojito": "Mojito",
-      "cubata": "Rum & coke",
-      "chupito": "Shot",
-      "gintonic": "Gin and tonic",
-      "coctel": "House cocktail",
-      "jager": "Jägerbomb",
-      "cargada": "Heavy pour",
-      "hierbas": "Herb shot",
-      "tequila3": "Triple tequila",
-      "absenta": "Absinthe",
-      "garrafon": "Bootleg spirits",
-      "pecera": "Fishbowl",
-      "agua": "Water"
+      "cana": {
+        "title": "Small beer",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Cold, small and perfect.",
+          "The first of the day always goes down on its own.",
+          "Two hundred millilitres of nothing. That is what you tell yourself.",
+          "The glass is sweating more than you are.",
+          "Drunk at the bar without sitting down.",
+          "You order one and three arrive."
+        ]
+      },
+      "tinto": {
+        "title": "Summer red",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Wine and lemonade. It is fooling nobody.",
+          "What you order when you do not want another beer.",
+          "Tastes like a Sunday afternoon.",
+          "There is a slice of lemon nobody eats.",
+          "Half a jug in and the sun stops bothering you."
+        ]
+      },
+      "clara": {
+        "title": "Shandy",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Half a step back. Only half.",
+          "The drink of somebody who says they are stopping.",
+          "It counts as water if you do not think about it."
+        ]
+      },
+      "pinta": {
+        "title": "Pint",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Like the small one, but twice it, twice as fast.",
+          "It arrives in a glass with actual weight to it.",
+          "It goes warm before you reach the bottom.",
+          "They pour these because the tourists cannot order properly."
+        ]
+      },
+      "vino": {
+        "title": "Glass of wine",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Somebody attempting class at four in the afternoon.",
+          "The list had two options and this was the expensive one.",
+          "Served far too cold and nobody minds.",
+          "Drunk looking at the sea as though you knew about wine."
+        ]
+      },
+      "vermut": {
+        "title": "Vermouth",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Ice, orange, and an olive nobody wanted.",
+          "Vermouth hour lasts six hours.",
+          "The house one, which is the barrel one."
+        ]
+      },
+      "sangria": {
+        "title": "Jug of sangria",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Fruit floating on top of something that is not wine.",
+          "Four straws and no conversation.",
+          "The jug is more ice than anything else."
+        ]
+      },
+      "mojito": {
+        "title": "Mojito",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Mint in your teeth for the rest of the afternoon.",
+          "So much sugar you cannot find the rum.",
+          "Made in thirty seconds and it shows."
+        ]
+      },
+      "cubata": {
+        "title": "Rum and coke",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Two fingers of mixer and the rest is not.",
+          "Plastic glass, filled right to the top.",
+          "You did not see which bottle he reached for.",
+          "It tastes different every time and it is always the same.",
+          "With a short straw that does not reach the bottom.",
+          "The barman puts it down before you order anything.",
+          "The ice gave up a while ago."
+        ]
+      },
+      "chupito": {
+        "title": "Shot",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "One. Just one. It is never one.",
+          "After three, and nobody counts to three.",
+          "A colour that does not occur in nature.",
+          "Drunk purely so as not to look rude."
+        ]
+      },
+      "gintonic": {
+        "title": "Gin and tonic",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "In a balloon glass, because they do it properly here.",
+          "With cucumber. You do not know why there is cucumber.",
+          "Eight euros and you pay it without a word.",
+          "The barman stirs it as though it mattered.",
+          "Half the glass is ice and it is still eight euros."
+        ]
+      },
+      "coctel": {
+        "title": "Cocktail",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Comes with a paper umbrella and four things that do not go together.",
+          "From the laminated menu, second one down.",
+          "Ordered for the photo and good anyway."
+        ]
+      },
+      "jager": {
+        "title": "Jägermeister",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Tastes like cough syrup and everybody loves it.",
+          "Out of that tap that is always freezing.",
+          "The bloke next to you has already ordered another.",
+          "Nobody decided this. It just happened."
+        ]
+      },
+      "cargada": {
+        "title": "Stiff one",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "You told him not to be shy and he was not shy.",
+          "The mixer is in there for the colour.",
+          "You get it down in two and say nothing."
+        ]
+      },
+      "hierbas": {
+        "title": "Herbal liqueur",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Mallorcan, sweet and treacherous.",
+          "The owner pours it and you cannot say no.",
+          "Tastes of boiled sweets and the end of the night."
+        ]
+      },
+      "tequila3": {
+        "title": "Tequila",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Salt, shot, lime. In that order, roughly.",
+          "By this hour nobody bothers with the salt.",
+          "The bottle has been out on the bar all night.",
+          "Three in a row, because one makes no sense."
+        ]
+      },
+      "absenta": {
+        "title": "Absinthe",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "They set fire to it, which should tell you something.",
+          "Green, with burnt sugar on the top.",
+          "Nobody at this table knows what is in it."
+        ]
+      },
+      "garrafon": {
+        "title": "Bootleg spirit",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "The bottle has no label and the price explains why.",
+          "You will remember this tomorrow. Vividly."
+        ]
+      },
+      "pecera": {
+        "title": "Fishbowl",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "A litre and a half, five straws and no accountability.",
+          "It takes two barmen to carry and the whole bar looks."
+        ]
+      },
+      "agua": {
+        "title": "Water",
+        "effect": "Take <intox>{{intox}} Intoxication</intox> and <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "The single most intelligent decision you will make today."
+        ]
+      }
     },
     "item": {
       "kebab": "Kebab",
@@ -540,48 +712,347 @@
       "domingo": "Sunday"
     },
     "event": {
-      "ligueTardeo": "Poolside hook-up — better than nothing. +2 VP.",
-      "fiestaTardeo": "Beach bar — +1 VP to everyone still partying.",
-      "peleaTardeo": "Tourist bickering — nothing serious. +2 VP and +1 Intoxication.",
-      "chungoTardeo": "Phone in the sea — −2 VP.",
-      "insolacion": "Sunstroke — six hours drinking in the sun. +2 Intoxication.",
-      "foto": "Photo for the feed — +2 VP.",
-      "ligueNoche": "Dancefloor hook-up — +4 VP.",
-      "fiestaNoche": "Foam party — +2 VP to everyone still partying.",
-      "peleaNoche": "Fight — +4 VP and +2 Intoxication.",
-      "chungoNoche": "Pickpocketed — pay them off, or lose everything you are carrying.",
-      "gorila": "Thrown out by the bouncer — you leave the phase, but with no penalty.",
-      "garrafonEvent": "Served bootleg — +3 Intoxication.",
-      "ligueAfter": "Afterparty hook-up — nobody will remember. +6 VP.",
-      "fiestaAfter": "Sunrise on the beach — +3 VP to everyone still partying.",
-      "peleaAfter": "Fight with the bouncers — +6 VP and +3 Intoxication.",
-      "chungoAfter": "You wake up with nothing — you lose all your items and 4 VP.",
-      "soloVoyAMirar": "Just going to look — you step out onto the balcony for a second. +6 VP.",
-      "terraza": "The fifth-floor terrace — the best party of the trip. Go up, or keep it quiet downstairs.",
-      "comaEtilico": "Alcohol poisoning — +5 Intoxication.",
-      "karaoke": "Karaoke — +2 VP, doubled if you are the most intoxicated.",
-      "barraLibre": "Open bar — +1 VP per drink you have had this phase.",
-      "perdido": "You get lost — you miss your next turn but stay in the party.",
-      "chupitoCasa": "House shot — on the house: you drink another alcohol card.",
-      "ronda": "Round of drinks — everyone still partying drinks an alcohol card.",
-      "vomitona": "You feel it coming up — let it out, or hold it in.",
-      "ambulancia": "Ambulance — the most intoxicated player withdraws, −5 Intoxication and +3 Hangover.",
-      "kebabEvent": "Kebab — you get a Kebab.",
-      "aguaEvent": "Bottle of water — you get a Water bottle.",
-      "redbullEvent": "Red Bull — you get a Red Bull.",
-      "cacheo": "Stop-and-search — everyone holding contraband discards it and loses 3 VP per item.",
-      "redada": "Police raid — everyone holding contraband spends the night in a cell.",
-      "nada": "Nothing happens — the party goes on.",
-      "colecta": "The whip-round — the table has a collection for whoever is having the worst weekend: +6 VP straight to the bank.",
-      "remontada": "The comeback — the player in last place is handed back half of what the leader is up on them, straight to the bank.",
-      "camelloPorro": "Dealer — he offers you a Joint. Take it, or leave it.",
-      "camelloPastis": "Dealer — he offers you MDMA. Take it, or leave it.",
-      "camelloFarlopa": "Dealer — he offers you Cocaine. Take it, or leave it.",
-      "ultimaRonda": "Last round — someone puts a drink in your hand. Sink it now, or promise them tomorrow.",
-      "resacon": "Rough one — you could sit this out and sleep some of it off, at a price.",
-      "invitacion": "You are owed a favour — take the cash, or take the food.",
-      "dobleONada": "Double or nothing — one more drink, worth twice as much.",
-      "saltarLaCola": "Queue-jump — a big night is starting elsewhere, and you would have to go now."
+      "ligueTardeo": {
+        "title": "Poolside pull",
+        "effect": "Gain <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Better than nothing.",
+          "They told you their name and it is already gone."
+        ]
+      },
+      "fiestaTardeo": {
+        "title": "Beach bar",
+        "effect": "<vpAll>{{vpAll}} VP</vpAll> to everyone still partying.",
+        "flavor": [
+          "Two speakers and a cool box. Nothing else required.",
+          "The barman knows your order and you have been here an hour."
+        ]
+      },
+      "peleaTardeo": {
+        "title": "Tourist bickering",
+        "effect": "Gain <vp>{{vp}} VP</vp> and <intox>{{intox}} Intoxication</intox>.",
+        "flavor": [
+          "Nothing serious. All shoving, no actual punches.",
+          "Broken up by two barmen and an inflatable flamingo."
+        ]
+      },
+      "chungoTardeo": {
+        "title": "Phone in the sea",
+        "effect": "Lose <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Rice is not going to fix this one.",
+          "You watch it go down. Slowly. Very clearly."
+        ]
+      },
+      "insolacion": {
+        "title": "Sunstroke",
+        "effect": "Take <intox>{{intox}} Intoxication</intox>.",
+        "flavor": [
+          "Six hours drinking in the sun. Nobody warned you.",
+          "You will have the sunglasses tan line until Sunday."
+        ]
+      },
+      "foto": {
+        "title": "Photo for the feed",
+        "effect": "Gain <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Forty attempts for one that works.",
+          "Your eyes are shut in it and you post it anyway."
+        ]
+      },
+      "ligueNoche": {
+        "title": "Dancefloor pull",
+        "effect": "Gain <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Neither of you can hear a thing, but it lands.",
+          "Half an hour of dancing and not one word exchanged."
+        ]
+      },
+      "fiestaNoche": {
+        "title": "Foam party",
+        "effect": "<vpAll>{{vpAll}} VP</vpAll> to everyone still partying.",
+        "flavor": [
+          "It has got in everywhere. Everywhere.",
+          "You lose a trainer and do not miss it until morning."
+        ]
+      },
+      "peleaNoche": {
+        "title": "Fight",
+        "effect": "Gain <vp>{{vp}} VP</vp> and <intox>{{intox}} Intoxication</intox>.",
+        "flavor": [
+          "You no longer remember how it started.",
+          "You were defending someone you had just met.",
+          "You won. According to you."
+        ]
+      },
+      "chungoNoche": {
+        "title": "Pickpocketed",
+        "effect": "Choose: pay them off, or lose everything you are carrying.",
+        "flavor": [
+          "Three very friendly lads until ten seconds ago.",
+          "You did not even notice. The doorman tells you."
+        ]
+      },
+      "gorila": {
+        "title": "Thrown out by the bouncer",
+        "effect": "You leave the phase, with no penalty.",
+        "flavor": [
+          "He does not say why. There is no why.",
+          "He lifts you off the floor without breaking a sweat."
+        ]
+      },
+      "garrafonEvent": {
+        "title": "Served bootleg",
+        "effect": "Take <intox>{{intox}} Intoxication</intox>.",
+        "flavor": [
+          "That is not gin. That has never been gin.",
+          "Tastes like a swimming pool and costs four euros.",
+          "The label on the bottle is on upside down."
+        ]
+      },
+      "ligueAfter": {
+        "title": "Afterparty pull",
+        "effect": "Gain <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "Nobody will remember. Including you.",
+          "You told each other everything. None of it survived."
+        ]
+      },
+      "fiestaAfter": {
+        "title": "Sunrise on the beach",
+        "effect": "<vpAll>{{vpAll}} VP</vpAll> to everyone still partying.",
+        "flavor": [
+          "The sun comes up and nobody wants to leave.",
+          "Eight strangers, one towel and a speaker out of battery."
+        ]
+      },
+      "peleaAfter": {
+        "title": "Fight with the bouncers",
+        "effect": "Gain <vp>{{vp}} VP</vp> and <intox>{{intox}} Intoxication</intox>.",
+        "flavor": [
+          "Bad idea. Everyone knew that except you.",
+          "There are three of them and none has blinked.",
+          "You end up on the kerb explaining it to a lamppost."
+        ]
+      },
+      "chungoAfter": {
+        "title": "You wake up with nothing",
+        "effect": "Lose <vp>{{vp}} VP</vp> and all your items.",
+        "flavor": [
+          "Pockets inside out and no idea when.",
+          "You had a bum bag. You are certain you had a bum bag."
+        ]
+      },
+      "soloVoyAMirar": {
+        "title": "Just going to look",
+        "effect": "Gain <vp>{{vp}} VP</vp>.",
+        "flavor": [
+          "You step out onto the balcony for a second. One second.",
+          "You can see the whole promenade from up here.",
+          "You are only looking. That is what you said."
+        ]
+      },
+      "terraza": {
+        "title": "The fifth-floor terrace",
+        "effect": "Choose: go up, or stay downstairs.",
+        "flavor": [
+          "The best party of the trip, five floors up.",
+          "You can hear it from the street and there is no lift."
+        ]
+      },
+      "comaEtilico": {
+        "title": "Alcohol poisoning",
+        "effect": "Take <intox>{{intox}} Intoxication</intox>.",
+        "flavor": [
+          "You are no longer at the party even though you are at the party.",
+          "Somebody is talking to you very slowly."
+        ]
+      },
+      "karaoke": {
+        "title": "Karaoke",
+        "effect": "Gain <vp>{{vp}} VP</vp>, doubled if you are the most intoxicated at the table.",
+        "flavor": [
+          "You know the words. You do not know the song.",
+          "Nobody asked for an encore and you are on your third."
+        ]
+      },
+      "barraLibre": {
+        "title": "Open bar",
+        "effect": "Gain <vp>+1 VP</vp> for every drink you have had this phase.",
+        "flavor": [
+          "Twenty euros and plastic cups until three.",
+          "The queue is longer than the bar."
+        ]
+      },
+      "perdido": {
+        "title": "You get lost",
+        "effect": "You miss your next turn, but stay in the party.",
+        "flavor": [
+          "Every street here is the same street.",
+          "You have spent twenty minutes following a group you do not know."
+        ]
+      },
+      "chupitoCasa": {
+        "title": "House shot",
+        "effect": "Drink another alcohol card.",
+        "flavor": [
+          "On the house. The house always insists.",
+          "It is blue. Do not ask what of.",
+          "One for you and one for the barman.",
+          "It appeared on the bar and nobody ordered it."
+        ]
+      },
+      "ronda": {
+        "title": "Round of drinks",
+        "effect": "Everyone still partying drinks an alcohol card.",
+        "flavor": [
+          "You are paying. You said so yourself.",
+          "Nobody remembers whose round it was.",
+          "Eight drinks and two hands."
+        ]
+      },
+      "vomitona": {
+        "title": "You feel it coming up",
+        "effect": "Choose: let it out, or hold it in.",
+        "flavor": [
+          "It was the bootleg. It was definitely the bootleg.",
+          "You have gone very quiet all of a sudden."
+        ]
+      },
+      "ambulancia": {
+        "title": "Ambulance",
+        "effect": "The most intoxicated player withdraws, with <relief>{{relief}} Intoxication</relief> and <resaca>+3 Hangover</resaca>.",
+        "flavor": [
+          "The crew have already been to this hotel tonight.",
+          "They walk him out, which is the good version."
+        ]
+      },
+      "kebabEvent": {
+        "title": "Kebab",
+        "effect": "You get a <item>Kebab</item>.",
+        "flavor": [
+          "The one on the corner that never closes.",
+          "Eaten standing up and the best thing all trip."
+        ]
+      },
+      "aguaEvent": {
+        "title": "Bottle of water",
+        "effect": "You get a <item>Water bottle</item>.",
+        "flavor": [
+          "Somebody sensible put it in your hand.",
+          "It is warm. It does not matter."
+        ]
+      },
+      "redbullEvent": {
+        "title": "Red Bull",
+        "effect": "You get a <item>Red Bull</item>.",
+        "flavor": [
+          "Second wind, bought at a petrol station.",
+          "At this hour it counts as breakfast."
+        ]
+      },
+      "cacheo": {
+        "title": "Stop-and-search",
+        "effect": "Everyone holding contraband discards it and loses <vp>−3 VP</vp> per item.",
+        "flavor": [
+          "Against the wall, hands where they can see them."
+        ]
+      },
+      "redada": {
+        "title": "Police raid",
+        "effect": "Everyone holding contraband spends the night in a cell.",
+        "flavor": [
+          "Two vans and no hurry at all.",
+          "The music stops before the people do."
+        ]
+      },
+      "nada": {
+        "title": "Nothing happens",
+        "effect": "The party goes on.",
+        "flavor": [
+          "For once, nothing. Enjoy it."
+        ]
+      },
+      "colecta": {
+        "title": "The whip-round",
+        "effect": "Whoever is having the worst weekend takes <vp>+6 VP</vp> straight to the bank.",
+        "flavor": [
+          "They have a collection without telling him.",
+          "Everyone puts in two euros and it is never mentioned again."
+        ]
+      },
+      "remontada": {
+        "title": "The comeback",
+        "effect": "The player in last place is handed back half of what the leader is up on them, straight to the bank.",
+        "flavor": [
+          "The weekend is not over until it is over.",
+          "One night left and the face of somebody not finished."
+        ]
+      },
+      "camelloPorro": {
+        "title": "Dealer",
+        "effect": "Choose: take a <item>Joint</item>, or leave it.",
+        "flavor": [
+          "He turns up exactly when nobody was looking for him.",
+          "He keeps it in his cap. Everyone knows."
+        ]
+      },
+      "camelloPastis": {
+        "title": "Dealer",
+        "effect": "Choose: take <item>MDMA</item>, or leave it.",
+        "flavor": [
+          "He shows you his palm and closes it again straight away.",
+          "He says it is the good stuff. They all say that.",
+          "He has not named a price and you are already thinking about it."
+        ]
+      },
+      "camelloFarlopa": {
+        "title": "Dealer",
+        "effect": "Choose: take <item>Cocaine</item>, or leave it.",
+        "flavor": [
+          "He walks you to the toilets without asking if you are coming.",
+          "He talks very fast for the one doing the selling.",
+          "At this hour he does not need to push it any more."
+        ]
+      },
+      "ultimaRonda": {
+        "title": "Last round",
+        "effect": "Choose: sink it now, or promise them tomorrow.",
+        "flavor": [
+          "Somebody puts a drink in your hand without asking.",
+          "They close in ten minutes and they are still pouring."
+        ]
+      },
+      "resacon": {
+        "title": "Rough one",
+        "effect": "Choose: sit still and sleep some of it off, or carry on.",
+        "flavor": [
+          "You could stop. It costs you, but you could.",
+          "There is a sofa and it is looking right at you."
+        ]
+      },
+      "invitacion": {
+        "title": "You are owed a favour",
+        "effect": "Choose: take the cash, or take the food.",
+        "flavor": [
+          "You lent it to him on Thursday and he had forgotten."
+        ]
+      },
+      "dobleONada": {
+        "title": "Double or nothing",
+        "effect": "Choose: one more drink worth twice as much, or pass.",
+        "flavor": [
+          "Nobody is making you. Nobody is going to stop you either."
+        ]
+      },
+      "saltarLaCola": {
+        "title": "Queue-jump",
+        "effect": "Choose: leave now and abandon the phase, or stay where you are.",
+        "flavor": [
+          "A big night is starting elsewhere and you would go now.",
+          "You know the doorman. He says now or not at all."
+        ]
+      }
     },
     "eventOption": {
       "vomitar": "Throw up — −4 Intoxication, +3 Hangover",

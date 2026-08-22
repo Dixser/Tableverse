@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { Client } from 'boardgame.io/client';
 
-import type { EventId, EventOption, ItemId, PhaseId } from './cards.js';
-import { ALCOHOL, eventOptions, PHASE_IDS } from './cards.js';
+import type { CardInstance, EventId, EventOption, ItemId, PhaseId } from './cards.js';
+import { ALCOHOL, cardArt, eventOptions, PHASE_IDS } from './cards.js';
 import { COMEBACK, PHASE_RULES } from './constants.js';
 import { buildLimitDeck, limitRange } from './limitScale.js';
 import { HIDDEN_LIMIT, magalufGameDef, type MagalufG } from './gameDef.js';
 import { magalufModule } from './index.js';
 import { clampSettings, dayMultipliers, DEFAULT_SETTINGS } from './settings.js';
 import { poolChance, survivesRoll } from './balconing.js';
-import { bankRound, newPlayer } from './state.js';
+import { bankRound, buildDeck, newPlayer } from './state.js';
 
 function phaseMinimum(g: MagalufG): number {
   return PHASE_RULES[PHASE_IDS[g.phase] as PhaseId].minDrinks;
@@ -214,9 +214,26 @@ function tookResacaFromACard(client: TestClient, seatID: string): boolean {
 }
 
 /** Stacks the current decks so the next draws are known. */
+/**
+ * Stacks both decks from plain id lists.
+ *
+ * Tests say what card comes next, not which printing of it, so the ids are
+ * wrapped into `CardInstance`s here. Repeats of one id get ascending variants
+ * exactly as `buildDeck` would, so a stacked deck of three Canas is three
+ * different printed cards like a real one.
+ */
+function instances<T extends string>(ids: T[]): CardInstance<T>[] {
+  const seen = new Map<T, number>();
+  return ids.map((id) => {
+    const variant = seen.get(id) ?? 0;
+    seen.set(id, variant + 1);
+    return { id, variant };
+  });
+}
+
 function stack(g: MagalufG, alcohol: string[], events: EventId[]): void {
-  g.alcoholDeck = [...alcohol].reverse();
-  g.eventDeck = [...events].reverse();
+  g.alcoholDeck = instances(alcohol).reverse();
+  g.eventDeck = instances(events).reverse();
 }
 
 describe('magaluf gameDef', () => {
@@ -471,7 +488,7 @@ describe('magaluf gameDef', () => {
       // point of splitting the two.
       expect(G(client).lastDraw).toEqual({
         seatID: seat,
-        alcohol: 'pinta',
+        alcohol: expect.objectContaining({ id: 'pinta' }),
         event: null,
         outcome: null,
         pours: [],
@@ -481,8 +498,8 @@ describe('magaluf gameDef', () => {
       // Foto is just its own numbers, so there is no worked-out result to pin.
       expect(G(client).lastDraw).toEqual({
         seatID: seat,
-        alcohol: 'pinta',
-        event: 'foto',
+        alcohol: expect.objectContaining({ id: 'pinta' }),
+        event: expect.objectContaining({ id: 'foto' }),
         outcome: null,
         pours: [],
       });
@@ -497,13 +514,18 @@ describe('magaluf gameDef', () => {
       // dealt out beside it rather than overwriting it.
       const draw = G(client).lastDraw!;
       expect(draw.seatID).toBe(seat);
-      expect(draw.alcohol).toBe('pinta');
-      expect(draw.event).toBe('ronda');
+      expect(draw.alcohol.id).toBe('pinta');
+      expect(draw.event!.id).toBe('ronda');
 
       // And the round itself is face-up: one card per seat still partying, with
       // the numbers each of them actually took.
       expect(draw.pours).toEqual(
-        G(client).activeSeatIDs.map((id) => ({ seatID: id, alcohol: 'cana', intox: 1, vp: 1 })),
+        G(client).activeSeatIDs.map((id) => ({
+          seatID: id,
+          alcohol: expect.objectContaining({ id: 'cana' }),
+          intox: 1,
+          vp: 1,
+        })),
       );
       for (const id of G(client).activeSeatIDs) {
         expect(G(client).players[id]!.drinksThisPhase).toBeGreaterThan(0);
@@ -516,7 +538,7 @@ describe('magaluf gameDef', () => {
       drinkAndReveal(client, seat);
 
       expect(G(client).lastDraw?.pours).toEqual([
-        { seatID: seat, alcohol: 'cana', intox: 1, vp: 1 },
+        { seatID: seat, alcohol: expect.objectContaining({ id: 'cana' }), intox: 1, vp: 1 },
       ]);
     });
 
@@ -534,7 +556,7 @@ describe('magaluf gameDef', () => {
       const pours = G(client).lastDraw!.pours;
       expect(pours.find((p) => p.seatID === armed)).toEqual({
         seatID: armed,
-        alcohol: 'cana',
+        alcohol: expect.objectContaining({ id: 'cana' }),
         intox: 1,
         vp: 2,
       });
@@ -1054,7 +1076,7 @@ describe('magaluf gameDef', () => {
       const { client, seat } = drawChoice('vomitona');
       expect(G(client).pendingChoice).toEqual({ seatID: seat, eventId: 'vomitona', endsTurn: true });
       // Face-up, so the table can read what is being decided.
-      expect(G(client).lastDraw?.event).toBe('vomitona');
+      expect(G(client).lastDraw?.event!.id).toBe('vomitona');
       expect(G(client).pendingEvent).toBeNull();
     });
 
@@ -1721,6 +1743,63 @@ describe('magaluf gameDef', () => {
     it('still lets a host dial the old weekend back in', () => {
       const old = clampSettings({ saturdayMultiplier: 1.5, sundayMultiplier: 2.25 } as never);
       expect(dayMultipliers(old)).toEqual([1, 1.5, 2.25]);
+    });
+  });
+
+  /**
+   * A deck of printed cards rather than a deck of ids. Two copies of a card
+   * are the same card and different objects, which is what lets each one carry
+   * its own picture and its own line.
+   */
+  describe('the deck is printed cards', () => {
+    it('numbers the copies of each card from zero', () => {
+      const deck = buildDeck({ ligueTardeo: 2, foto: 1, ronda: 3 });
+      const variantsOf = (id: string) =>
+        deck.filter((c) => c.id === id).map((c) => c.variant).sort();
+
+      expect(variantsOf('ligueTardeo')).toEqual([0, 1]);
+      expect(variantsOf('foto')).toEqual([0]);
+      expect(variantsOf('ronda')).toEqual([0, 1, 2]);
+      expect(deck).toHaveLength(6);
+    });
+
+    it('names one artwork file per printing, one-based and padded', () => {
+      expect(cardArt('ligueTardeo', 0)).toBe('ligueTardeo01.png');
+      expect(cardArt('ligueTardeo', 1)).toBe('ligueTardeo02.png');
+      expect(cardArt('chupitoCasa', 9)).toBe('chupitoCasa10.png');
+    });
+
+    it('deals real dealt cards, and puts them back the same way', () => {
+      // A card that goes to the discard and comes back on a reshuffle is the
+      // same printed card. Picking artwork at draw time would give it a new
+      // face every time it came round.
+      const client = makeClient(3);
+      const g = G(client);
+      for (const drawnCard of [...g.alcoholDeck, ...g.eventDeck]) {
+        expect(typeof drawnCard.id).toBe('string');
+        expect(drawnCard.variant).toBeGreaterThanOrEqual(0);
+      }
+
+      const copies = g.alcoholDeck.filter((c) => c.id === g.alcoholDeck[0]!.id);
+      // Distinct printings, not the same card repeated.
+      expect(new Set(copies.map((c) => c.variant)).size).toBe(copies.length);
+    });
+
+    it('carries the printing through to what the board is shown', () => {
+      const client = makeClient(3, (g) => stack(g, ['cana', 'cana'], ['nada', 'nada']));
+      const first = G(client).turnSeatID;
+      drinkAndReveal(client, first);
+      const one = G(client).lastDraw!.alcohol;
+
+      const second = G(client).turnSeatID;
+      drinkAndReveal(client, second);
+      const two = G(client).lastDraw!.alcohol;
+
+      // Same card twice, and the board is told which of the two it is looking
+      // at -- which is the whole reason the deck holds objects.
+      expect(one.id).toBe('cana');
+      expect(two.id).toBe('cana');
+      expect(one.variant).not.toBe(two.variant);
     });
   });
 

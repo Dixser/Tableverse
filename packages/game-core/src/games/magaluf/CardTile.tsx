@@ -3,7 +3,7 @@ import styles from './CardTile.module.css';
 
 export interface CardTileProps {
   kind: 'alcohol' | 'event';
-  /** Card id; the display name is `magaluf.<kind>.<id>`. */
+  /** Card id; the display name is `magaluf.<kind>.<id>.title`. */
   id: string;
   /** Alcohol only — the numbers actually applied, after any halving. */
   intox?: number;
@@ -11,16 +11,19 @@ export interface CardTileProps {
 }
 
 /**
- * A typographic placeholder for one card, matching this codebase's convention
- * of never shipping artwork (Love Letter, Regicide, Crew, Cahoots all do the
- * same). A per-game copy on purpose: every game here owns its own card atom
- * rather than sharing one.
+ * The compact form of a card: its title and the numbers a seat actually took.
+ *
+ * `GameCard` is the full printed object — title, picture, effect, flavour —
+ * and is what the drawn pair get. This stays for the knock-on drinks a Ronda
+ * pours, where the point is *who took what* rather than what the card is: ten
+ * seats at a ten-seat table would otherwise deal ten pieces of artwork
+ * underneath the one card that caused them.
  */
 export function CardTile({ kind, id, intox, vp }: CardTileProps) {
   const { t } = useTranslation();
   return (
     <div className={kind === 'alcohol' ? styles.alcohol : styles.event} data-testid={`card-${id}`}>
-      <span className={styles.name}>{t(`magaluf.${kind}.${id}`)}</span>
+      <span className={styles.name}>{t(`magaluf.${kind}.${id}.title`)}</span>
       {intox !== undefined && vp !== undefined && (
         <span className={styles.numbers}>
           {/* Coloured by what the number does to you, not by its sign: more

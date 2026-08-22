@@ -1,0 +1,29 @@
+.art,
+.placeholder {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius);
+  object-fit: cover;
+}
+
+/* Reads as a reserved space rather than as a broken image: the card keeps its
+   full height with or without artwork, so dropping a file in never reflows the
+   board. */
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  background: color-mix(in srgb, var(--color-border) 18%, transparent);
+}
+
+.placeholderFile {
+  font-size: 0.7rem;
+  opacity: 0.55;
+  word-break: break-all;
+}

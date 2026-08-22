@@ -1,12 +1,43 @@
 /**
  * Card catalogues — data only, no rules and no strings.
  *
- * Names and flavour text live in `magaluf.*` i18n keys derived from these
- * ids (`magaluf.alcohol.cana`, `magaluf.event.ligueTardeo`, …), never here:
- * the engine runs on the server and must not hold display text. See
- * `prototypes/magaluf/design.md` §7 and §11 for the full catalogues and the
- * reasoning behind the values.
+ * Titles, effect text and flavour live in `magaluf.*` i18n keys derived from
+ * these ids (`magaluf.alcohol.cana.title`, `magaluf.event.ligueTardeo.flavor.0`,
+ * …), never here: the engine runs on the server and must not hold display
+ * text. See `prototypes/magaluf/design.md` §7 and §11 for the full catalogues
+ * and the reasoning behind the values.
  */
+
+/**
+ * One physical card, as opposed to one *kind* of card.
+ *
+ * The deck holds these rather than bare ids because the two Ligue de piscina
+ * cards in the Tardeo are two different printed cards: same title, same
+ * effect, different picture and different line underneath it. That is how the
+ * genre does it, and it only works if the copy is identified before it is
+ * shuffled — pick the artwork at draw time and you get the same picture twice
+ * in a phase, never see the third, and watch a card come back from the discard
+ * wearing someone else's face.
+ *
+ * `variant` is 0-based and assigned by `buildDeck` per copy, so a deck holding
+ * three of something uses variants 0, 1 and 2. The i18n catalogue therefore
+ * has to carry at least as many flavour lines as the largest count any one
+ * phase deck asks for — `i18nKeys.test.ts` is what holds that to account.
+ */
+export interface CardInstance<Id extends string = string> {
+  id: Id;
+  variant: number;
+}
+
+/**
+ * The artwork file for one printed card, named from the id rather than from
+ * the title: the picture is shared by every language, and titles are not.
+ * 1-based on the filename because it is read by people, 0-based in the data
+ * because it indexes an array.
+ */
+export function cardArt(id: string, variant: number): string {
+  return `${id}${String(variant + 1).padStart(2, '0')}.png`;
+}
 
 export type PhaseId = 'tardeo' | 'noche' | 'after';
 export const PHASE_IDS: readonly PhaseId[] = ['tardeo', 'noche', 'after'];

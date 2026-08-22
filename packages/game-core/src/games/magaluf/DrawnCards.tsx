@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { ALCOHOL } from './cards.js';
 import type { LastDraw } from './state.js';
 import { CardTile } from './CardTile.js';
+import { GameCard } from './GameCard.js';
 import styles from './DrawnCards.module.css';
 
 export interface DrawnCardsProps {
@@ -64,17 +64,19 @@ export function DrawnCards({ lastDraw, drawerName, eventPending, nameFor }: Draw
     );
   }
 
-  const card = ALCOHOL[lastDraw.alcohol];
-
   return (
     <div className={styles.drawn} data-testid="drawn-cards">
       <span className={styles.caption}>
         {t('magaluf.board.drewCaption', { name: drawerName ?? '' })}
       </span>
+      {/* The drawn pair are the headline, so they get the whole card: title,
+          picture, effect and the line underneath. The knock-on pours below
+          stay compact tiles -- a Ronda at ten seats would otherwise deal ten
+          full cards under the one that caused them. */}
       <div className={styles.cards}>
-        {card && <CardTile kind="alcohol" id={card.id} intox={card.intox} vp={card.vp} />}
+        <GameCard kind="alcohol" id={lastDraw.alcohol.id} variant={lastDraw.alcohol.variant} />
         {lastDraw.event ? (
-          <CardTile kind="event" id={lastDraw.event} />
+          <GameCard kind="event" id={lastDraw.event.id} variant={lastDraw.event.variant} />
         ) : (
           // Face-down, so the table can see an event is coming before it lands.
           eventPending && (
@@ -96,11 +98,16 @@ export function DrawnCards({ lastDraw, drawerName, eventPending, nameFor }: Draw
             {lastDraw.pours.map((pour, index) => (
               // Index in the key because one card can pour the same drink on
               // the same seat twice -- a Ronda into a Chupito de la casa.
-              <div key={`${pour.seatID}-${pour.alcohol}-${index}`} className={styles.pour}>
+              <div key={`${pour.seatID}-${pour.alcohol.id}-${index}`} className={styles.pour}>
                 <span className={styles.pourName} data-testid={`poured-${pour.seatID}`}>
                   {nameFor(pour.seatID)}
                 </span>
-                <CardTile kind="alcohol" id={pour.alcohol} intox={pour.intox} vp={pour.vp} />
+                <CardTile
+                  kind="alcohol"
+                  id={pour.alcohol.id}
+                  intox={pour.intox}
+                  vp={pour.vp}
+                />
               </div>
             ))}
           </div>

@@ -571,14 +571,14 @@ function takeDrink(
   seatID: string,
   options: { halveIntox?: boolean; drawsEvent?: boolean; endsTurn?: boolean } = {},
 ): boolean {
-  const card = drawAlcohol(G, rng);
-  if (!card) return false;
-  consumeAlcohol(G, seatID, card, { halveIntox: options.halveIntox });
+  const drawn = drawAlcohol(G, rng);
+  if (!drawn) return false;
+  consumeAlcohol(G, seatID, drawn, { halveIntox: options.halveIntox });
 
   // Set here rather than after the event, so the drink is on the table for
   // everyone to read while the event is still face-down. A Ronda's knock-on
   // drinks cannot overwrite it: those go through consumeAlcohol, never here.
-  G.lastDraw = { seatID, alcohol: card.id, event: null, outcome: null, pours: [] };
+  G.lastDraw = { seatID, alcohol: drawn, event: null, outcome: null, pours: [] };
 
   if (options.drawsEvent !== false) {
     G.pendingEvent = { seatID, endsTurn: options.endsTurn ?? true };
@@ -599,15 +599,15 @@ function revealPendingEvent(G: MagalufG, rng: Rng): void {
   if (!pending) return;
   G.pendingEvent = null;
 
-  const eventId = drawEvent(G, rng);
-  if (!eventId) return;
-  if (G.lastDraw) G.lastDraw = { ...G.lastDraw, event: eventId };
+  const drawn = drawEvent(G, rng);
+  if (!drawn) return;
+  if (G.lastDraw) G.lastDraw = { ...G.lastDraw, event: drawn };
 
-  const id = eventId as EventId;
+  const id = drawn.id;
   if (eventOptions(id)) {
     // Logged here rather than in resolveEventOption, so the log reads "drew
     // the card, then picked a branch" in the order it happened at the table.
-    log(G, 'event', { actor: pending.seatID, descriptionKey: `magaluf.event.${id}` });
+    log(G, 'event', { actor: pending.seatID, descriptionKey: `magaluf.event.${id}.title` });
     G.pendingChoice = { seatID: pending.seatID, eventId: id, endsTurn: pending.endsTurn };
     return;
   }

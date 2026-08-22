@@ -1,0 +1,67 @@
+/* The printed-card proportions, near enough: a fixed narrow column so a row of
+   them reads as a hand rather than as a stack of paragraphs. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 11rem;
+  padding: var(--space-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+/* Event cards keep the dashed edge they had as tiles, so the two kinds stay
+   tellable apart at a glance without relying on colour. */
+.card[data-kind='event'] {
+  border-style: dashed;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.effect {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+.flavor {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  font-style: italic;
+  opacity: 0.72;
+  text-wrap: pretty;
+}
+
+/* Same palette as CardTile: coloured by what the number does to you. */
+.vp {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.intoxUp {
+  color: var(--magaluf-intox-up);
+  font-weight: 600;
+}
+
+.intoxDown {
+  color: var(--magaluf-intox-down);
+  font-weight: 600;
+}
+
+.resaca {
+  color: var(--magaluf-resaca);
+  font-weight: 600;
+}
+
+.item {
+  font-weight: 600;
+}

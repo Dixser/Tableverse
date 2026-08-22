@@ -11,6 +11,7 @@
     "test:integration": "npm run test:integration --workspace=packages/server --if-present",
     "lint": "eslint .",
     "new-game": "node scripts/new-game.mjs",
+    "check:card-art": "tsx scripts/check-card-art.ts",
     "dev": "concurrently -n server,client -c blue,green \"npm run dev --workspace=packages/server\" \"npm run dev --workspace=packages/client\"",
     "dev:server": "npm run dev --workspace=packages/server",
     "dev:client": "npm run dev --workspace=packages/client",
