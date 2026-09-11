@@ -175,7 +175,18 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       foto: 2,
       perdido: 2,
       chupitoCasa: 2,
-      ronda: 2,
+      // Ronda 2 -> 1, paying for the single Barra libre below. Feature 034's
+      // standing trade: the forced-drink cards are the right thing to give up,
+      // being the ones that spend a player's capacity without asking. It is a
+      // particularly clean swap here, because Barra libre pays for exactly the
+      // capacity a Ronda used to spend for you -- the slot goes from taking
+      // the choice away to rewarding the one you made.
+      ronda: 1,
+      // One copy, not the Noche's two. The Tardeo pays a point per drink and
+      // caps at four, so the ceiling is 4 VP against a Ligue's 2 -- worth
+      // drawing, not worth building a Friday around, which is the correct
+      // weight for the phase whose whole job is to stay forgiving.
+      barraLibreTardeo: 1,
       vomitona: 1,
       kebabEvent: 2,
       aguaEvent: 2,
@@ -223,7 +234,7 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       gorila: 2,
       garrafonEvent: 2,
       karaoke: 2,
-      barraLibre: 2,
+      barraLibreNoche: 2,
       perdido: 2,
       chupitoCasa: 2,
       ronda: 1,
@@ -286,7 +297,7 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       terraza: 2,
       comaEtilico: 2,
       karaoke: 2,
-      barraLibre: 2,
+      barraLibreAfter: 2,
       perdido: 1,
       chupitoCasa: 4,
       ronda: 3,

@@ -116,6 +116,7 @@ export type EventId =
   | 'chungoTardeo'
   | 'insolacion'
   | 'foto'
+  | 'barraLibreTardeo'
   // Noche tier — interactive, real teeth
   | 'ligueNoche'
   | 'fiestaNoche'
@@ -123,6 +124,7 @@ export type EventId =
   | 'chungoNoche'
   | 'gorila'
   | 'garrafonEvent'
+  | 'barraLibreNoche'
   // After tier — the big money and the real damage
   | 'ligueAfter'
   | 'fiestaAfter'
@@ -131,9 +133,9 @@ export type EventId =
   | 'soloVoyAMirar'
   | 'terraza'
   | 'comaEtilico'
+  | 'barraLibreAfter'
   // Present in more than one tier, at different frequencies
   | 'karaoke'
-  | 'barraLibre'
   | 'perdido'
   | 'chupitoCasa'
   | 'ronda'
@@ -261,6 +263,14 @@ export const EVENTS: Record<EventId, EventCard> = {
   chungoTardeo: { id: 'chungoTardeo', vp: -2 },
   insolacion: { id: 'insolacion', intox: 2 },
   foto: { id: 'foto', vp: 2 },
+  // One Barra libre per tier rather than one card that pays the same
+  // everywhere. `vp` is a rate here, not a total — the same reading Cacheo
+  // gives it — and the rate is the whole point: the old single card paid a
+  // flat point per drink, so an After player who had risked four expensive
+  // drinks was paid exactly what a Tardeo player was paid for four cheap
+  // ones. Pricing the rate by venue is what makes the card scale with what
+  // the drinks actually cost you.
+  barraLibreTardeo: { id: 'barraLibreTardeo', vp: 1 },
 
   // Noche tier
   ligueNoche: { id: 'ligueNoche', vp: 4 },
@@ -277,6 +287,7 @@ export const EVENTS: Record<EventId, EventCard> = {
   },
   gorila: { id: 'gorila' },
   garrafonEvent: { id: 'garrafonEvent', intox: 3 },
+  barraLibreNoche: { id: 'barraLibreNoche', vp: 2 },
 
   // After tier
   ligueAfter: { id: 'ligueAfter', vp: 6 },
@@ -294,10 +305,10 @@ export const EVENTS: Record<EventId, EventCard> = {
     ],
   },
   comaEtilico: { id: 'comaEtilico', intox: 5 },
+  barraLibreAfter: { id: 'barraLibreAfter', vp: 3 },
 
   // Shared across tiers
   karaoke: { id: 'karaoke', vp: 2 },
-  barraLibre: { id: 'barraLibre' },
   perdido: { id: 'perdido' },
   chupitoCasa: { id: 'chupitoCasa' },
   ronda: { id: 'ronda' },

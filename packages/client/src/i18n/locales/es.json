@@ -760,6 +760,13 @@
           "Sales con los ojos cerrados y aun así la subes."
         ]
       },
+      "barraLibreTardeo": {
+        "title": "Barra libre de piscina",
+        "effect": "Ganas <vp>{{vp}} PV</vp> por cada copa que llevas en esta fase.",
+        "flavor": [
+          "Pulsera de papel y sangría de garrafa hasta las nueve."
+        ]
+      },
       "ligueNoche": {
         "title": "Ligue en la pista",
         "effect": "Ganas <vp>{{vp}} PV</vp>.",
@@ -808,6 +815,14 @@
           "Eso no es ginebra. Eso no ha sido ginebra nunca.",
           "Sabe a piscina y cuesta cuatro euros.",
           "La botella tiene la etiqueta al revés."
+        ]
+      },
+      "barraLibreNoche": {
+        "title": "Barra libre de discoteca",
+        "effect": "Ganas <vp>{{vp}} PV</vp> por cada copa que llevas en esta fase.",
+        "flavor": [
+          "Veinte euros y vasos de plástico hasta las tres.",
+          "La cola es más larga que la barra."
         ]
       },
       "ligueAfter": {
@@ -868,20 +883,20 @@
           "Alguien te está hablando muy despacio."
         ]
       },
+      "barraLibreAfter": {
+        "title": "Barra libre del after",
+        "effect": "Ganas <vp>{{vp}} PV</vp> por cada copa que llevas en esta fase.",
+        "flavor": [
+          "Ya nadie está cobrando nada.",
+          "Solo queda hielo y una botella sin etiqueta."
+        ]
+      },
       "karaoke": {
         "title": "Karaoke",
         "effect": "Ganas <vp>{{vp}} PV</vp>, o el doble si eres el más borracho de la mesa.",
         "flavor": [
           "Te sabes la letra. No te sabes la canción.",
           "Nadie te ha pedido un bis y vas por el tercero."
-        ]
-      },
-      "barraLibre": {
-        "title": "Barra libre",
-        "effect": "Ganas <vp>+1 PV</vp> por cada copa que llevas en esta fase.",
-        "flavor": [
-          "Veinte euros y vasos de plástico hasta las tres.",
-          "La cola es más larga que la barra."
         ]
       },
       "perdido": {

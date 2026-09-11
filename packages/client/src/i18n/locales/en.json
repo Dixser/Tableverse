@@ -760,6 +760,13 @@
           "Your eyes are shut in it and you post it anyway."
         ]
       },
+      "barraLibreTardeo": {
+        "title": "Poolside open bar",
+        "effect": "Gain <vp>{{vp}} VP</vp> for every drink you have had this phase.",
+        "flavor": [
+          "A paper wristband and sangria from a jug until nine."
+        ]
+      },
       "ligueNoche": {
         "title": "Dancefloor pull",
         "effect": "Gain <vp>{{vp}} VP</vp>.",
@@ -808,6 +815,14 @@
           "That is not gin. That has never been gin.",
           "Tastes like a swimming pool and costs four euros.",
           "The label on the bottle is on upside down."
+        ]
+      },
+      "barraLibreNoche": {
+        "title": "Club open bar",
+        "effect": "Gain <vp>{{vp}} VP</vp> for every drink you have had this phase.",
+        "flavor": [
+          "Twenty euros and plastic cups until three.",
+          "The queue is longer than the bar."
         ]
       },
       "ligueAfter": {
@@ -868,20 +883,20 @@
           "Somebody is talking to you very slowly."
         ]
       },
+      "barraLibreAfter": {
+        "title": "Afterparty open bar",
+        "effect": "Gain <vp>{{vp}} VP</vp> for every drink you have had this phase.",
+        "flavor": [
+          "Nobody is charging for anything any more.",
+          "All that is left is ice and a bottle with no label."
+        ]
+      },
       "karaoke": {
         "title": "Karaoke",
         "effect": "Gain <vp>{{vp}} VP</vp>, doubled if you are the most intoxicated at the table.",
         "flavor": [
           "You know the words. You do not know the song.",
           "Nobody asked for an encore and you are on your third."
-        ]
-      },
-      "barraLibre": {
-        "title": "Open bar",
-        "effect": "Gain <vp>+1 VP</vp> for every drink you have had this phase.",
-        "flavor": [
-          "Twenty euros and plastic cups until three.",
-          "The queue is longer than the bar."
         ]
       },
       "perdido": {

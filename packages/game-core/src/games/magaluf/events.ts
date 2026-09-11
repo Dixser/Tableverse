@@ -222,10 +222,18 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
       break;
     }
 
-    case 'barraLibre': {
-      const vp = player.drinksThisPhase;
+    // One case for all three printings: they differ only in what a drink is
+    // worth, and `card.vp` carries that rate — the same reading Cacheo gives
+    // it. The two numbers in the log were identical while the rate was always
+    // 1, which is why they could be filled from one variable; they are not
+    // identical any more. `n` is what you drank, `vp` is what it paid.
+    case 'barraLibreTardeo':
+    case 'barraLibreNoche':
+    case 'barraLibreAfter': {
+      const drinks = player.drinksThisPhase;
+      const vp = drinks * (card.vp ?? 0);
       gainVP(player, vp);
-      logOutcome(G, 'barraLibreResult', { actor: seatID, vp, n: vp }, 'success');
+      logOutcome(G, 'barraLibreResult', { actor: seatID, vp, n: drinks }, 'success');
       break;
     }
 

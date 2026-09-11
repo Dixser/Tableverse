@@ -884,16 +884,33 @@ describe('magaluf gameDef', () => {
       [...G(client).log].reverse().find((e) => e.key === `magaluf.log.${key}`);
 
     it('reports what Barra libre actually paid', () => {
-      const { client, seat, outcome } = drawEventCard('barraLibre', (g) => {
+      const { client, seat, outcome } = drawEventCard('barraLibreNoche', (g) => {
         g.players[g.turnSeatID]!.drinksThisPhase = 2;
       });
       // 2 already had, plus the drink that turned the card over.
       expect(G(client).players[seat]!.drinksThisPhase).toBe(3);
+      // The two numbers are the point of the line: three drinks, six points.
+      // They were equal for as long as every printing paid 1, so a log that
+      // reported the rate as the count would have read correctly by accident.
       expect(outcome).toEqual({
         key: 'magaluf.log.barraLibreResult',
-        params: { actor: seat, vp: 3, n: 3 },
+        params: { actor: seat, vp: 6, n: 3 },
       });
       expect(lastEntry(client, 'barraLibreResult')?.params).toEqual(outcome!.params);
+    });
+
+    it('pays Barra libre at the rate printed for the venue', () => {
+      // Same three drinks at each printing. The card is stacked rather than
+      // drawn from a venue's own deck, so this is the rate on the card and
+      // nothing else -- which is exactly the thing that has to differ.
+      const paid = (eventId: EventId) =>
+        drawEventCard(eventId, (g) => {
+          g.players[g.turnSeatID]!.drinksThisPhase = 2;
+        }).outcome?.params?.vp;
+
+      expect(paid('barraLibreTardeo')).toBe(3);
+      expect(paid('barraLibreNoche')).toBe(6);
+      expect(paid('barraLibreAfter')).toBe(9);
     });
 
     it('says when Karaoke doubled, and when it did not', () => {
@@ -1051,7 +1068,9 @@ describe('magaluf gameDef', () => {
     });
 
     it('clears the outcome with the rest of the table at a new venue', () => {
-      const client = makeClient(3, (g) => stack(g, Array<string>(8).fill('cana'), ['barraLibre']));
+      const client = makeClient(3, (g) =>
+        stack(g, Array<string>(8).fill('cana'), ['barraLibreNoche']),
+      );
       drinkAndReveal(client, G(client).turnSeatID);
       expect(G(client).lastDraw?.outcome).not.toBeNull();
 
