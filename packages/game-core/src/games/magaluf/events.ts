@@ -6,10 +6,13 @@
  * behaviour (forced drinks, the police, the ambulance, anything that
  * retargets away from the drawing player) need a case of their own.
  *
- * Both police events deliberately reach only seats that are still
- * **partying**. A player who has gone home is not raided — which also closes
- * a loophole: otherwise you could hold contraband, withdraw early, and hope a
- * Redada banked your VP and cancelled your limit check for free.
+ * Both police events, the ambulance, the forced rounds and the fiesta bonus
+ * deliberately reach only seats that are `inside` — still partying AND still
+ * in the room, not out for a smoke on a Porro. A player who has gone home is
+ * not raided — which also closes a loophole: otherwise you could hold
+ * contraband, withdraw early, and hope a Redada banked your VP and cancelled
+ * your limit check for free. A player who is only outside is not raided
+ * either, on the same reading: neither is in the room to be caught.
  *
  * The two catch-up events are the deliberate opposite: they reach every seat
  * still in the running, room or no room, because the player they exist for is
@@ -34,6 +37,7 @@ import {
   gainVP,
   countContraband,
   hasContraband,
+  inside,
   leavePhase,
   log,
   logOutcome,
@@ -88,7 +92,7 @@ function applyCardEffects(
 ): void {
   const player = G.players[seatID]!;
   if (effects.vp) gainVP(player, effects.vp);
-  if (effects.vpAll) for (const id of partying(G)) gainVP(G.players[id]!, effects.vpAll);
+  if (effects.vpAll) for (const id of inside(G)) gainVP(G.players[id]!, effects.vpAll);
   if (effects.intox) addIntox(player, effects.intox);
   if (effects.relief) addIntox(player, -effects.relief);
   if (effects.resaca) addResaca(player, effects.resaca);
@@ -174,7 +178,7 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
       // positional rule Rey del guiri was reworked to remove, one card over.
       // The Ambulancia keeps that helper: it removes exactly one player from
       // the phase, so it has no way to honour a tie.
-      const most = rankSeats(G, (p) => p.intox, partying(G))[0]?.value ?? 0;
+      const most = rankSeats(G, (p) => p.intox, inside(G))[0]?.value ?? 0;
       const doubled = most > 0 && player.intox === most;
       const vp = doubled ? (card.vp ?? 0) * 2 : (card.vp ?? 0);
       gainVP(player, vp);
@@ -281,7 +285,7 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
     }
 
     case 'ronda': {
-      for (const id of partying(G)) {
+      for (const id of inside(G)) {
         const drink = drawAlcohol(G, rng);
         if (!drink) break;
         pourDrink(G, id, drink);
@@ -290,7 +294,7 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
     }
 
     case 'cacheo': {
-      for (const id of partying(G)) {
+      for (const id of inside(G)) {
         const target = G.players[id]!;
         // Counted before it is dropped, and priced per item: `card.vp` is a
         // rate here, not a total. Holding a stash used to cost exactly what
@@ -306,7 +310,15 @@ export function resolveEvent(G: MagalufG, seatID: string, eventId: EventId, rng:
     }
 
     case 'redada': {
-      const caught = partying(G).filter((id) => hasContraband(G.players[id]!));
+      // Outside on a Porro when the raid hits: visibly holding contraband and
+      // visibly not arrested, which is worth a line of its own rather than a
+      // silent non-event.
+      for (const id of partying(G)) {
+        if (G.players[id]!.outside && hasContraband(G.players[id]!)) {
+          log(G, 'dodgedOutside', { actor: id });
+        }
+      }
+      const caught = inside(G).filter((id) => hasContraband(G.players[id]!));
       if (caught.length === 0) break;
       const multiplier = dayMultipliers(G.settings)[G.day] ?? 1;
       for (const id of caught) {

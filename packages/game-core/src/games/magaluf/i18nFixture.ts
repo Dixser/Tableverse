@@ -140,6 +140,7 @@ void i18n.use(initReactI18next).init({
             statusOut: 'TEST_out',
             statusJail: 'TEST_jail',
             statusDead: 'TEST_dead',
+            outside: 'TEST_smoking',
             balconyRisk: 'TEST_risk {{percent}}',
             intoxShort: 'TEST_int {{n}}',
             vpShort: 'TEST_vp {{n}}',

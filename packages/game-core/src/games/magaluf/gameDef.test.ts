@@ -642,6 +642,22 @@ describe('magaluf gameDef', () => {
       }
     });
 
+    it('skips a seat that stepped outside when a ronda pours', () => {
+      const client = makeClient(3, (g) => {
+        stack(g, ['pinta', 'cana', 'cana', 'cana'], ['ronda']);
+        g.players[g.activeSeatIDs.find((id) => id !== g.turnSeatID)!]!.outside = true;
+      });
+      const seat = G(client).turnSeatID;
+      const outsideID = G(client).activeSeatIDs.find((id) => id !== seat)!;
+      const thirdID = G(client).activeSeatIDs.find((id) => id !== seat && id !== outsideID)!;
+      drinkAndReveal(client, seat);
+
+      expect(G(client).players[outsideID]!.drinksThisPhase).toBe(0);
+      expect(G(client).lastDraw!.pours.some((p) => p.seatID === outsideID)).toBe(false);
+      // Everybody still in the room gets the round as normal.
+      expect(G(client).players[thirdID]!.drinksThisPhase).toBeGreaterThan(0);
+    });
+
     it('deals a chupito de la casa face-up too, on the drawer alone', () => {
       const client = makeClient(3, (g) => stack(g, ['pinta', 'cana'], ['chupitoCasa']));
       const seat = G(client).turnSeatID;
@@ -739,7 +755,7 @@ describe('magaluf gameDef', () => {
       expect(player.pastisArmed).toBe(false);
     });
 
-    it('porro ends the turn without drawing or withdrawing (AC3, AC5)', () => {
+    it('porro ends the turn without drawing or withdrawing, and steps outside (AC3, AC5)', () => {
       const client = makeClient(3, (g) => {
         g.players[g.turnSeatID]!.items = ['porro'];
       });
@@ -750,7 +766,65 @@ describe('magaluf gameDef', () => {
       expect(player.status).toBe('partying');
       expect(player.drinksThisPhase).toBe(0);
       expect(player.intox).toBe(0);
+      expect(player.outside).toBe(true);
       expect(G(client).turnSeatID).not.toBe(seat);
+      expect(G(client).log.some((e) => e.key === 'magaluf.log.wentOutside' && e.params?.actor === seat)).toBe(true);
+    });
+
+    describe('porro immunity ("outside")', () => {
+      it('clears when the turn comes back round', () => {
+        const client = makeClient(3, (g) => {
+          g.players[g.turnSeatID]!.items = ['porro'];
+          // Deterministic, side-effect-free draws for the other two seats:
+          // this test is about the turn cycle, not about what they drink.
+          stack(g, ['agua', 'agua'], ['nada', 'nada']);
+        });
+        const seat = G(client).turnSeatID;
+        actAs(client, seat).useItem!('porro');
+        expect(G(client).players[seat]!.outside).toBe(true);
+
+        // Two other seats, then the turn is back on `seat`.
+        drinkAndReveal(client, G(client).turnSeatID);
+        drinkAndReveal(client, G(client).turnSeatID);
+
+        expect(G(client).turnSeatID).toBe(seat);
+        expect(G(client).players[seat]!.outside).toBe(false);
+      });
+
+      it('startPhase clears a stray outside flag unconditionally, the same belt-and-braces treatment skipNextTurn gets', () => {
+        // Not reachable through ordinary play: a partying seat that is
+        // outside always gets the very next turn on it (see the test above),
+        // and nothing can remove an outside seat from the phase -- that is
+        // the whole point of the immunity. Pinned down on its own regardless,
+        // the same way `advanceTurn`'s second sweep is belt-and-braces for a
+        // state normal play cannot reach either.
+        const client = makeClient(3, (g) => {
+          g.players['1']!.outside = true;
+        });
+        play(client, alwaysWithdraw, (g) => g.phase !== 0);
+        expect(G(client).players['1']!.outside).toBe(false);
+      });
+
+      it('startDay clears it too', () => {
+        const client = makeClient(3, (g) => {
+          g.players['1']!.outside = true;
+        });
+        play(client, alwaysWithdraw, (g) => g.day !== 0);
+        expect(G(client).players['1']!.outside).toBe(false);
+      });
+
+      it('the only partying seat gets their turn straight back, already inside', () => {
+        const client = makeClient(3, (g) => {
+          g.players[g.turnSeatID]!.items = ['porro'];
+          g.players['1']!.status = 'withdrawn';
+          g.players['2']!.status = 'withdrawn';
+        });
+        const seat = G(client).turnSeatID;
+        actAs(client, seat).useItem!('porro');
+
+        expect(G(client).turnSeatID).toBe(seat);
+        expect(G(client).players[seat]!.outside).toBe(false);
+      });
     });
 
     it('farlopa halves only its own extra draw (AC6)', () => {
@@ -834,6 +908,16 @@ describe('magaluf gameDef', () => {
       for (const id of G(client).activeSeatIDs) {
         expect(G(client).players[id]!.roundVP).toBe(-PHASE_RULES.tardeo.earlyExitPenalty);
       }
+    });
+
+    it('gorila still throws the drawer out, whatever any other seat is doing outside', () => {
+      const client = makeClient(3, (g) => {
+        stack(g, ['cana'], ['gorila']);
+        g.players[g.activeSeatIDs.find((id) => id !== g.turnSeatID)!]!.outside = true;
+      });
+      const seat = G(client).turnSeatID;
+      drinkAndReveal(client, seat);
+      expect(G(client).players[seat]!.status).toBe('withdrawn');
     });
   });
 
@@ -1170,6 +1254,46 @@ describe('magaluf gameDef', () => {
       // The number that got them picked, not the one they leave with.
       expect(outcome?.params?.n).toBe(40);
       expect(G(client).players['1']!.intox).toBe(35);
+    });
+
+    it('never picks a seat that stepped outside, however drunk they are', () => {
+      const { client, outcome } = drawEventCard('ambulancia', (g) => {
+        g.players['1']!.intox = 40;
+        g.players['1']!.outside = true;
+        g.players['2']!.intox = 20;
+      });
+      expect(outcome?.params?.actor).toBe('2');
+      expect(G(client).players['2']!.status).toBe('withdrawn');
+      // Untouched: still the table's worst number, and still in the room.
+      expect(G(client).players['1']!.status).toBe('partying');
+      expect(G(client).players['1']!.intox).toBe(40);
+    });
+
+    it("skips an outside seat's turn at the fiesta bonus, same as the police and the ambulance", () => {
+      const { client } = drawEventCard('fiestaNoche', (g) => {
+        g.players['1']!.outside = true;
+      });
+      expect(G(client).players['1']!.roundVP).toBe(0);
+      expect(G(client).players['2']!.roundVP).toBe(2);
+    });
+
+    it("ignores an outside seat's intox for Karaoke's drunkest check", () => {
+      const doubled = drawEventCard('karaoke', (g) => {
+        g.players[g.turnSeatID]!.intox = 10;
+        g.players['1']!.intox = 40;
+        g.players['1']!.outside = true;
+      });
+      // Would otherwise deny the double: seat 0 is not level with seat 1's 40.
+      expect(doubled.outcome?.key).toBe('magaluf.log.karaokeDrunkest');
+    });
+
+    it('still pays an outside seat the catch-up cards, unlike the room-only effects', () => {
+      const { client, outcome } = drawEventCard('colecta', (g) => {
+        g.players['1']!.bankedVP = -100;
+        g.players['1']!.outside = true;
+      });
+      expect(outcome?.params?.winners).toBe('1');
+      expect(G(client).players['1']!.bankedVP).toBeGreaterThan(-100);
     });
 
     it('leaves the outcome empty for a card that is just its own numbers', () => {
@@ -1923,6 +2047,24 @@ describe('magaluf gameDef', () => {
       expect(G(client).players[seat]!.status).toBe('partying'); // released
     });
 
+    it('does not arrest a contraband holder who stepped outside for a smoke', () => {
+      const client = makeClient(3, (g) => {
+        g.turnSeatID = '0';
+        g.players['1']!.items = ['pastis'];
+        g.players['1']!.outside = true;
+        g.players['2']!.items = ['farlopa'];
+        stack(g, ['cana'], ['redada']);
+      });
+      drinkAndReveal(client, '0');
+
+      expect(G(client).players['1']!.status).toBe('partying');
+      expect(G(client).players['1']!.items).toEqual(['pastis']); // stash kept
+      expect(G(client).players['2']!.status).toBe('arrested'); // still caught
+      expect(
+        G(client).log.some((e) => e.key === 'magaluf.log.dodgedOutside' && e.params?.actor === '1'),
+      ).toBe(true);
+    });
+
     /**
      * The Cacheo used to cost a flat 3 VP however much you were carrying,
      * which made a stash exactly as cheap to hold as a single joint — the one
@@ -1950,6 +2092,18 @@ describe('magaluf gameDef', () => {
         expect(G(client).players['2']!.roundVP).toBe(-9);
         // And it takes the lot, exactly as it always did.
         expect(G(client).players['2']!.items).toEqual([]);
+      });
+
+      it('does not search a seat that stepped outside for a smoke', () => {
+        const client = makeClient(3, (g) => {
+          stack(g, Array<string>(8).fill('cana'), ['cacheo']);
+          g.turnSeatID = '0';
+          g.players['1']!.items = ['pastis'];
+          g.players['1']!.outside = true;
+        });
+        drinkAndReveal(client, G(client).turnSeatID);
+        expect(G(client).players['1']!.items).toEqual(['pastis']);
+        expect(G(client).players['1']!.roundVP).toBe(0);
       });
 
       it('counts duplicates separately', () => {

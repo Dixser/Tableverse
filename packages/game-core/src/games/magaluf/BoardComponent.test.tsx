@@ -752,6 +752,18 @@ describe('MagalufBoard', () => {
       expect(screen.getByTestId('status-2')).toHaveTextContent('TEST_dead');
     });
 
+    it('badges a seat that stepped outside on a Porro, but only while still partying', () => {
+      const G = makeG();
+      G.players['0']!.outside = true;
+      G.players['1']!.outside = true;
+      G.players['1']!.status = 'withdrawn'; // stale flag on a seat that has since left
+      renderBoard(G);
+
+      expect(screen.getByTestId('outside-0')).toHaveTextContent('TEST_smoking');
+      expect(screen.queryByTestId('outside-1')).toBeNull();
+      expect(screen.queryByTestId('outside-2')).toBeNull();
+    });
+
     it('keeps banked and at-risk points separate, never summed (AC9)', () => {
       const G = makeG();
       G.players['0']!.bankedVP = 40;

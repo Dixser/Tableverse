@@ -44,6 +44,14 @@ export interface MagalufPlayer {
   /** Spent a Red Bull. The only per-player secret in the game. */
   peekedLimit: boolean;
   itemUsedThisTurn: boolean;
+  /**
+   * Stepped outside to smoke (`porro`). Still `partying` — this is not a
+   * withdrawal — but for as long as it holds no effect that targets a player
+   * can reach this seat: not the ambulance, not a forced round, not the
+   * police, not even the fiesta cards' bonus or Karaoke's drunkest check. See
+   * `inside`. Cleared the moment this seat is next handed the turn.
+   */
+  outside: boolean;
   /** Order of leaving the current phase; -1 while still partying. */
   withdrawSeq: number;
   totalDrinks: number;
@@ -290,6 +298,7 @@ export function newPlayer(): MagalufPlayer {
     pastisArmed: false,
     peekedLimit: false,
     itemUsedThisTurn: false,
+    outside: false,
     withdrawSeq: -1,
     totalDrinks: 0,
     totalIntoxSurvived: 0,
@@ -317,6 +326,22 @@ export function phaseRules(G: MagalufG): PhaseRules {
 
 export function partying(G: MagalufG): string[] {
   return G.activeSeatIDs.filter((id) => G.players[id]?.status === 'partying');
+}
+
+/**
+ * Everyone still in the venue AND still in the room — `partying` minus anyone
+ * who stepped outside for a smoke (`porro`).
+ *
+ * This is the field an event effect reaches when it targets a player: the
+ * ambulance, a forced round, the police, the fiesta cards' bonus, Karaoke's
+ * drunkest check. No card is special-cased by whether the effect helps or
+ * hurts — an outside seat is out of the room for all of them, the same way a
+ * card settling something about the *match* still ranks `alive`, and a card
+ * that simply happens to the drawer still names the drawer regardless of
+ * either list.
+ */
+export function inside(G: MagalufG): string[] {
+  return partying(G).filter((id) => !G.players[id]!.outside);
 }
 
 /**
@@ -536,9 +561,14 @@ export function removeItem(player: MagalufPlayer, item: ItemId): boolean {
   return true;
 }
 
-/** The most intoxicated seat still partying; ties broken by seat order. */
+/**
+ * The most intoxicated seat still in the room; ties broken by seat order.
+ *
+ * Ranks `inside(G)`, not `partying(G)`: a seat outside on a Porro cannot be
+ * the ambulance's pick even while carrying the table's worst number.
+ */
 export function drunkestSeat(G: MagalufG): string | null {
-  const candidates = partying(G);
+  const candidates = inside(G);
   if (candidates.length === 0) return null;
   return candidates.reduce((best, id) =>
     G.players[id]!.intox > G.players[best]!.intox ? id : best,

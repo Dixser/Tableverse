@@ -67,6 +67,16 @@ export function PlayerPanel({
             {t('magaluf.board.balconyRisk', { percent: Math.round(risk * 100) })}
           </span>
         )}
+        {/*
+          Orthogonal to `statusKey`: a seat outside on a Porro is still
+          `partying` -- it just is not `inside` for as long as this shows, so
+          nothing that targets a player can reach it. See `inside` in state.ts.
+        */}
+        {player.outside && player.status === 'partying' && (
+          <span className={styles.outside} data-testid={`outside-${seatID}`}>
+            {t('magaluf.board.outside')}
+          </span>
+        )}
       </header>
 
       <IntoxMeter

@@ -33,7 +33,8 @@
 }
 
 .status,
-.risk {
+.risk,
+.outside {
   font-size: var(--font-size-sm);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -47,6 +48,14 @@
   background: var(--color-danger, #c0392b);
   color: #fff;
   font-weight: 700;
+}
+
+/* Distinct from `.status`'s withdrawn/jailed reds: this seat is still
+   partying, only unreachable until their next turn. */
+.outside {
+  border-color: var(--color-warning, #e0a63a);
+  color: var(--color-warning, #e0a63a);
+  font-weight: 600;
 }
 
 .scores {

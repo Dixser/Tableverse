@@ -58,6 +58,7 @@ import {
   drawAlcohol,
   drawEvent,
   gainVP,
+  inside,
   leavePhase,
   log,
   logOutcome,
@@ -116,6 +117,9 @@ function advanceTurn(G: MagalufG): void {
     const id = seats[index]!;
     G.turnSeatID = id;
     G.players[id]!.itemUsedThisTurn = false;
+    // The instant this seat is handed the turn, they are back inside — this
+    // is "until the start of your next turn" for a Porro.
+    G.players[id]!.outside = false;
   };
 
   for (let step = 1; step <= seats.length * 2; step++) {
@@ -124,6 +128,9 @@ function advanceTurn(G: MagalufG): void {
     if (player.status !== 'partying') continue;
     if (player.skipNextTurn) {
       player.skipNextTurn = false;
+      // Their turn was owed and consumed here rather than at `take()`, so the
+      // same clear applies: immunity does not survive a turn that never came.
+      player.outside = false;
       log(G, 'skipped', { actor: seats[index]! });
       continue;
     }
@@ -283,6 +290,7 @@ function startPhase(G: MagalufG, rng: Rng, phaseIndex: number, opener: number): 
     if (player.status !== 'partying') continue;
     player.skipNextTurn = false;
     player.itemUsedThisTurn = false;
+    player.outside = false;
   }
 
   log(G, 'phaseStart', { descriptionKey: `magaluf.phase.${PHASE_IDS[phaseIndex]}` }, 'round');
@@ -407,6 +415,7 @@ function startDay(G: MagalufG, rng: Rng, day: number): void {
     player.pastisArmed = false;
     player.peekedLimit = false;
     player.itemUsedThisTurn = false;
+    player.outside = false;
   }
 
   log(G, 'dayStart', { descriptionKey: `magaluf.day.${DAY_IDS[day]}` }, 'round');
@@ -626,7 +635,9 @@ function revealPendingEvent(G: MagalufG, rng: Rng): void {
     // A challenge nobody is left to accept is not a question. Settled before
     // the choice is parked, so the drawer is never offered one, and pinned to
     // the card so the table reads a rule rather than a card that did nothing.
-    if (isDuelCard(id) && partying(G).length < 2) {
+    // `inside`, not `partying`: a seat outside on a Porro is not there to
+    // challenge, and never the drawer, so it can only shrink this count.
+    if (isDuelCard(id) && inside(G).length < 2) {
       logOutcome(G, 'duelNobody');
       return;
     }
@@ -660,6 +671,12 @@ function applyItem(G: MagalufG, rng: Rng, seatID: string, item: ItemId): boolean
       // Skip your draw without withdrawing: watch what everyone else does and
       // decide next turn. Deliberately not a drink, which is why Ultimo en Pie
       // has its own drink-minimum gate.
+      //
+      // And step outside: until this seat is next handed the turn, `inside`
+      // does not count them, so nothing that targets a player can reach them.
+      // Cleared in `advanceTurn`, `startPhase` and `startDay` — see `outside`.
+      player.outside = true;
+      log(G, 'wentOutside', { actor: seatID });
       return true;
     case 'farlopa':
       addResaca(player, ITEM_EFFECTS.farlopaResaca);
@@ -831,8 +848,10 @@ function chooseDuelTarget(
   if (G.finished || !duel || duel.targetID !== null || duel.challengerID !== playerID) {
     return INVALID_MOVE;
   }
-  // Somebody else, and somebody still in the room.
-  if (targetID === playerID || !partying(G).includes(targetID)) return INVALID_MOVE;
+  // Somebody else, and somebody still in the room — not a seat outside on a
+  // Porro, which the same "still in the room" reading `inside` gives every
+  // other event.
+  if (targetID === playerID || !inside(G).includes(targetID)) return INVALID_MOVE;
 
   const cap = phaseRules(G).maxDrinks;
   G.pendingDuel = {
