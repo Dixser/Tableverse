@@ -136,6 +136,13 @@ for this phase.
 - Being thrown out by the bouncer, taken away by ambulance or arrested is not
   a withdrawal, and never costs the party pooper penalty.
 
+**The maximum is a host setting for playtesting.** A host can replace 4 / 5 /
+4 with a single number for every phase, or turn it off entirely (`0` — no
+closing time at all, for however long the table wants to keep going) when the
+room is created. Left alone, the tuned numbers above apply exactly as shown.
+The minimum, the party pooper penalty and the Cierrabares bonus are unaffected
+either way.
+
 ## 6. Items
 
 You may hold any number of items. They carry over from day to day.

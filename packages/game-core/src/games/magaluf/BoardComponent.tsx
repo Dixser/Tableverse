@@ -5,6 +5,7 @@ import { eventOptions } from './cards.js';
 import { HIDDEN_LIMIT } from './gameDef.js';
 import { dayMultipliers } from './settings.js';
 import type { MagalufG } from './state.js';
+import { phaseRules } from './state.js';
 import { ActionBar } from './ActionBar.js';
 import { BalconyOverlay } from './BalconyOverlay.js';
 import { CierrabaresBanner } from './CierrabaresBanner.js';
@@ -108,6 +109,7 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
         dayMultiplier={dayMultipliers(G.settings)[G.day] ?? 1}
         band={limitRange(G.settings)}
         limit={limit}
+        rules={phaseRules(G)}
       />
 
       <div className={styles.players}>

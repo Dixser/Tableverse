@@ -506,6 +506,66 @@ describe('magaluf gameDef', () => {
       if (G(client).phase === 0) expect(player.status).not.toBe('partying');
     });
 
+    describe('the max drinks override (host setting)', () => {
+      it('behaves exactly like the shipped caps at the default', () => {
+        const client = makeClient(3);
+        expect(G(client).settings.maxDrinksOverride).toBe(-1);
+        const cap = PHASE_RULES.tardeo.maxDrinks;
+        const seat = G(client).turnSeatID;
+        play(client, (g, s) => (s === seat ? 'drink' : 'withdraw'), (g) =>
+          (g.pendingEvent === null &&
+            g.pendingChoice === null &&
+            g.players[seat]!.drinksThisPhase >= cap) ||
+          g.phase !== 0,
+        );
+        if (G(client).phase === 0) {
+          expect(G(client).players[seat]!.status).not.toBe('partying');
+        }
+      });
+
+      it('never triggers closing time when set to unlimited (AC4)', () => {
+        const client = makeClient(3, (g) => {
+          g.settings = { ...g.settings, maxDrinksOverride: 0 };
+          // Plain cards throughout: the point of this test is the absence of
+          // a cap, not what a random event or duel does along the way.
+          stack(g, Array<string>(30).fill('cana'), Array<EventId>(30).fill('foto'));
+        });
+        const seat = G(client).turnSeatID;
+        const cap = PHASE_RULES.tardeo.maxDrinks;
+        play(
+          client,
+          (g, s) => (s === seat ? 'drink' : 'withdraw'),
+          (g) => g.players[seat]!.drinksThisPhase > cap * 3 || g.phase !== 0,
+        );
+        // Reaching well past the old cap without a single call to `play()`
+        // ever satisfying the closing-time branch is the only way this
+        // assertion can pass -- confirmed to fail against the unmodified
+        // engine before `phaseRules` learned about the override.
+        expect(G(client).players[seat]!.status).toBe('partying');
+        expect(G(client).players[seat]!.drinksThisPhase).toBeGreaterThan(cap);
+      });
+
+      it('enforces the override as every phase’s cap when set to a positive number (AC5)', () => {
+        const client = makeClient(3, (g) => {
+          g.settings = { ...g.settings, maxDrinksOverride: 2 };
+        });
+        const seat = G(client).turnSeatID;
+        play(client, (g, s) => (s === seat ? 'drink' : 'withdraw'), (g) =>
+          (g.pendingEvent === null &&
+            g.pendingChoice === null &&
+            g.players[seat]!.drinksThisPhase >= 2) ||
+          g.phase !== 0,
+        );
+        if (G(client).phase === 0) {
+          const player = G(client).players[seat]!;
+          expect(player.status).not.toBe('partying');
+          // 2, not the tuned cap of 4 -- the override replaced it rather than
+          // sitting alongside it.
+          expect(player.drinksThisPhase).toBe(2);
+        }
+      });
+    });
+
     it('puts the drink on the table before the event, then fills it in', () => {
       const client = makeClient(3, (g) => stack(g, ['pinta'], ['foto']));
       const seat = G(client).turnSeatID;
@@ -2203,6 +2263,14 @@ describe('magaluf gameDef', () => {
       );
       expect(clampSettings({} as never).arrestLasts).toBe('day');
       expect(clampSettings({ arrestLasts: 'phase' } as never).arrestLasts).toBe('phase');
+    });
+
+    it('clamps the max-drinks override, with -1 meaning off rather than invalid', () => {
+      expect(clampSettings({ maxDrinksOverride: 999 } as never).maxDrinksOverride).toBe(20);
+      expect(clampSettings({ maxDrinksOverride: -50 } as never).maxDrinksOverride).toBe(-1);
+      expect(clampSettings({ maxDrinksOverride: -1 } as never).maxDrinksOverride).toBe(-1);
+      expect(clampSettings({} as never).maxDrinksOverride).toBe(-1);
+      expect(clampSettings({ maxDrinksOverride: 0 } as never).maxDrinksOverride).toBe(0);
     });
 
     it('refuses a die that does not exist rather than clamping to the nearest', () => {

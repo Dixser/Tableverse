@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { DAY_IDS, PHASE_IDS } from './cards.js';
-import { PHASE_RULES } from './constants.js';
+import type { PhaseRules } from './constants.js';
 import type { LimitBand } from './limitScale.js';
 import styles from './PhaseHeader.module.css';
 
@@ -12,14 +12,18 @@ export interface PhaseHeaderProps {
   band: LimitBand;
   /** The real limit, or null while it is still face-down for this viewer. */
   limit: number | null;
+  /**
+   * The two numbers that decide when you may leave and when the venue
+   * throws you out -- `phaseRules(G)`, so a host's `maxDrinksOverride`
+   * shows up here rather than the tuned default.
+   */
+  rules: PhaseRules;
 }
 
-export function PhaseHeader({ day, phase, dayMultiplier, band, limit }: PhaseHeaderProps) {
+export function PhaseHeader({ day, phase, dayMultiplier, band, limit, rules }: PhaseHeaderProps) {
   const { t } = useTranslation();
-  // The two numbers that decide when you may leave and when the venue throws
-  // you out. They are printed on the phase table in the rules and were the one
-  // thing a player had to remember rather than read.
-  const rules = PHASE_RULES[PHASE_IDS[phase] ?? 'tardeo'];
+  // Unlimited reads as "no cap" rather than a number the table never sees hit.
+  const maxDisplay = Number.isFinite(rules.maxDrinks) ? rules.maxDrinks : '∞';
 
   return (
     <header className={styles.header}>
@@ -33,7 +37,7 @@ export function PhaseHeader({ day, phase, dayMultiplier, band, limit }: PhaseHea
       >
         <span>{t(`magaluf.phase.${PHASE_IDS[phase]}`)}</span>
         <span className={styles.drinks} data-testid="phase-drinks-chip">
-          ({t('magaluf.board.phaseDrinks', { min: rules.minDrinks, max: rules.maxDrinks })})
+          ({t('magaluf.board.phaseDrinks', { min: rules.minDrinks, max: maxDisplay })})
         </span>
       </span>
 

@@ -79,6 +79,19 @@ export interface MagalufSettings {
   sundayMultiplier: number;
   /** How long an arrest keeps you out. See `ArrestScope`. */
   arrestLasts: ArrestScope;
+  /**
+   * Replaces the tuned per-phase "closing time" cap (4 / 5 / 4) with a
+   * single value applied to every phase.
+   *
+   * `-1` — no override; the tuned caps apply exactly as shipped. `0` —
+   * unlimited: nobody is ever auto-withdrawn for reaching a drink count. A
+   * positive `N` — every phase's cap becomes `N`.
+   *
+   * `-1` rather than `0` for "off" because `0` was asked for explicitly to
+   * mean limitless — overloading it with a second meaning would have made
+   * one of the two unreachable.
+   */
+  maxDrinksOverride: number;
 }
 
 interface NumericRange {
@@ -95,6 +108,9 @@ const RANGES: Record<
   limitMax: { min: LIMIT_BOUNDS.min, max: LIMIT_BOUNDS.max, fallback: DEFAULT_LIMIT_MAX },
   saturdayMultiplier: { min: 1, max: 3, fallback: DAY_VP_MULTIPLIER[1]! },
   sundayMultiplier: { min: 1, max: 4, fallback: DAY_VP_MULTIPLIER[2]! },
+  // -1 is "off" (the tuned caps apply), not a typo to clamp away from — see
+  // the field's doc comment on MagalufSettings.
+  maxDrinksOverride: { min: -1, max: 20, fallback: -1 },
 };
 
 export const DEFAULT_SETTINGS: MagalufSettings = {
@@ -106,6 +122,7 @@ export const DEFAULT_SETTINGS: MagalufSettings = {
   sundayMultiplier: RANGES.sundayMultiplier.fallback,
   // The rule as shipped. A host opts in to the shorter sentence.
   arrestLasts: 'day',
+  maxDrinksOverride: RANGES.maxDrinksOverride.fallback,
 };
 
 function clampNumber(raw: unknown, range: NumericRange): number {
@@ -146,6 +163,9 @@ export function clampSettings(raw: Partial<MagalufSettings> | undefined): Magalu
     arrestLasts: ARREST_SCOPE_OPTIONS.includes(raw?.arrestLasts as ArrestScope)
       ? (raw?.arrestLasts as ArrestScope)
       : DEFAULT_SETTINGS.arrestLasts,
+    maxDrinksOverride: Math.round(
+      clampNumber(raw?.maxDrinksOverride, RANGES.maxDrinksOverride),
+    ),
   };
 }
 
@@ -205,6 +225,14 @@ export const magalufSettingsSchema: JSONSchema = {
       enum: [...ARREST_SCOPE_OPTIONS],
       default: DEFAULT_SETTINGS.arrestLasts,
       title: 'A police raid keeps you out for the rest of the (phase / day)',
+    },
+    maxDrinksOverride: {
+      type: 'number',
+      default: DEFAULT_SETTINGS.maxDrinksOverride,
+      minimum: RANGES.maxDrinksOverride.min,
+      maximum: RANGES.maxDrinksOverride.max,
+      title:
+        'Max drinks per phase override, replacing the built-in 4/5/4 cap (-1 = off/default, 0 = unlimited, N = cap every phase at N)',
     },
   },
 };
