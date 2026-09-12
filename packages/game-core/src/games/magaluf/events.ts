@@ -137,6 +137,18 @@ export function resolveEventOption(
 export { eventOptions };
 
 /**
+ * What a duel pays whoever holds out: the rate printed on the card, once to
+ * open the pot and once more for every drink poured, both sides counted.
+ *
+ * So the first drink raises the stakes too, and a target who backs down at
+ * once hands the challenger exactly the base. Exported for the board, which
+ * shows the pot and what one more drink would make it.
+ */
+export function duelPot(eventId: EventId, drinks: number): number {
+  return (EVENTS[eventId].vp ?? 0) * (drinks + 1);
+}
+
+/**
  * Resolves a card that simply happens to you.
  *
  * A card with `options` never reaches here — `revealPendingEvent` parks it in

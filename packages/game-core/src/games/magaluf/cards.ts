@@ -165,7 +165,12 @@ export type EventId =
   | 'resacon'
   | 'invitacion'
   | 'dobleONada'
-  | 'saltarLaCola';
+  | 'saltarLaCola'
+  // The one card that puts a question to a seat other than the drawer. Three
+  // printings, priced like Barra libre -- see EVENTS.
+  | 'dueloTardeo'
+  | 'dueloNoche'
+  | 'dueloAfter';
 
 /**
  * Every id an option button can carry. Closed, like EventId, so a typo is a
@@ -191,7 +196,8 @@ export type EventOptionId =
   | 'pillarPorro'
   | 'pillarPastis'
   | 'pillarFarlopa'
-  | 'dejarlo';
+  | 'dejarlo'
+  | 'retar';
 
 /**
  * What a card — or one branch of a card — does.
@@ -225,6 +231,12 @@ export interface EventEffects {
   doubles?: boolean;
   /** Loses the next turn. */
   skips?: boolean;
+  /**
+   * Challenges another seat to a duel. The one flag that does not resolve in
+   * `applyCardEffects`: it hands the table to an opponent pick and then to the
+   * `duel` phase, which settle the turn themselves.
+   */
+  duels?: boolean;
 }
 
 export interface EventOption extends EventEffects {
@@ -246,6 +258,13 @@ export interface EventCard extends EventEffects {
    */
   options?: readonly EventOption[];
 }
+
+/**
+ * The question every Duelo asks. `dejarlo` is the Camello's pass, reused: its
+ * label already says nothing happens. `aguantar` is deliberately not reused
+ * for the duel's own "hold out" -- its label carries Vomitona's +2.
+ */
+const DUEL_OPTIONS: readonly EventOption[] = [{ id: 'retar', duels: true }, { id: 'dejarlo' }];
 
 /**
  * Most events are pure data; only the ones with structural behaviour need a
@@ -447,9 +466,33 @@ export const EVENTS: Record<EventId, EventCard> = {
       { id: 'hacerCola' },
     ],
   },
+
+  // --- El duelo ------------------------------------------------------------
+
+  /**
+   * The drawer challenges another seat still in the venue; the two take turns
+   * drinking or backing down, and whoever holds out takes the pot. `vp` is a
+   * rate, as on Barra libre: the pot opens at one rate and every drink poured
+   * adds another -- see `duelPot` in `events.ts`.
+   *
+   * Priced by venue for Barra libre's reason. A duel drink costs more the
+   * later the night gets, so a flat pot would pay an After duel what it pays
+   * a Tardeo one.
+   */
+  dueloTardeo: { id: 'dueloTardeo', vp: 1, options: DUEL_OPTIONS },
+  dueloNoche: { id: 'dueloNoche', vp: 2, options: DUEL_OPTIONS },
+  dueloAfter: { id: 'dueloAfter', vp: 3, options: DUEL_OPTIONS },
 };
 
 /** The branches this card offers, or null when it simply happens to you. */
 export function eventOptions(id: EventId): readonly EventOption[] | null {
   return EVENTS[id].options ?? null;
+}
+
+export type DuelEventId = 'dueloTardeo' | 'dueloNoche' | 'dueloAfter';
+export const DUEL_EVENTS: readonly DuelEventId[] = ['dueloTardeo', 'dueloNoche', 'dueloAfter'];
+
+/** True for any printing of the Duelo. */
+export function isDuelCard(id: EventId): id is DuelEventId {
+  return (DUEL_EVENTS as readonly EventId[]).includes(id);
 }

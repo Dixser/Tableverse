@@ -8,7 +8,13 @@ import type { CardInstance } from './cards.js';
 import { PHASE_RULES } from './constants.js';
 import { HIDDEN_LIMIT } from './gameDef.js';
 import { DEFAULT_SETTINGS } from './settings.js';
-import { newPlayer, type JumpRecord, type MagalufG, type MagalufPlayer } from './state.js';
+import {
+  newPlayer,
+  type JumpRecord,
+  type MagalufG,
+  type MagalufPlayer,
+  type PendingDuel,
+} from './state.js';
 
 const NAMES = { '0': 'Alice', '1': 'Bob', '2': 'Carol' };
 
@@ -43,6 +49,7 @@ function makeG(overrides: Partial<MagalufG> = {}): MagalufG {
     lastDraw: null,
     pendingEvent: null,
     pendingChoice: null,
+    pendingDuel: null,
     cierrabares: null,
     pendingAdvance: null,
     roundConfirm: null,
@@ -74,6 +81,9 @@ function renderBoard(G: MagalufG, playerID: string | null = '0', isActive = true
     useItem: vi.fn(),
     revealEvent: vi.fn(),
     chooseEventOption: vi.fn(),
+    chooseDuelTarget: vi.fn(),
+    duelDrink: vi.fn(),
+    duelFold: vi.fn(),
     revealJump: vi.fn(),
     advanceJump: vi.fn(),
     skipBalcony: vi.fn(),
@@ -614,6 +624,94 @@ describe('MagalufBoard', () => {
       );
       expect(screen.getByTestId('choose-pillarFarlopa')).toHaveTextContent('TEST_take_the_coke');
       expect(screen.getByTestId('choose-dejarlo')).toHaveTextContent('TEST_leave_it');
+    });
+  });
+
+  describe('the duel', () => {
+    // A Noche duel between Alice (0) and Carol (2), waiting on Carol.
+    const duelG = (duel: Partial<PendingDuel> = {}, overrides: Partial<MagalufG> = {}) =>
+      makeG({
+        lastDraw: {
+          seatID: '0',
+          alcohol: card('pinta'),
+          event: card('dueloNoche'),
+          outcome: null,
+          pours: [],
+        },
+        pendingDuel: {
+          challengerID: '0',
+          targetID: '2',
+          toActID: '2',
+          eventId: 'dueloNoche',
+          drinks: 0,
+          overCap: [],
+          endsTurn: true,
+          ...duel,
+        },
+        ...overrides,
+      });
+
+    it('asks the challenger to pick from the seats still in the room', () => {
+      const G = duelG(
+        { targetID: null, toActID: null },
+        { players: { '0': player(), '1': player({ status: 'withdrawn' }), '2': player() } },
+      );
+      const { moves } = renderBoard(G, '0');
+      expect(screen.getByTestId('duel-target-2')).toHaveTextContent('Carol');
+      expect(screen.queryByTestId('duel-target-1')).toBeNull();
+      expect(screen.queryByTestId('duel-target-0')).toBeNull();
+      expect(screen.queryByTestId('action-bar')).toBeNull();
+
+      fireEvent.click(screen.getByTestId('duel-target-2'));
+      expect(moves.chooseDuelTarget).toHaveBeenCalledWith('2');
+    });
+
+    it('tells the rest of the table who is choosing', () => {
+      renderBoard(duelG({ targetID: null, toActID: null }), '1');
+      expect(screen.getByTestId('duel-waiting-target')).toHaveTextContent('TEST_duel_choosing Alice');
+      expect(screen.queryByTestId(/^duel-target-/)).toBeNull();
+    });
+
+    it('shows both duelists, the pot, and what one more drink makes it', () => {
+      renderBoard(duelG({ drinks: 3, toActID: '0' }), '1');
+      expect(screen.getByTestId('duel-vs')).toHaveTextContent('TEST_duel Alice Carol');
+      // Noche pays 2 to open and 2 a drink: 2 × (3 + 1), then 2 × (4 + 1).
+      expect(screen.getByTestId('duel-pot')).toHaveTextContent('TEST_pot 8');
+      expect(screen.getByTestId('duel-next-pot')).toHaveTextContent('TEST_next_pot 10');
+    });
+
+    it('gives the buttons to the duelist it is waiting on, and only them', () => {
+      const { moves } = renderBoard(duelG(), '2');
+      fireEvent.click(screen.getByTestId('duel-drink'));
+      expect(moves.duelDrink).toHaveBeenCalled();
+      fireEvent.click(screen.getByTestId('duel-fold'));
+      expect(moves.duelFold).toHaveBeenCalled();
+      cleanup();
+
+      // The challenger, a bystander and a spectator all wait -- and the turn
+      // seat's action bar stays away even though it is seat 0's turn.
+      for (const seat of ['0', '1', null]) {
+        renderBoard(duelG(), seat, seat !== null);
+        expect(screen.queryByTestId('duel-drink')).toBeNull();
+        expect(screen.getByTestId('duel-waiting')).toHaveTextContent('TEST_duel_deciding Carol');
+        expect(screen.queryByTestId('action-bar')).toBeNull();
+        cleanup();
+      }
+    });
+
+    it('leaves the result pinned under the Duelo once it is over', () => {
+      renderBoard(
+        makeG({
+          lastDraw: {
+            seatID: '0',
+            alcohol: card('pinta'),
+            event: card('dueloNoche'),
+            outcome: { key: 'magaluf.log.duelResult', params: { actor: '2', n: 3, vp: 8 } },
+            pours: [],
+          },
+        }),
+      );
+      expect(screen.getByTestId('event-outcome')).toHaveTextContent('TEST_duel_result Carol 3 8');
     });
   });
 

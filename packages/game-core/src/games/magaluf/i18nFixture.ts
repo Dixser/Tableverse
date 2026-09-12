@@ -70,6 +70,11 @@ void i18n.use(initReactI18next).init({
               effect: 'TEST_puke_effect',
               flavor: ['TEST_puke_flavor_a'],
             },
+            dueloNoche: {
+              title: 'TEST_duel_card',
+              effect: 'TEST_duel_effect <vp>{{vp}}</vp>',
+              flavor: ['TEST_duel_flavor_a', 'TEST_duel_flavor_b'],
+            },
           },
           eventOption: {
             vomitar: 'TEST_throw_up',
@@ -78,6 +83,7 @@ void i18n.use(initReactI18next).init({
             quedarseAbajo: 'TEST_stay_down',
             pillarFarlopa: 'TEST_take_the_coke',
             dejarlo: 'TEST_leave_it',
+            retar: 'TEST_challenge',
           },
           item: {
             kebab: 'TEST_kebab',
@@ -108,6 +114,8 @@ void i18n.use(initReactI18next).init({
           log: {
             barraLibreResult: 'TEST_open_bar {{actor}} {{n}} {{vp}}',
             remontadaResult: 'TEST_comeback {{winners}} {{n}} {{vp}}',
+            duelResult: 'TEST_duel_result {{actor}} {{n}} {{vp}}',
+            duelNobody: 'TEST_duel_nobody',
           },
           phase: { tardeo: 'TEST_tardeo', noche: 'TEST_noche', after: 'TEST_after' },
           day: { viernes: 'TEST_friday', sabado: 'TEST_saturday', domingo: 'TEST_sunday' },
@@ -162,6 +170,14 @@ void i18n.use(initReactI18next).init({
             eventFaceDown: 'TEST_face_down',
             chooseOption: 'TEST_your_call',
             waitingChoice: 'TEST_deciding {{name}}',
+            duelPickTarget: 'TEST_duel_pick',
+            duelWaitingTarget: 'TEST_duel_choosing {{name}}',
+            duelVs: 'TEST_duel {{challenger}} {{target}}',
+            duelPot: 'TEST_pot {{vp}}',
+            duelNextPot: 'TEST_next_pot {{vp}}',
+            duelDrink: 'TEST_duel_drink',
+            duelFold: 'TEST_duel_fold',
+            duelWaiting: 'TEST_duel_deciding {{name}}',
           },
         },
       },

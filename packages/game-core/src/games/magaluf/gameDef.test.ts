@@ -109,6 +109,31 @@ function watchBalcony(client: TestClient): boolean {
 }
 
 /**
+ * Plays an open Duelo out, one beat per call: the challenger picks the first
+ * seat still in the room, and the duelists drink until two drinks have been
+ * poured, then whoever is next backs down. Returns false when there is no duel.
+ *
+ * Every driver needs this for `answerChoice`'s reason: while a duel is open
+ * the only moves in the game belong to the seat it is waiting on.
+ */
+function answerDuel(client: TestClient): boolean {
+  const g = G(client);
+  const duel = g.pendingDuel;
+  if (!duel) return false;
+  if (duel.targetID === null) {
+    const target = g.activeSeatIDs.find(
+      (id) => id !== duel.challengerID && g.players[id]!.status === 'partying',
+    )!;
+    actAs(client, duel.challengerID).chooseDuelTarget!(target);
+  } else if (duel.drinks < 2) {
+    actAs(client, duel.toActID!).duelDrink!();
+  } else {
+    actAs(client, duel.toActID!).duelFold!();
+  }
+  return true;
+}
+
+/**
  * Drives the table until `stop` is true, or the weekend ends.
  *
  * Clears round-confirm gates and balconies automatically. Tests that care about
@@ -134,6 +159,8 @@ function play(
       answerChoice(client, pickOption);
       continue;
     }
+
+    if (answerDuel(client)) continue;
 
     if (watchBalcony(client)) continue;
 
@@ -186,6 +213,7 @@ function playToGate(
       answerChoice(client, pickOption);
       continue;
     }
+    if (answerDuel(client)) continue;
     if (watchBalcony(client)) continue;
     const seat = g.turnSeatID;
     actAs(client, seat)[choose(g, seat)]!();
@@ -1248,6 +1276,307 @@ describe('magaluf gameDef', () => {
       expect(drew).toBeGreaterThan(-1);
       expect(chose).toBeGreaterThan(drew);
       expect(G(client).log[chose]!.params?.descriptionKey).toBe('magaluf.eventOption.vomitar');
+    });
+  });
+
+  describe('the duel', () => {
+    /**
+     * Draws a stacked Duelo on seat 0's drink and stops at the question.
+     *
+     * Canas all the way down, so every duel drink is a known 1 VP and 1
+     * intoxication and the pot is the only number moving.
+     */
+    function drawDuel(
+      eventId: EventId = 'dueloTardeo',
+      setup: (g: MagalufG) => void = () => {},
+      numPlayers = 3,
+    ): TestClient {
+      const client = makeClient(numPlayers, (g) => {
+        stack(g, Array<string>(12).fill('cana'), [eventId]);
+        g.turnSeatID = '0';
+        setup(g);
+      });
+      drinkAndReveal(client, '0');
+      return client;
+    }
+
+    /** Draws a Duelo, challenges `target`, and stops with the duel open. */
+    function openDuel(
+      target: string,
+      eventId: EventId = 'dueloTardeo',
+      setup: (g: MagalufG) => void = () => {},
+      numPlayers = 3,
+    ): TestClient {
+      const client = drawDuel(eventId, setup, numPlayers);
+      actAs(client, '0').chooseEventOption!(0); // retar
+      actAs(client, '0').chooseDuelTarget!(target);
+      return client;
+    }
+
+    const phaseOf = (client: TestClient) => client.store.getState().ctx.phase;
+
+    it('has no effect with nobody left to challenge (AC1)', () => {
+      const client = drawDuel('dueloTardeo', (g) => {
+        g.players['1']!.status = 'withdrawn';
+        g.players['2']!.status = 'withdrawn';
+      });
+      const g = G(client);
+      expect(g.pendingChoice).toBeNull();
+      expect(g.pendingDuel).toBeNull();
+      // A rule on the card, not a card that silently did nothing.
+      expect(g.lastDraw?.outcome?.key).toBe('magaluf.log.duelNobody');
+    });
+
+    it('asks the drawer to challenge or leave it, and leaving it does nothing (AC2)', () => {
+      const client = drawDuel();
+      expect(G(client).pendingChoice).toEqual({ seatID: '0', eventId: 'dueloTardeo', endsTurn: true });
+      expect(eventOptions('dueloTardeo')!.map((o) => o.id)).toEqual(['retar', 'dejarlo']);
+
+      actAs(client, '0').chooseEventOption!(1);
+      expect(G(client).pendingDuel).toBeNull();
+      expect(G(client).turnSeatID).not.toBe('0');
+      expect(G(client).players['0']!.roundVP).toBe(ALCOHOL.cana!.vp);
+    });
+
+    it('parks an opponent pick only the drawer can answer, with a seat still in the room (AC3)', () => {
+      const client = drawDuel('dueloTardeo', (g) => {
+        g.players['1']!.status = 'withdrawn';
+      });
+      actAs(client, '0').chooseEventOption!(0);
+      expect(G(client).pendingDuel).toMatchObject({ challengerID: '0', targetID: null });
+      expect(phaseOf(client)).toBe('party');
+
+      actAs(client, '2').chooseDuelTarget!('2'); // not the drawer
+      actAs(client, '0').chooseDuelTarget!('0'); // yourself
+      actAs(client, '0').chooseDuelTarget!('1'); // gone home
+      actAs(client, '0').chooseDuelTarget!('7'); // nobody
+      expect(G(client).pendingDuel?.targetID).toBeNull();
+
+      // Nothing else is playable while the pick is owed.
+      actAs(client, '0').drink!();
+      expect(G(client).players['0']!.drinksThisPhase).toBe(1);
+
+      actAs(client, '0').chooseDuelTarget!('2');
+      expect(G(client).pendingDuel).toMatchObject({ targetID: '2', toActID: '2', drinks: 0 });
+      expect(phaseOf(client)).toBe('duel');
+    });
+
+    it('lets only the duelist it is waiting on move, target first (AC4)', () => {
+      const client = openDuel('2');
+      actAs(client, '0').duelDrink!(); // the challenger, out of turn
+      actAs(client, '1').duelDrink!(); // not in the duel
+      actAs(client, '1').duelFold!();
+      expect(G(client).pendingDuel).toMatchObject({ toActID: '2', drinks: 0 });
+
+      actAs(client, '2').duelDrink!();
+      expect(G(client).pendingDuel).toMatchObject({ toActID: '0', drinks: 1 });
+      actAs(client, '2').duelDrink!(); // no longer theirs
+      expect(G(client).pendingDuel?.drinks).toBe(1);
+    });
+
+    it('pours a duel drink like any card-poured drink, and draws no event (AC5)', () => {
+      const client = openDuel('2');
+      const eventsLeft = G(client).eventDeck.length;
+      actAs(client, '2').duelDrink!();
+
+      const g = G(client);
+      expect(g.players['2']!.drinksThisPhase).toBe(1);
+      expect(g.players['2']!.intox).toBe(ALCOHOL.cana!.intox);
+      expect(g.players['2']!.roundVP).toBe(ALCOHOL.cana!.vp);
+      expect(g.lastDraw?.pours).toEqual([
+        { seatID: '2', alcohol: expect.objectContaining({ id: 'cana' }), intox: 1, vp: 1 },
+      ]);
+      expect(g.eventDeck.length).toBe(eventsLeft);
+      expect(g.pendingEvent).toBeNull();
+    });
+
+    it('pays whoever holds out the rate once, plus once per drink poured (AC6)', () => {
+      const client = openDuel('2', 'dueloNoche');
+      actAs(client, '2').duelDrink!();
+      actAs(client, '0').duelDrink!();
+      actAs(client, '2').duelDrink!();
+      const before = G(client).players['2']!;
+      actAs(client, '0').duelFold!();
+
+      const g = G(client);
+      // Noche's rate is 2: 2 × (3 drinks + 1).
+      expect(g.players['2']!.roundVP).toBe(before.roundVP + 8);
+      // Round pool, not the bank: it rides on tonight's limit check.
+      expect(g.players['2']!.bankedVP).toBe(before.bankedVP);
+      expect(g.lastDraw?.outcome).toEqual({
+        key: 'magaluf.log.duelResult',
+        params: { actor: '2', n: 3, vp: 8 },
+      });
+      expect(g.pendingDuel).toBeNull();
+      expect(phaseOf(client)).toBe('party');
+    });
+
+    it('hands the challenger exactly the rate when the target backs down at once (AC6)', () => {
+      for (const [eventId, rate] of [
+        ['dueloTardeo', 1],
+        ['dueloNoche', 2],
+        ['dueloAfter', 3],
+      ] as const) {
+        const client = openDuel('2', eventId);
+        const before = G(client).players['0']!.roundVP;
+        actAs(client, '2').duelFold!();
+        expect(G(client).players['0']!.roundVP).toBe(before + rate);
+        expect(G(client).players['2']!.roundVP).toBe(0);
+      }
+    });
+
+    it('doubles the first duel drink of a duelist who armed a Pastis before it (AC7)', () => {
+      const client = openDuel('2', 'dueloTardeo', (g) => {
+        g.players['2']!.pastisArmed = true;
+      });
+      actAs(client, '2').duelDrink!();
+      actAs(client, '0').duelDrink!();
+      actAs(client, '2').duelDrink!();
+
+      const target = G(client).players['2']!;
+      // The first one doubled, the second at face value, the Pastis spent.
+      expect(target.roundVP).toBe(ALCOHOL.cana!.vp * 2 + ALCOHOL.cana!.vp);
+      expect(target.pastisArmed).toBe(false);
+    });
+
+    it('lets duelists drink past the cap and sends them home at the end, in the order they got there (AC8)', () => {
+      const cap = PHASE_RULES.tardeo.maxDrinks;
+      // After the drink that drew the card, both duelists are one short of the
+      // cap. The target drinks first and so gets there first -- and sits in a
+      // higher seat, so a sweep in seat order would send the challenger first.
+      const client = openDuel('2', 'dueloTardeo', (g) => {
+        g.players['0']!.drinksThisPhase = cap - 2;
+        g.players['2']!.drinksThisPhase = cap - 1;
+      });
+      actAs(client, '2').duelDrink!(); // seat 2 reaches the cap
+      actAs(client, '0').duelDrink!(); // seat 0 reaches it
+      actAs(client, '2').duelDrink!(); // and past it, still in the duel
+      expect(G(client).players['2']!.drinksThisPhase).toBe(cap + 1);
+      expect(G(client).players['2']!.status).toBe('partying');
+      expect(G(client).pendingDuel?.overCap).toEqual(['2', '0']);
+
+      actAs(client, '0').duelFold!();
+      const g = G(client);
+      expect(g.players['0']!.status).toBe('withdrawn');
+      expect(g.players['2']!.status).toBe('withdrawn');
+      expect(g.players['2']!.withdrawSeq).toBeLessThan(g.players['0']!.withdrawSeq);
+      // The one seat still in the room is up.
+      expect(g.turnSeatID).toBe('1');
+      expect(phaseOf(client)).toBe('party');
+    });
+
+    it('counts a duelist already at the cap when the duel opens as first there (AC8)', () => {
+      const cap = PHASE_RULES.tardeo.maxDrinks;
+      // The drawer's last permitted drink is the one that turned up the Duelo.
+      // The target reaches the cap later, in the duel -- but a sweep that only
+      // knew about cap-crossings *during* the duel would send them home first.
+      const client = openDuel('1', 'dueloTardeo', (g) => {
+        g.players['0']!.drinksThisPhase = cap - 1;
+        g.players['1']!.drinksThisPhase = cap - 1;
+      });
+      expect(G(client).pendingDuel?.overCap).toEqual(['0']);
+
+      actAs(client, '1').duelDrink!();
+      actAs(client, '0').duelFold!();
+      const g = G(client);
+      expect(g.players['0']!.withdrawSeq).toBeLessThan(g.players['1']!.withdrawSeq);
+    });
+
+    it('allows no items, from the opponent pick to the last drink (AC9)', () => {
+      const client = drawDuel('dueloTardeo', (g) => {
+        g.players['0']!.items = ['kebab'];
+        g.players['2']!.items = ['kebab'];
+      });
+      actAs(client, '0').chooseEventOption!(0);
+      actAs(client, '0').useItem!('kebab');
+      expect(G(client).players['0']!.items).toEqual(['kebab']);
+
+      actAs(client, '0').chooseDuelTarget!('2');
+      actAs(client, '2').useItem!('kebab');
+      actAs(client, '0').useItem!('kebab');
+      expect(G(client).players['2']!.items).toEqual(['kebab']);
+      expect(G(client).players['0']!.items).toEqual(['kebab']);
+    });
+
+    it('reshuffles the discard when the deck runs dry mid-duel (AC10)', () => {
+      const client = openDuel('2', 'dueloTardeo', (g) => {
+        // One card for the drink that draws the Duelo, then nothing: the duel's
+        // own drinks have to come out of the discard.
+        g.alcoholDeck = instances(['cana']);
+        g.alcoholDiscard = instances(['pinta', 'pinta']);
+      });
+      expect(G(client).alcoholDeck).toHaveLength(0);
+
+      actAs(client, '2').duelDrink!();
+      const g = G(client);
+      expect(g.log.some((e) => e.key === 'magaluf.log.reshuffledAlcohol')).toBe(true);
+      expect(g.players['2']!.drinksThisPhase).toBe(1);
+      expect(g.pendingDuel?.drinks).toBe(1);
+    });
+
+    it('hands the turn on after a duel that came off an ordinary drink (AC11)', () => {
+      const client = openDuel('2');
+      actAs(client, '2').duelFold!();
+      expect(phaseOf(client)).toBe('party');
+      expect(G(client).turnSeatID).toBe('1');
+    });
+
+    it('leaves the drawer their own action after a duel off a Farlopa draw (AC11)', () => {
+      const client = makeClient(3, (g) => {
+        stack(g, Array<string>(8).fill('cana'), ['dueloTardeo']);
+        g.turnSeatID = '0';
+        g.players['0']!.items = ['farlopa'];
+      });
+      actAs(client, '0').useItem!('farlopa');
+      actAs(client, '0').revealEvent!();
+      expect(G(client).pendingChoice?.endsTurn).toBe(false);
+
+      actAs(client, '0').chooseEventOption!(0);
+      actAs(client, '0').chooseDuelTarget!('1');
+      actAs(client, '1').duelFold!();
+      expect(phaseOf(client)).toBe('party');
+      expect(G(client).turnSeatID).toBe('0');
+
+      // And they really can still act.
+      actAs(client, '0').drink!();
+      expect(G(client).players['0']!.drinksThisPhase).toBe(2);
+    });
+
+    it('closes the venue when the sweep sends the last two home (AC11)', () => {
+      const cap = PHASE_RULES.tardeo.maxDrinks;
+      const client = openDuel(
+        '1',
+        'dueloTardeo',
+        (g) => {
+          g.players['0']!.drinksThisPhase = cap - 2;
+          g.players['1']!.drinksThisPhase = cap - 1;
+        },
+        2,
+      );
+      actAs(client, '1').duelDrink!();
+      actAs(client, '0').duelDrink!();
+      actAs(client, '1').duelFold!();
+
+      const g = G(client);
+      expect(g.players['0']!.status).toBe('withdrawn');
+      expect(g.players['1']!.status).toBe('withdrawn');
+      expect(g.roundConfirm).not.toBeNull();
+      expect(phaseOf(client)).toBe('confirm');
+    });
+
+    it('logs who challenged whom', () => {
+      const client = openDuel('2');
+      const entry = G(client).log.find((e) => e.key === 'magaluf.log.duelChallenge');
+      expect(entry?.params).toEqual({ actor: '0', target: '2' });
+    });
+
+    it('keeps every event deck the size it was (AC12)', () => {
+      const size = (phase: PhaseId) =>
+        Object.values(PHASE_RULES[phase].events).reduce((sum, n) => sum + (n ?? 0), 0);
+      expect(PHASE_IDS.map(size)).toEqual([36, 45, 55]);
+      expect(PHASE_RULES.tardeo.events.dueloTardeo).toBe(1);
+      expect(PHASE_RULES.noche.events.dueloNoche).toBe(2);
+      expect(PHASE_RULES.after.events.dueloAfter).toBe(2);
     });
   });
 

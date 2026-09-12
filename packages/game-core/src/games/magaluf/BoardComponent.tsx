@@ -9,6 +9,7 @@ import { ActionBar } from './ActionBar.js';
 import { BalconyOverlay } from './BalconyOverlay.js';
 import { CierrabaresBanner } from './CierrabaresBanner.js';
 import { DrawnCards } from './DrawnCards.js';
+import { DuelPanel } from './DuelPanel.js';
 import { EventChoicePanel } from './EventChoicePanel.js';
 import { limitRange } from './limitScale.js';
 import { PhaseHeader } from './PhaseHeader.js';
@@ -84,6 +85,13 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
     // your own turn anyway, but stating both keeps the two ideas separate.
     (G.turnSeatID === playerID || owesReveal);
   const me = playerID != null ? G.players[playerID] : undefined;
+  const duel = G.pendingDuel;
+  // Who a challenger may pick: anyone else still in the room.
+  const duelCandidates = duel
+    ? G.activeSeatIDs.filter(
+        (id) => id !== duel.challengerID && G.players[id]?.status === 'partying',
+      )
+    : [];
 
   return (
     <div className={styles.board} data-testid="magaluf-board">
@@ -134,7 +142,22 @@ export const MagalufBoard: React.FC<BoardProps<MagalufG>> = ({
         saying who they are waiting on. Spectators land here too, which is the
         right answer -- they can already read the card in DrawnCards above.
       */}
-      {choice ? (
+      {/*
+        An open Duelo outranks both: the seat it is waiting on is usually not
+        the one whose turn it is, so neither the choice panel nor the action
+        bar can be the right surface for it.
+      */}
+      {duel ? (
+        <DuelPanel
+          duel={duel}
+          candidates={duelCandidates}
+          playerID={playerID ?? null}
+          nameFor={nameFor}
+          onPick={(seatID: string) => moves.chooseDuelTarget?.(seatID)}
+          onDrink={() => moves.duelDrink?.()}
+          onFold={() => moves.duelFold?.()}
+        />
+      ) : choice ? (
         <EventChoicePanel
           options={eventOptions(choice.eventId) ?? []}
           chooserName={nameFor(choice.seatID)}

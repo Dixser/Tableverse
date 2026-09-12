@@ -16,14 +16,13 @@ and done properly.
 Lands as a change to `magaluf-v1`, on the same argument as 034: no recorded
 match exists to corrupt.
 
-### Depends on 042
+### Builds on 042
 
-The pot is priced like Barra libre — 1 / 2 / 3 VP across the venues — and those
-three tiers (`barraLibreTardeo` / `Noche` / `After`) exist only in feature 042's
-working tree; on `main`, `barraLibre` is still one flat card. The duel does not
-need that code, since each Duelo printing carries its own rate, but the deck
-counts below are measured against 042's decks (042 already traded the Tardeo's
-second Ronda for Barra libre). Branch from 042 once it is committed.
+The pot is priced like Barra libre — 1 / 2 / 3 VP across the venues — using the
+three tiers 042 introduced. The duel does not need that code, since each Duelo
+printing carries its own rate, but the deck counts below are measured against
+042's decks (042 had already traded the Tardeo's second Ronda for Barra libre).
+Branched from `main` after 042 merged.
 
 ## The card
 
@@ -77,7 +76,8 @@ The existing chain, two links longer:
 
 The pot opens at the base and every drink adds another base, so each drink
 raises the stakes — including the first. A target who backs down at once hands
-the challenger exactly the base.
+the challenger exactly the base. `duelPot` in `events.ts` is the one place this
+is computed; the board calls it too.
 
 | d | 0 | 1 | 2 | 3 | 4 | 6 | 8 |
 |---|---|---|---|---|---|---|---|
@@ -105,6 +105,9 @@ Consequences that fall out of reusing the ordinary path, all intended:
 - It counts toward `drinksThisPhase` and `totalDrinks`, and so toward
   **Cierrabares**. A duel is now the biggest lever on the bar-closing race;
   accepted.
+- An **armed Pastis doubles the first duel drink** of the duelist who armed it,
+  and is spent doing so. It was armed before the duel — no item is *used*
+  during one — and a Ronda already consumes it the same way.
 - It lands face-up next to the Duelo card in `lastDraw.pours`, so the table
   sees every drink of the duel as a compact `CardTile`.
 - An Agua can come up. It still counts as a drink and still raises the pot.
@@ -122,15 +125,15 @@ seat at or over the cap is sent home (`closingTime`), exactly as `finishTurn`
 would have done at the end of the turn.
 
 The sweep runs **at duel end**, not at turn end, and the two differ: a duel
-that came off a Farlopa's extra draw does not end the turn. So the sweep is
-extracted from `finishTurn` into a helper both call.
+that came off a Farlopa's extra draw does not end the turn. So the sweep came
+out of `finishTurn` into `sendHomeAtCap`, which both call.
 
 Order matters because `withdrawSeq` decides who opens the next venue
-(`openerAfterLastOut`). `finishTurn` sweeps in `activeSeatIDs` order, which
-would let seat number decide it when both duelists blow the cap — the
-positional tiebreak Rey del guiri and Karaoke were both reworked to remove. So
-seats are sent home **in the order they reached the cap**. A duelist already at
-it when the duel opened counts first; this is common, since the drawer's last
+(`openerAfterLastOut`). A sweep in `activeSeatIDs` order would let seat number
+decide it when both duelists blow the cap — the positional tiebreak Rey del
+guiri and Karaoke were both reworked to remove. So seats are sent home **in the
+order they reached the cap** (`PendingDuel.overCap`). A duelist already at it
+when the duel opened counts first; this is common, since the drawer's last
 permitted drink is exactly the one that can turn up a Duelo.
 
 Written so that it does not depend on the cap existing. A future host setting
@@ -138,8 +141,8 @@ that removes `maxDrinks` leaves the sweep with nothing to do.
 
 ### Items
 
-**No items during a duel.** `useItem` is a `party` move and the duel runs in its
-own phase, so this holds structurally rather than by a check.
+**No items during a duel.** `canAct` refuses `useItem` while the opponent pick
+is owed, and the exchange runs in its own phase, which has no `useItem` at all.
 
 ## Turn machinery
 
@@ -154,7 +157,7 @@ move server-gated to the one seat whose moment it is. The duel copies it.
 
     duel: {
       turn: { activePlayers: ActivePlayers.ALL },
-      moves: { duelDrink, duelFold, abandonDuel },
+      moves: { duelDrink, duelFold },
     }
 
 No `next`: every exit is explicit, like the other two.
@@ -171,7 +174,7 @@ the same seat.
       targetID: string | null;
       /** Whose decision it is. The target answers first. */
       toActID: string | null;
-      eventId: 'dueloTardeo' | 'dueloNoche' | 'dueloAfter';
+      eventId: EventId;
       /** Drinks poured in this duel, both sides. */
       drinks: number;
       /** Seats that reached maxDrinks, in the order they did. */
@@ -180,8 +183,9 @@ the same seat.
       endsTurn: boolean;
     }
 
-`G.pendingDuel: PendingDuel | null`, and `canAct` refuses every `party` move
-while it is set — the same sentence it already says for the other two.
+`G.pendingDuel: PendingDuel | null`, cleared at every venue open, and `canAct`
+refuses every `party` move while it is set — the same sentence it already says
+for the other two.
 
 `chooseEventOption` parks the duel rather than settling when the picked branch
 carries `duels`, mirroring how `revealEvent` already declines to settle while a
@@ -189,43 +193,45 @@ choice is owed.
 
 ### Settling
 
-When the duel ends — a fold, or `abandonDuel`:
+When the duel ends — on a fold — `settleDuel`:
 
-1. Pay the pot (not on `abandonDuel`; see open question 2).
-2. Send `overCap` home, in order.
-3. Clear `G.pendingDuel`.
-4. Hand over exactly as `settleAfterEvent` would have: if `endsTurn`, or the
+1. Sends `overCap` home, in order (`sendHomeAtCap`).
+2. Clears `G.pendingDuel`.
+3. Hands over exactly as `settleAfterEvent` would have: if `endsTurn`, or the
    drawer is at the cap, or the drawer is no longer partying, run `finishTurn`
    and map its result to a phase — `'turn'` → `setPhase('party')`, `'confirm'`,
    `'balcony'` as named, `'finished'` → nothing. Otherwise return to `party`
    with the drawer's action still owed.
 
-`handOver` cannot be reused unchanged: it maps `'turn'` to `endTurn()`, which is
-wrong from inside the duel phase.
+`handOver` cannot be reused unchanged: it maps `'turn'` to `endTurn()`, which
+would end a turn of the duel phase rather than the party's.
 
 ## Board
 
-Two new surfaces. Both replace the `ActionBar`, for the reason
+One `DuelPanel` for both steps. It replaces the `ActionBar`, for the reason
 `EventChoicePanel` gives: while a decision is owed there is exactly one thing
-to do.
+to do. An open duel outranks the choice panel too.
 
-- **Opponent picker** (`party`, while `targetID === null`). The drawer gets one
+- **Opponent pick** (`party`, while `targetID === null`). The drawer gets one
   button per eligible seat; everyone else gets "{{name}} is choosing an
   opponent…".
-- **Duel panel** (`duel` phase, every seat). Challenger vs target, drinks so
-  far, the **current pot and what the next drink raises it to** — the rising
-  stake is the whole card, so it is on screen. The seat that owes the decision
-  gets Drink / Back down; the other duelist and the table get a waiting line.
-  The host additionally gets the abandon control.
+- **Exchange** (`duel` phase, every seat). Challenger vs target, drinks so far,
+  the **current pot and what the next drink raises it to** — the rising stake is
+  the whole card, so it is on screen for everyone. The seat that owes the
+  decision gets Drink / Back down, styled identically on purpose; the other
+  duelist, the table and spectators get a waiting line.
 
-A duelist sent home at duel end is being ejected outside their own turn, which
-happens nowhere else in the game. The `closingTime` log line already names
-them; the panel must not simply vanish from under a player who is watching.
+"Mine" is read from the duel, never from the turn: the seat being asked is
+usually not the seat that is up.
+
+When the duel ends the result stays pinned under the Duelo card (`duelResult`),
+the duel's drinks stay dealt out beside it, and a duelist the sweep sent home
+shows as out on their own panel, with `closingTime` naming them in the feed.
 
 ## Content
 
-Written Spanish first, as 042 set down. Titles and flavour below are **drafts**
-for the author's voice.
+Written Spanish first, as 042 set down. Titles and flavour are **drafts** for
+the author's voice.
 
 | Key | es | en |
 |---|---|---|
@@ -246,15 +252,14 @@ Flavour — one line for the Tardeo, two each for the Noche and After:
 New keys besides the cards:
 
 - `magaluf.log.*` — `duelChallenge` {actor, target}, `duelFold` {actor, n},
-  `duelResult` {actor, n, vp}, `duelNobody`, `duelAbandoned` {actor}. Duel
-  drinks reuse `drank`.
+  `duelResult` {actor, n, vp}, `duelNobody`. Duel drinks reuse `drank`.
 - `magaluf.board.*` — `duelPickTarget`, `duelWaitingTarget` {name}, `duelVs`
   {challenger, target}, `duelPot` {vp}, `duelNextPot` {vp}, `duelDrink`,
-  `duelFold`, `duelWaiting` {name}, `duelAbandon`.
+  `duelFold`, `duelWaiting` {name}. The drink count reuses `board.drinks`.
 
 No artwork ships. `CardArt`'s placeholder names the file it wanted —
-`dueloTardeo01.png`, `dueloNoche01.png`–`02`, `dueloAfter01.png`–`02` — so the
-pictures can land later with no code change.
+`dueloTardeo01.png`, `dueloNoche01.png`–`02`, `dueloAfter01.png`–`02` — and
+`npm run check:card-art` lists them, since it reads `PHASE_RULES` directly.
 
 ## Deck
 
@@ -290,29 +295,32 @@ deck, deliberately — held in check by the hidden limit (12 intox is most of a
 Unprobed. The simulator in `prototypes/magaluf/` does not run 034's rules, let
 alone these. The first dial to turn is the copy count, then the rate.
 
-## Open questions
+## Decisions
 
-1. **Armed Pastis.** A Pastis armed before the duel doubles the next drink, and
-   the next drink may be a duel drink. Recommended: **let it** — it was armed
-   before the duel, not used during it, and a Ronda already consumes it the same
-   way.
-2. **Host escape hatch.** A duelist who closes the tab holds the whole table,
-   as a jumper would on the balcony. The balcony's answer is a host-only skip.
-   But the host may *be* a duelist, and a skip that counted as a fold would let
-   the host award themselves the pot. Recommended: `abandonDuel`, host-only,
-   ends the duel **with no pot paid** — drinks stay drunk, the cap sweep still
-   runs — so the host has nothing to gain by pressing it.
-3. **Deck trades.** The table above is a recommendation, not a tuning.
+Settled with the author before implementation:
+
+1. **Payout** is the total drinks of the duel on top of the base:
+   `rate × (d + 1)`.
+2. **Copies** follow Barra libre: 1 / 2 / 2.
+3. **Drink cap:** duelists may drink past it; anyone over is sent home when the
+   duel ends.
+4. **Cierrabares** counts duel drinks.
+5. **Deck exhaustion** reshuffles the discard and the duel continues.
+6. **Items** cannot be used during a duel.
+7. **Fewer than two seats partying:** the card has no effect.
+8. **Pastis** armed before the duel doubles the first duel drink.
+9. **No escape hatch.** Tableverse is played among friends: a duelist who
+   disconnects is waited for, so there is no host abandon move.
+10. **Deck trades** as the table above.
 
 ## Non-goals / deferred
 
 - **A host setting for `maxDrinks` / unlimited drinks.** Planned separately.
   The duel is written not to depend on it.
+- **Disconnect handling.** See decision 9. The same already holds for a drawer
+  sitting on any choice card.
 - **Ambulancia asking its victim.** The duel phase is the machinery 034 said
   that would need; reusing it is a separate change.
-- **A stalled drawer.** A drawer who disconnects at the opponent picker holds
-  the table, exactly as one at any existing choice card already does. Not the
-  duel's problem to solve alone.
 - **Simulator parity.**
 
 ## Acceptance criteria
@@ -321,23 +329,63 @@ alone these. The first dial to turn is the copy count, then the rate.
   no choice, and pins `duelNobody` to the card.
 - AC2 — Otherwise it parks `retar` / `dejarlo`; `dejarlo` does nothing.
 - AC3 — `retar` parks an opponent pick; only the drawer may answer, and only
-  with another `partying` seat — anything else is `INVALID_MOVE`.
+  with another `partying` seat — anything else is `INVALID_MOVE`, and no other
+  party move is allowed meanwhile.
 - AC4 — Picking enters the `duel` phase with the target to act. Only the seat
   that owes the decision may drink or fold; every other seat is `INVALID_MOVE`.
 - AC5 — A duel drink pours one alcohol card, draws no event, counts toward
   `drinksThisPhase`, and appears in `lastDraw.pours`.
 - AC6 — Folding pays the other duelist `rate × (d + 1)` into the round pool and
   pins `duelResult` to the card. A fold at `d = 0` pays exactly the rate.
-- AC7 — Duelists may pass `maxDrinks`; at duel end every seat at or over it is
-  sent home, in the order they reached it.
-- AC8 — No item can be used during a duel.
-- AC9 — An empty alcohol deck mid-duel reshuffles its discard and the duel
+- AC7 — An armed Pastis doubles the first duel drink of the duelist who armed
+  it, and only that one.
+- AC8 — Duelists may pass `maxDrinks`; at duel end every seat at or over it is
+  sent home, in the order they reached it — a duelist already at it when the
+  duel opened first.
+- AC9 — No item can be used during a duel, from the pick to the last drink.
+- AC10 — An empty alcohol deck mid-duel reshuffles its discard and the duel
   continues.
-- AC10 — Duel end hands the turn on exactly as the drink that started it would
+- AC11 — Duel end hands the turn on exactly as the drink that started it would
   have — including a Farlopa draw that keeps the drawer's action, and a venue
   that closes because the sweep emptied it.
-- AC11 — `abandonDuel` is host-only, pays no pot, and still runs the sweep;
-  `hostPlayerID === null` authorizes nobody.
 - AC12 — Event deck totals stay 36 / 45 / 55.
 - AC13 — Every new key exists in `en` and `es`, with one flavour line for
   `dueloTardeo` and two each for `dueloNoche` and `dueloAfter`.
+
+## Verification
+
+885 tests in `game-core` (863 before: 17 engine tests in *the duel*, 5 board
+tests), 259 client, 24 shared; `typecheck` clean in every workspace. `lint`
+reports one warning in the Magaluf folder, `dayMultiplier` unused in
+`PhaseHeader.tsx`, which is on `main` and untouched here.
+
+Fifteen mutations, fifteen caught, each against the Magaluf engine, board and
+i18n tests: the pot paying `rate × d`; the sweep going by seat order; the duel
+skipping its ordered sweep; `overCap` ignoring a duelist already at the cap;
+a Duelo with nobody to challenge still asking; party moves allowed during the
+pick; `retar` settling like a pass; the challenger answering first; the
+question never passing over; the folder taking the pot; a Farlopa duel ending
+the turn; the Noche printed at the Tardeo rate; a third After copy with no
+flavour line; the buttons going to the challenger; the picker offering seats
+that went home. Planning the list is what exposed the missing
+already-at-the-cap test, which was added before the run.
+
+Checked in the running app with two players in separate browser sessions. The
+table was advanced with scripted clicks until Beto drew **Duelo al amanecer**
+in Friday's After; the pick, the drink and the fold were real clicks:
+
+- Beto's panel asked "¿A quién retas?" offering only Ana; Ana's read "Beto está
+  eligiendo rival…". The feed logged "Beto reta a Ana a un duelo."
+- Ana, the target, got the buttons first: "0 copas · Bote: 3 PV · Una copa más
+  y sube a 6 PV". Beto saw the same numbers and "Ana está decidiendo si bebe…".
+- Ana drank a Jäger, dealt out beside the Duelo; the question passed to Beto at
+  "1 copa · Bote: 6 PV · … sube a 9 PV".
+- Beto backed down. Ana's at-risk points went 41 → 47, the panel closed, the
+  card read "Duelo: Ana aguanta y se lleva +6 PV. Copas en el duelo: 1.", and
+  Ana's action bar came back — the Duelo came off Beto's own drink, so the turn
+  moved on.
+
+No new console errors. The console does show a pre-existing duplicate-key
+warning from `ChatPanel`, which keys log rows by `key + observed time` and so
+collides whenever one update adds the same log key twice — a Ronda already does
+it. Logged as a separate task rather than fixed here.

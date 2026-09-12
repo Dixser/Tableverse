@@ -26,7 +26,7 @@ quickest place to read the answer: `magaluf.<kind>.<id>.flavor` in
 `packages/client/src/i18n/locales/es.json` has exactly one entry per printing.
 
 Highest counts today: `cubata` 7, `cana` 6, `tinto`/`gintonic` 5,
-`chupitoCasa` 4.
+and no event card past 3.
 
 ## What is still missing
 

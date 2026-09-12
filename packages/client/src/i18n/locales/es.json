@@ -1067,6 +1067,29 @@
           "Hay un fiestón empezando en otro sitio y sales ya.",
           "Conoces al de la puerta. Dice que ahora o nada."
         ]
+      },
+      "dueloTardeo": {
+        "title": "Duelo en el chiringuito",
+        "effect": "Elige: retar a alguien a un duelo de copas, o dejarlo. Quien aguante se lleva <vp>{{vp}} PV</vp>, más <vp>{{vp}} PV</vp> por cada copa del duelo.",
+        "flavor": [
+          "El primero que pida agua paga la ronda."
+        ]
+      },
+      "dueloNoche": {
+        "title": "Duelo en la barra",
+        "effect": "Elige: retar a alguien a un duelo de copas, o dejarlo. Quien aguante se lleva <vp>{{vp}} PV</vp>, más <vp>{{vp}} PV</vp> por cada copa del duelo.",
+        "flavor": [
+          "Nadie se acuerda de por qué empezó. Nadie va a ceder.",
+          "El camarero ya ha dejado de preguntar."
+        ]
+      },
+      "dueloAfter": {
+        "title": "Duelo al amanecer",
+        "effect": "Elige: retar a alguien a un duelo de copas, o dejarlo. Quien aguante se lleva <vp>{{vp}} PV</vp>, más <vp>{{vp}} PV</vp> por cada copa del duelo.",
+        "flavor": [
+          "Sale el sol, y solo uno de los dos lo va a ver.",
+          "A diez pasos. Con vasos."
+        ]
       }
     },
     "eventOption": {
@@ -1089,7 +1112,8 @@
       "pillarPorro": "Pillarlo — te llevas un Porro (contrabando)",
       "pillarPastis": "Pillarlo — te llevas Pastis (contrabando)",
       "pillarFarlopa": "Pillarla — te llevas Farlopa (contrabando)",
-      "dejarlo": "Dejarlo — no pasa nada"
+      "dejarlo": "Dejarlo — no pasa nada",
+      "retar": "Retar — eliges a quién"
     },
     "log": {
       "dayStart": "Empieza el día:",
@@ -1107,6 +1131,10 @@
       "cierrabaresNobody": "Nadie cierra el bar — empate a copas.",
       "choseOption": "{{actor}} decide:",
       "barraLibreResult": "Barra libre: {{actor}} lleva {{n}} copas en esta fase y se lleva +{{vp}} PV.",
+      "duelChallenge": "{{actor}} reta a {{target}} a un duelo.",
+      "duelFold": "{{actor}} se raja.",
+      "duelResult": "Duelo: {{actor}} aguanta y se lleva +{{vp}} PV. Copas en el duelo: {{n}}.",
+      "duelNobody": "Duelo: no queda nadie en el local a quien retar.",
       "karaokeResult": "{{actor}} coge el micro: +{{vp}} PV.",
       "karaokeDrunkest": "{{actor}} coge el micro siendo el más borracho de la mesa — doble: +{{vp}} PV.",
       "colectaResult": "La colecta: {{winners}} va último, +{{vp}} PV al banco.",
@@ -1179,7 +1207,15 @@
       "revealEvent": "Revelar evento",
       "eventFaceDown": "Evento boca abajo",
       "chooseOption": "Tú decides:",
-      "waitingChoice": "{{name}} está decidiendo…"
+      "waitingChoice": "{{name}} está decidiendo…",
+      "duelPickTarget": "¿A quién retas?",
+      "duelWaitingTarget": "{{name}} está eligiendo rival…",
+      "duelVs": "{{challenger}} contra {{target}}",
+      "duelPot": "Bote: {{vp}} PV",
+      "duelNextPot": "Una copa más y sube a {{vp}} PV",
+      "duelDrink": "Beber — una copa más, sin evento",
+      "duelFold": "Rajarse — el otro se lleva el bote",
+      "duelWaiting": "{{name}} está decidiendo si bebe…"
     }
   }
 }

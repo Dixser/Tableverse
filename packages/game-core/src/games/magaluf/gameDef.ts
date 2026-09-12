@@ -2,8 +2,8 @@
  * Magaluf — turn, venue, day and weekend orchestration.
  *
  * **Naming, because two things are called a phase.** `G.phase` is the *venue*
- * — Tardeo, Noche, After. A boardgame.io phase is `party`, `balcony` or
- * `confirm`. They are not the same axis and the code never conflates them.
+ * — Tardeo, Noche, After. A boardgame.io phase is `party`, `duel`,
+ * `balcony` or `confirm`. They are not the same axis and the code never conflates them.
  *
  * Feature 032 shipped with no boardgame.io phase machinery at all: every
  * transition happened inside the move that caused it. **Feature 033 reversed
@@ -37,16 +37,16 @@ import {
 // ESM resolution. See vendor.ts.
 import { ActivePlayers, INVALID_MOVE } from '../../vendor.js';
 import type { EventId, ItemId } from './cards.js';
-import { DAY_IDS, ITEM_IDS, PHASE_IDS } from './cards.js';
+import { DAY_IDS, isDuelCard, ITEM_IDS, PHASE_IDS } from './cards.js';
 import { ITEM_EFFECTS, PHASE_RULES } from './constants.js';
 import { resolveJump } from './balconing.js';
-import { eventOptions, resolveEvent, resolveEventOption } from './events.js';
+import { duelPot, eventOptions, resolveEvent, resolveEventOption } from './events.js';
 import type { Rng, BoardgameRandom } from './rng.js';
 import { fromBoardgameRandom } from './rng.js';
 import type { MagalufSettings } from './settings.js';
 import { clampSettings, dayMultipliers } from './settings.js';
 import { buildLimitDeck, limitRange } from './limitScale.js';
-import type { JumpRecord, MagalufG, MagalufPlayer, PendingAdvance } from './state.js';
+import type { JumpRecord, MagalufG, MagalufPlayer, PendingAdvance, PendingDuel } from './state.js';
 import {
   addIntox,
   addResaca,
@@ -60,9 +60,11 @@ import {
   gainVP,
   leavePhase,
   log,
+  logOutcome,
   newPlayer,
   partying,
   phaseRules,
+  pourDrink,
   removeItem,
 } from './state.js';
 
@@ -252,6 +254,7 @@ function startPhase(G: MagalufG, rng: Rng, phaseIndex: number, opener: number): 
   G.lastDraw = null;
   G.pendingEvent = null;
   G.pendingChoice = null;
+  G.pendingDuel = null;
   // Last venue's Cierrabares comes off the board when this one opens.
   G.cierrabares = null;
 
@@ -528,14 +531,26 @@ function settleNight(G: MagalufG): void {
  */
 type HandOver = 'turn' | 'balcony' | 'confirm' | 'finished';
 
-function finishTurn(G: MagalufG, rng: Rng): HandOver {
+/**
+ * Closing time: everyone still partying who has reached the cap goes home.
+ *
+ * `first` go before the rest, in the order given. A duel pours into two seats
+ * and sends both home together when it ends, and a sweep in seat order would
+ * then decide which of them left last -- which is who opens the next venue.
+ * The duel knows the order they actually reached the cap in, so it says.
+ */
+function sendHomeAtCap(G: MagalufG, first: readonly string[] = []): void {
   const rules = phaseRules(G);
-  for (const id of G.activeSeatIDs) {
+  for (const id of [...first, ...G.activeSeatIDs]) {
     const player = G.players[id]!;
     if (player.status === 'partying' && player.drinksThisPhase >= rules.maxDrinks) {
       leavePhase(G, id, 'closingTime');
     }
   }
+}
+
+function finishTurn(G: MagalufG, rng: Rng): HandOver {
+  sendHomeAtCap(G);
 
   if (partying(G).length > 0) {
     advanceTurn(G);
@@ -608,6 +623,13 @@ function revealPendingEvent(G: MagalufG, rng: Rng): void {
     // Logged here rather than in resolveEventOption, so the log reads "drew
     // the card, then picked a branch" in the order it happened at the table.
     log(G, 'event', { actor: pending.seatID, descriptionKey: `magaluf.event.${id}.title` });
+    // A challenge nobody is left to accept is not a question. Settled before
+    // the choice is parked, so the drawer is never offered one, and pinned to
+    // the card so the table reads a rule rather than a card that did nothing.
+    if (isDuelCard(id) && partying(G).length < 2) {
+      logOutcome(G, 'duelNobody');
+      return;
+    }
     G.pendingChoice = { seatID: pending.seatID, eventId: id, endsTurn: pending.endsTurn };
     return;
   }
@@ -678,6 +700,9 @@ function canAct(G: MagalufG, playerID: string): boolean {
     // And so does a face-up one still waiting on its branch. Same argument one
     // step later: an unanswered question is not a free action.
     G.pendingChoice === null &&
+    // And an open Duelo, from the opponent pick to the last drink. The pick is
+    // the only step of it that happens in this phase, and it has its own move.
+    G.pendingDuel === null &&
     G.turnSeatID === playerID &&
     G.players[playerID]?.status === 'partying'
   );
@@ -766,9 +791,145 @@ function chooseEventOption(
 
   G.pendingChoice = null;
   const rng = fromBoardgameRandom(random);
-  resolveEventOption(G, playerID, options[index]!, rng);
+  const option = options[index]!;
+  resolveEventOption(G, playerID, option, rng);
+
+  // A challenge is not finished either. The opponent pick and the duel settle
+  // the turn, in `settleDuel`.
+  if (option.duels) {
+    G.pendingDuel = {
+      challengerID: playerID,
+      targetID: null,
+      toActID: null,
+      eventId: pending.eventId,
+      drinks: 0,
+      overCap: [],
+      endsTurn: pending.endsTurn,
+    };
+    return;
+  }
 
   settleAfterEvent(G, rng, playerID, pending.endsTurn, events);
+}
+
+// ---------------------------------------------------------------------------
+// The duel
+// ---------------------------------------------------------------------------
+
+/**
+ * Names the Duelo's opponent and hands the table over to the duel.
+ *
+ * Still a `party` move: the challenger is the seat that is up, so this step
+ * has the shape of any other choice card. Only what comes after it needs a
+ * seat that is not up, which is what the `duel` phase is for.
+ */
+function chooseDuelTarget(
+  { G, playerID, events }: MoveCtx,
+  targetID: string,
+): typeof INVALID_MOVE | void {
+  const duel = G.pendingDuel;
+  if (G.finished || !duel || duel.targetID !== null || duel.challengerID !== playerID) {
+    return INVALID_MOVE;
+  }
+  // Somebody else, and somebody still in the room.
+  if (targetID === playerID || !partying(G).includes(targetID)) return INVALID_MOVE;
+
+  const cap = phaseRules(G).maxDrinks;
+  G.pendingDuel = {
+    ...duel,
+    targetID,
+    toActID: targetID,
+    // A duelist can already be at the cap when the duel opens -- the drawer's
+    // last permitted drink is exactly the one that can turn up a Duelo -- and
+    // then they got there first.
+    overCap: [playerID, targetID].filter((id) => G.players[id]!.drinksThisPhase >= cap),
+  };
+  log(G, 'duelChallenge', { actor: playerID, target: targetID }, 'special');
+  events.setPhase('duel');
+}
+
+/** The other seat in the duel. */
+function opponentOf(duel: PendingDuel, seatID: string): string {
+  return seatID === duel.challengerID ? duel.targetID! : duel.challengerID;
+}
+
+/** True when `playerID` is the duelist the duel is waiting on. */
+function owesDuel(G: MagalufG, playerID: string): boolean {
+  return !G.finished && G.pendingDuel?.targetID != null && G.pendingDuel.toActID === playerID;
+}
+
+/**
+ * One more drink, and the question passes to the other duelist.
+ *
+ * `drawAlcohol` + `pourDrink`, the pair every card-poured drink uses, so it
+ * counts toward Cierrabares, spends an armed Pastis and lands face-up beside
+ * the Duelo. Never an event: an event that drew an event would chain.
+ */
+function duelDrink({ G, playerID, random }: MoveCtx): typeof INVALID_MOVE | void {
+  if (!owesDuel(G, playerID)) return INVALID_MOVE;
+  const duel = G.pendingDuel!;
+  // Cannot come back empty: every drawn card goes to the discard and an empty
+  // deck reshuffles it. Refused rather than settled if it ever did, so the way
+  // out is still the fold.
+  const drawn = drawAlcohol(G, fromBoardgameRandom(random));
+  if (!drawn) return INVALID_MOVE;
+  pourDrink(G, playerID, drawn);
+
+  const reachedCap =
+    !duel.overCap.includes(playerID) &&
+    G.players[playerID]!.drinksThisPhase >= phaseRules(G).maxDrinks;
+  G.pendingDuel = {
+    ...duel,
+    drinks: duel.drinks + 1,
+    toActID: opponentOf(duel, playerID),
+    overCap: reachedCap ? [...duel.overCap, playerID] : duel.overCap,
+  };
+}
+
+/** Backs down. The other duelist takes the pot, and the duel is over. */
+function duelFold({ G, playerID, random, events }: MoveCtx): typeof INVALID_MOVE | void {
+  if (!owesDuel(G, playerID)) return INVALID_MOVE;
+  const duel = G.pendingDuel!;
+  const winnerID = opponentOf(duel, playerID);
+  const vp = duelPot(duel.eventId, duel.drinks);
+
+  log(G, 'duelFold', { actor: playerID, n: duel.drinks }, 'failure');
+  // Into the round pool, not the bank: earned tonight, so it rides on
+  // tonight's limit check like Barra libre and Cierrabares.
+  gainVP(G.players[winnerID]!, vp);
+  logOutcome(G, 'duelResult', { actor: winnerID, n: duel.drinks, vp }, 'success');
+
+  settleDuel(G, fromBoardgameRandom(random), events);
+}
+
+/**
+ * Closes the duel and hands the table back.
+ *
+ * `settleAfterEvent` again, with two differences. The cap sweep runs here, in
+ * the order the duelists reached the cap, even when the turn is not ending --
+ * a duel off a Farlopa's extra draw leaves the drawer their own action. And
+ * every exit is a phase change, because `handOver`'s `endTurn()` would end a
+ * turn of the duel rather than the party's. Going back to `party` resumes
+ * whoever `G.turnSeatID` names: `turnOrder.first` reads it.
+ */
+function settleDuel(G: MagalufG, rng: Rng, events: MoveCtx['events']): void {
+  const duel = G.pendingDuel!;
+  G.pendingDuel = null;
+  sendHomeAtCap(G, duel.overCap);
+
+  const drawer = G.players[duel.challengerID]!;
+  const atCap = drawer.drinksThisPhase >= phaseRules(G).maxDrinks;
+  const left = drawer.status !== 'partying';
+  if (!duel.endsTurn && !atCap && !left) {
+    events.setPhase('party');
+    return;
+  }
+
+  const next = finishTurn(G, rng);
+  if (next === 'turn') events.setPhase('party');
+  else if (next === 'balcony') events.setPhase('balcony');
+  else if (next === 'confirm') events.setPhase('confirm');
+  // 'finished' needs nothing: the top-level endIf ends the match.
 }
 
 function withdraw({ G, playerID, random, events }: MoveCtx): typeof INVALID_MOVE | void {
@@ -1013,6 +1174,7 @@ export const magalufGameDef: Game<MagalufG, Record<string, unknown>, MagalufSetu
       lastDraw: null,
       pendingEvent: null,
       pendingChoice: null,
+      pendingDuel: null,
       cierrabares: null,
       pendingAdvance: null,
       roundConfirm: null,
@@ -1035,7 +1197,7 @@ export const magalufGameDef: Game<MagalufG, Record<string, unknown>, MagalufSetu
     party: {
       start: true,
       turn: { order: turnOrder },
-      moves: { drink, revealEvent, chooseEventOption, withdraw, useItem },
+      moves: { drink, revealEvent, chooseEventOption, chooseDuelTarget, withdraw, useItem },
       onBegin: ({ G, events }) => {
         // A venue nobody can attend -- everyone arrested, or dead -- closes on
         // arrival and ends the night on the spot. Bouncing straight back keeps
@@ -1045,6 +1207,15 @@ export const magalufGameDef: Game<MagalufG, Record<string, unknown>, MagalufSetu
         if (G.balcony) events.setPhase('balcony');
         else if (G.roundConfirm) events.setPhase('confirm');
       },
+    },
+
+    // A Duelo, fought out. ActivePlayers.ALL for the balcony's reason: the
+    // target is almost never the seat that is up, and in `party` only that
+    // seat may move at all. Each move is gated to the duelist it is waiting
+    // on, and every exit is explicit -- see settleDuel.
+    duel: {
+      turn: { activePlayers: ActivePlayers.ALL },
+      moves: { duelDrink, duelFold },
     },
 
     // The night's jumps, watched together. ActivePlayers.ALL because the seat

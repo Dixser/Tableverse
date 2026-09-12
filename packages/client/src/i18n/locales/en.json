@@ -1067,6 +1067,29 @@
           "A big night is starting elsewhere and you would go now.",
           "You know the doorman. He says now or not at all."
         ]
+      },
+      "dueloTardeo": {
+        "title": "Beach bar duel",
+        "effect": "Choose: challenge someone to a drinking duel, or leave it. Whoever holds out takes <vp>{{vp}} VP</vp>, plus <vp>{{vp}} VP</vp> for every drink in the duel.",
+        "flavor": [
+          "First one to order water buys the round."
+        ]
+      },
+      "dueloNoche": {
+        "title": "Duel at the bar",
+        "effect": "Choose: challenge someone to a drinking duel, or leave it. Whoever holds out takes <vp>{{vp}} VP</vp>, plus <vp>{{vp}} VP</vp> for every drink in the duel.",
+        "flavor": [
+          "Nobody remembers how it started. Nobody's backing down.",
+          "The barman has stopped asking."
+        ]
+      },
+      "dueloAfter": {
+        "title": "Duel at dawn",
+        "effect": "Choose: challenge someone to a drinking duel, or leave it. Whoever holds out takes <vp>{{vp}} VP</vp>, plus <vp>{{vp}} VP</vp> for every drink in the duel.",
+        "flavor": [
+          "The sun's coming up, and only one of you is going to see it.",
+          "Ten paces. With glasses."
+        ]
       }
     },
     "eventOption": {
@@ -1089,7 +1112,8 @@
       "pillarPorro": "Take it — you pick up a Joint (contraband)",
       "pillarPastis": "Take it — you pick up MDMA (contraband)",
       "pillarFarlopa": "Take it — you pick up Cocaine (contraband)",
-      "dejarlo": "Leave it — nothing happens"
+      "dejarlo": "Leave it — nothing happens",
+      "retar": "Challenge — pick an opponent"
     },
     "log": {
       "dayStart": "A new day begins:",
@@ -1107,6 +1131,10 @@
       "cierrabaresNobody": "Nobody closed the bar — the drink count was level.",
       "choseOption": "{{actor}} decides:",
       "barraLibreResult": "Open bar: {{actor}} had {{n}} drinks this phase and takes +{{vp}} VP.",
+      "duelChallenge": "{{actor}} challenges {{target}} to a duel.",
+      "duelFold": "{{actor}} backs down.",
+      "duelResult": "Duel: {{actor}} holds out and takes +{{vp}} VP. Drinks in the duel: {{n}}.",
+      "duelNobody": "Duel: nobody left in the venue to challenge.",
       "karaokeResult": "{{actor}} takes the mic: +{{vp}} VP.",
       "karaokeDrunkest": "{{actor}} takes the mic as the drunkest at the table — doubled: +{{vp}} VP.",
       "colectaResult": "The whip-round: {{winners}} is last, +{{vp}} VP to the bank.",
@@ -1179,7 +1207,15 @@
       "revealEvent": "Reveal event",
       "eventFaceDown": "Event face-down",
       "chooseOption": "Your call:",
-      "waitingChoice": "{{name}} is deciding…"
+      "waitingChoice": "{{name}} is deciding…",
+      "duelPickTarget": "Who do you challenge?",
+      "duelWaitingTarget": "{{name}} is choosing an opponent…",
+      "duelVs": "{{challenger}} vs {{target}}",
+      "duelPot": "Pot: {{vp}} VP",
+      "duelNextPot": "One more drink makes it {{vp}} VP",
+      "duelDrink": "Drink — one more, no event",
+      "duelFold": "Back down — they take the pot",
+      "duelWaiting": "{{name}} is deciding whether to drink…"
     }
   }
 }

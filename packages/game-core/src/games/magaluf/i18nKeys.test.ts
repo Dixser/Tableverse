@@ -139,6 +139,23 @@ function keysFromAPlayedMatch(): Set<string> {
           client.moves.chooseEventOption!(seed.charCodeAt(0) % 2);
           continue;
         }
+        // A duel is the same again, one seat further out: while it is open the
+        // only moves belong to the seat it is waiting on. One drink, then a
+        // fold, so both the pour and the payout reach the log.
+        if (G.pendingDuel) {
+          const duel = G.pendingDuel;
+          if (duel.targetID === null) {
+            const target = G.activeSeatIDs.find(
+              (id) => id !== duel.challengerID && G.players[id]!.status === 'partying',
+            )!;
+            client.updatePlayerID(duel.challengerID);
+            client.moves.chooseDuelTarget!(target);
+          } else {
+            client.updatePlayerID(duel.toActID!);
+            client.moves[duel.drinks < 1 ? 'duelDrink' : 'duelFold']!();
+          }
+          continue;
+        }
 
         client.updatePlayerID(G.turnSeatID);
         client.moves[move]!();

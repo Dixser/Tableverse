@@ -174,7 +174,9 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       insolacion: 2,
       foto: 2,
       perdido: 2,
-      chupitoCasa: 2,
+      // Chupito de la casa 2 -> 1, paying for the Duelo below: a drink nobody
+      // asked for swapped for one two players had to agree to (feature 043).
+      chupitoCasa: 1,
       // Ronda 2 -> 1, paying for the single Barra libre below. Feature 034's
       // standing trade: the forced-drink cards are the right thing to give up,
       // being the ones that spend a player's capacity without asking. It is a
@@ -187,6 +189,9 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       // drawing, not worth building a Friday around, which is the correct
       // weight for the phase whose whole job is to stay forgiving.
       barraLibreTardeo: 1,
+      // One Duelo, like the one Barra libre: at a point a drink, the Tardeo's
+      // pot is where a table learns the duel, not where a Friday is decided.
+      dueloTardeo: 1,
       vomitona: 1,
       kebabEvent: 2,
       aguaEvent: 2,
@@ -232,11 +237,14 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       peleaNoche: 3,
       chungoNoche: 2,
       gorila: 2,
-      garrafonEvent: 2,
+      // Garrafón and Chupito de la casa 2 -> 1 each pay for the two Duelos:
+      // feature 034's standing trade, forced drinks out for chosen ones.
+      garrafonEvent: 1,
       karaoke: 2,
       barraLibreNoche: 2,
+      dueloNoche: 2,
       perdido: 2,
-      chupitoCasa: 2,
+      chupitoCasa: 1,
       ronda: 1,
       vomitona: 2,
       ambulancia: 1,
@@ -298,9 +306,12 @@ export const PHASE_RULES: Record<PhaseId, PhaseRules> = {
       comaEtilico: 2,
       karaoke: 2,
       barraLibreAfter: 2,
+      dueloAfter: 2,
       perdido: 1,
-      chupitoCasa: 4,
-      ronda: 3,
+      // Chupito de la casa 4 -> 3 and Ronda 3 -> 2 pay for the two Duelos, on
+      // the same trade as the Noche.
+      chupitoCasa: 3,
+      ronda: 2,
       garrafonEvent: 3,
       vomitona: 2,
       ambulancia: 2,

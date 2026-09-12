@@ -193,6 +193,37 @@ export interface PendingChoice {
   endsTurn: boolean;
 }
 
+/**
+ * A Duelo in progress: two seats taking turns to drink or back down.
+ *
+ * The first thing in the game a seat other than the turn seat has to answer,
+ * which is why the exchange runs in its own boardgame.io phase rather than as
+ * a third link in the `pendingEvent` → `pendingChoice` chain -- see the `duel`
+ * phase in `gameDef.ts`. The opponent pick still happens in `party`, while
+ * the challenger is the seat that is up, so `targetID` is null for that step.
+ */
+export interface PendingDuel {
+  /** The drawer. Owes the opponent pick, then answers every other drink. */
+  challengerID: string;
+  /** Null while the challenger is still choosing. */
+  targetID: string | null;
+  /** Whose decision it is. The target answers first; null until picked. */
+  toActID: string | null;
+  /** Which printing, so the pot is read at the rate on the card. */
+  eventId: EventId;
+  /** Drinks poured in this duel, both sides. `d` in `duelPot`. */
+  drinks: number;
+  /**
+   * Duelists who have reached `maxDrinks`, in the order they did. They drink
+   * on past it and are sent home when the duel ends, in this order -- a sweep
+   * in seat order would let where somebody sits decide who opens the next
+   * venue.
+   */
+  overCap: string[];
+  /** Carried through from the PendingChoice that produced it. */
+  endsTurn: boolean;
+}
+
 /** What the board shows about the bar that just closed. */
 export interface Cierrabares {
   seatID: string;
@@ -224,6 +255,8 @@ export interface MagalufG extends RoundConfirmG {
   pendingEvent: PendingEvent | null;
   /** Non-null while a face-up choice card is waiting on its drawer. */
   pendingChoice: PendingChoice | null;
+  /** Non-null from a Duelo's `retar` until the duel is settled. */
+  pendingDuel: PendingDuel | null;
   /**
    * Who closed the bar this phase, or `null` when the count tied or nobody met
    * the drink minimum. Set at closing time and cleared when the next venue
