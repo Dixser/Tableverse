@@ -303,11 +303,10 @@ export function phaseId(G: MagalufG): PhaseId {
 /**
  * The tuned per-phase rules, with the host's `maxDrinksOverride` applied.
  *
- * `-1` (the default) means no override -- the tuned cap for this phase is
- * returned unchanged. `0` becomes `Infinity`, which every existing
+ * `0` (the default) becomes `Infinity`, which every existing
  * `drinksThisPhase >= maxDrinks` comparison already handles correctly
  * (always false) without any other call site needing to know the cap can
- * be absent.
+ * be absent. `-1` opts back into the tuned cap for this phase, unchanged.
  */
 export function phaseRules(G: MagalufG): PhaseRules {
   const rules = PHASE_RULES[phaseId(G)];

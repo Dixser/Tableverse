@@ -39,6 +39,13 @@ function makeClient(
     seed,
     setup: (ctx: Parameters<NonNullable<typeof magalufGameDef.setup>>[0], setupData?: unknown) => {
       const G = magalufGameDef.setup!(ctx, setupData as never) as MagalufG;
+      // The shipped default is unlimited (0), for the ongoing playtest --
+      // see settings.ts. Every test written before that default flip
+      // relies on the tuned 4/5/4 caps being reachable, so the harness
+      // pins the shipped rule back on here; a test exercising the real
+      // default (or a different override) sets it in its own `overrides`,
+      // which runs after this and wins.
+      G.settings.maxDrinksOverride = -1;
       overrides(G);
       return G;
     },
@@ -507,25 +514,23 @@ describe('magaluf gameDef', () => {
     });
 
     describe('the max drinks override (host setting)', () => {
-      it('behaves exactly like the shipped caps at the default', () => {
-        const client = makeClient(3);
-        expect(G(client).settings.maxDrinksOverride).toBe(-1);
-        const cap = PHASE_RULES.tardeo.maxDrinks;
-        const seat = G(client).turnSeatID;
-        play(client, (g, s) => (s === seat ? 'drink' : 'withdraw'), (g) =>
-          (g.pendingEvent === null &&
-            g.pendingChoice === null &&
-            g.players[seat]!.drinksThisPhase >= cap) ||
-          g.phase !== 0,
-        );
-        if (G(client).phase === 0) {
-          expect(G(client).players[seat]!.status).not.toBe('partying');
-        }
+      it('ships with the override at 0 (unlimited), for the ongoing playtest', () => {
+        // Straight through setup(), bypassing makeClient's test-harness
+        // baseline (see its comment) -- the only way to see the real
+        // shipped default rather than the convenience one every other test
+        // in this file relies on.
+        const fakeRandom = { Number: () => 0.5, Shuffle: <T>(deck: T[]) => deck };
+        const g = magalufGameDef.setup!(
+          { ctx: { numPlayers: 3 }, random: fakeRandom } as never,
+          undefined as never,
+        ) as MagalufG;
+        expect(g.settings.maxDrinksOverride).toBe(0);
+        expect(DEFAULT_SETTINGS.maxDrinksOverride).toBe(0);
       });
 
-      it('never triggers closing time when set to unlimited (AC4)', () => {
+      it('never triggers closing time at the default of 0 (AC4)', () => {
         const client = makeClient(3, (g) => {
-          g.settings = { ...g.settings, maxDrinksOverride: 0 };
+          g.settings = { ...g.settings, maxDrinksOverride: DEFAULT_SETTINGS.maxDrinksOverride };
           // Plain cards throughout: the point of this test is the absence of
           // a cap, not what a random event or duel does along the way.
           stack(g, Array<string>(30).fill('cana'), Array<EventId>(30).fill('foto'));
@@ -543,6 +548,23 @@ describe('magaluf gameDef', () => {
         // engine before `phaseRules` learned about the override.
         expect(G(client).players[seat]!.status).toBe('partying');
         expect(G(client).players[seat]!.drinksThisPhase).toBeGreaterThan(cap);
+      });
+
+      it('brings the shipped 4/5/4 caps back when set to -1', () => {
+        const client = makeClient(3, (g) => {
+          g.settings = { ...g.settings, maxDrinksOverride: -1 };
+        });
+        const cap = PHASE_RULES.tardeo.maxDrinks;
+        const seat = G(client).turnSeatID;
+        play(client, (g, s) => (s === seat ? 'drink' : 'withdraw'), (g) =>
+          (g.pendingEvent === null &&
+            g.pendingChoice === null &&
+            g.players[seat]!.drinksThisPhase >= cap) ||
+          g.phase !== 0,
+        );
+        if (G(client).phase === 0) {
+          expect(G(client).players[seat]!.status).not.toBe('partying');
+        }
       });
 
       it('enforces the override as every phase’s cap when set to a positive number (AC5)', () => {
@@ -2265,11 +2287,11 @@ describe('magaluf gameDef', () => {
       expect(clampSettings({ arrestLasts: 'phase' } as never).arrestLasts).toBe('phase');
     });
 
-    it('clamps the max-drinks override, with -1 meaning off rather than invalid', () => {
+    it('clamps the max-drinks override, defaulting to unlimited rather than invalid', () => {
       expect(clampSettings({ maxDrinksOverride: 999 } as never).maxDrinksOverride).toBe(20);
       expect(clampSettings({ maxDrinksOverride: -50 } as never).maxDrinksOverride).toBe(-1);
       expect(clampSettings({ maxDrinksOverride: -1 } as never).maxDrinksOverride).toBe(-1);
-      expect(clampSettings({} as never).maxDrinksOverride).toBe(-1);
+      expect(clampSettings({} as never).maxDrinksOverride).toBe(DEFAULT_SETTINGS.maxDrinksOverride);
       expect(clampSettings({ maxDrinksOverride: 0 } as never).maxDrinksOverride).toBe(0);
     });
 

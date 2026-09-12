@@ -136,11 +136,12 @@ for this phase.
 - Being thrown out by the bouncer, taken away by ambulance or arrested is not
   a withdrawal, and never costs the party pooper penalty.
 
-**The maximum is a host setting for playtesting.** A host can replace 4 / 5 /
-4 with a single number for every phase, or turn it off entirely (`0` — no
-closing time at all, for however long the table wants to keep going) when the
-room is created. Left alone, the tuned numbers above apply exactly as shown.
-The minimum, the party pooper penalty and the Cierrabares bonus are unaffected
+**The maximum is a host setting, and while the game is in playtesting there
+is no maximum by default.** Closing time is off out of the box (a host can
+still drink for as long as the table wants to keep going); setting it back
+to `-1` when the room is created brings the tuned 4 / 5 / 4 back, and any
+other number replaces it with a single cap for every phase instead. The
+minimum, the party pooper penalty and the Cierrabares bonus are unaffected
 either way.
 
 ## 6. Items

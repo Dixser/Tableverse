@@ -219,13 +219,26 @@ describe('MagalufBoard', () => {
      */
     it('prints the current venue’s drink minimum and maximum', () => {
       for (const [phase, id] of [[0, 'tardeo'], [1, 'noche'], [2, 'after']] as const) {
-        const { unmount } = renderBoard(makeG({ phase }));
+        // Pinned to -1: maxDrinksOverride now defaults to unlimited (0) for
+        // the ongoing playtest, and this test is about the tuned numbers
+        // themselves, not that default -- see the override's own test below.
+        const { unmount } = renderBoard(
+          makeG({ phase, settings: { ...DEFAULT_SETTINGS, maxDrinksOverride: -1 } }),
+        );
         const rules = PHASE_RULES[id];
         expect(screen.getByTestId('phase-drinks-chip')).toHaveTextContent(
           `TEST_phase_drinks ${rules.minDrinks} ${rules.maxDrinks}`,
         );
         unmount();
       }
+    });
+
+    it('shows ∞ instead of a number once the host removes the cap', () => {
+      const { unmount } = renderBoard(makeG({ settings: { ...DEFAULT_SETTINGS, maxDrinksOverride: 0 } }));
+      expect(screen.getByTestId('phase-drinks-chip')).toHaveTextContent(
+        `TEST_phase_drinks ${PHASE_RULES.tardeo.minDrinks} ∞`,
+      );
+      unmount();
     });
   });
 

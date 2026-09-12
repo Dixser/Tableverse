@@ -117,12 +117,13 @@ como copas tuyas en esta fase.
 - Que te eche el portero, que te lleve la ambulancia o que te detengan no
   cuenta como retirarse, y nunca cuesta la penalización por aguafiestas.
 
-**El máximo es un ajuste del anfitrión pensado para las pruebas.** El
-anfitrión puede sustituir el 4 / 5 / 4 por un único número para todas las
-fases, o desactivarlo del todo (`0` — no cierra nunca el local, la mesa sigue
-mientras quiera) al crear la sala. Si no se toca, se aplican los números de
-la tabla tal cual. El mínimo, la penalización por aguafiestas y el bonus de
-Cierrabares no cambian en ningún caso.
+**El máximo es un ajuste del anfitrión, y mientras el juego está en fase de
+pruebas no hay máximo por defecto.** El local no cierra nunca de salida (la
+mesa puede seguir bebiendo el tiempo que quiera); poniéndolo en `-1` al
+crear la sala vuelve el 4 / 5 / 4 de siempre, y cualquier otro número lo
+sustituye por un único tope para todas las fases. El mínimo, la
+penalización por aguafiestas y el bonus de Cierrabares no cambian en ningún
+caso.
 
 ## 6. Objetos
 

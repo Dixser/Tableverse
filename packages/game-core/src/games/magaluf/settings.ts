@@ -83,13 +83,14 @@ export interface MagalufSettings {
    * Replaces the tuned per-phase "closing time" cap (4 / 5 / 4) with a
    * single value applied to every phase.
    *
-   * `-1` — no override; the tuned caps apply exactly as shipped. `0` —
-   * unlimited: nobody is ever auto-withdrawn for reaching a drink count. A
-   * positive `N` — every phase's cap becomes `N`.
+   * `0` (the default, while the table is actively playtesting) —
+   * unlimited: nobody is ever auto-withdrawn for reaching a drink count.
+   * `-1` — opts back into the tuned caps, exactly as shipped. A positive
+   * `N` — every phase's cap becomes `N`.
    *
-   * `-1` rather than `0` for "off" because `0` was asked for explicitly to
-   * mean limitless — overloading it with a second meaning would have made
-   * one of the two unreachable.
+   * `-1` rather than `0` for "the shipped rule" because `0` was asked for
+   * explicitly to mean limitless — overloading it with a second meaning
+   * would have made one of the two unreachable.
    */
   maxDrinksOverride: number;
 }
@@ -108,9 +109,10 @@ const RANGES: Record<
   limitMax: { min: LIMIT_BOUNDS.min, max: LIMIT_BOUNDS.max, fallback: DEFAULT_LIMIT_MAX },
   saturdayMultiplier: { min: 1, max: 3, fallback: DAY_VP_MULTIPLIER[1]! },
   sundayMultiplier: { min: 1, max: 4, fallback: DAY_VP_MULTIPLIER[2]! },
-  // -1 is "off" (the tuned caps apply), not a typo to clamp away from — see
-  // the field's doc comment on MagalufSettings.
-  maxDrinksOverride: { min: -1, max: 20, fallback: -1 },
+  // 0 is the default (unlimited, for the ongoing playtest); -1 is a real,
+  // deliberate value too -- it opts back into the tuned caps -- not a typo
+  // to clamp away from. See the field's doc comment on MagalufSettings.
+  maxDrinksOverride: { min: -1, max: 20, fallback: 0 },
 };
 
 export const DEFAULT_SETTINGS: MagalufSettings = {
@@ -232,7 +234,7 @@ export const magalufSettingsSchema: JSONSchema = {
       minimum: RANGES.maxDrinksOverride.min,
       maximum: RANGES.maxDrinksOverride.max,
       title:
-        'Max drinks per phase override, replacing the built-in 4/5/4 cap (-1 = off/default, 0 = unlimited, N = cap every phase at N)',
+        'Max drinks per phase override, replacing the built-in 4/5/4 cap (0 = unlimited/default, -1 = use the shipped 4/5/4 caps, N = cap every phase at N)',
     },
   },
 };

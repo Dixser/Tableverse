@@ -90,7 +90,21 @@ function keysFromAPlayedMatch(): Set<string> {
   for (const seed of ['a', 'b', 'c', 'd', 'e', 'f']) {
     for (const move of ['drink', 'withdraw'] as const) {
       const client = Client({
-        game: { ...magalufGameDef, seed },
+        game: {
+          ...magalufGameDef,
+          seed,
+          // maxDrinksOverride now defaults to unlimited (0), for the ongoing
+          // playtest -- see settings.ts. The 'drink' sweep below drives every
+          // seat to always drink, which relies on closing time to ever end a
+          // phase; pin the shipped cap back on so this still finishes in a
+          // sane amount of time rather than drinking, unthrottled, into a
+          // 6000-iteration guard.
+          setup: (ctx: Parameters<NonNullable<typeof magalufGameDef.setup>>[0], setupData?: unknown) => {
+            const G = magalufGameDef.setup!(ctx, setupData as never) as MagalufG;
+            G.settings.maxDrinksOverride = -1;
+            return G;
+          },
+        },
         numPlayers: 4,
       }) as unknown as {
         updatePlayerID: (id: string) => void;
