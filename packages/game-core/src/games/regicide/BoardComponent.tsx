@@ -120,13 +120,7 @@ export const RegicideBoard: React.FC<BoardProps<RegicideView>> = ({
         roundConfirm={G.roundConfirm}
       />
 
-      <PlayerStatusList
-        activeSeatIDs={G.activeSeatIDs}
-        handCounts={G.handCounts}
-        playerID={playerID}
-        playerNames={playerNames}
-        currentPlayerID={ctx.currentPlayer}
-      />
+
 
       <PlayedCardsZone cardsInPlay={G.cardsInPlay} />
 
@@ -171,6 +165,14 @@ export const RegicideBoard: React.FC<BoardProps<RegicideView>> = ({
           playerNames={playerNames}
         />
       )}
+      <PlayerStatusList
+        activeSeatIDs={G.activeSeatIDs}
+        handCounts={G.handCounts}
+        playerID={playerID}
+        playerNames={playerNames}
+        currentPlayerID={ctx.currentPlayer}
+      />
     </div>
+
   );
 };
