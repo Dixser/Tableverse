@@ -114,7 +114,7 @@ interface PlayCardParams {
 }
 
 /** Tokens needed to win the match, keyed by seated player count. */
-const TOKENS_TO_WIN: Record<number, number> = { 2: 6, 3: 5, 4: 4, 5: 3, 6: 3 };
+export const TOKENS_TO_WIN: Record<number, number> = { 2: 6, 3: 5, 4: 4, 5: 3, 6: 3 };
 
 function seatIDs(ctx: Ctx): string[] {
   return Array.from({ length: ctx.numPlayers }, (_, i) => String(i));

@@ -421,43 +421,7 @@ export function RoomShell({
 
           <section className={styles.section} aria-label={t('room.seats')}>
             <h2 className={styles.sectionTitle}>{t('room.seats')}</h2>
-            <ul className={styles.list}>
-              {seats.map((seat) => (
-                <li className={styles.listItem} key={seat.playerID}>
-                  {t('room.seatOccupied', {
-                    // Seats are 0-indexed internally (boardgame.io's playerID
-                    // convention), but displayed 1-indexed -- "Seat 1" for
-                    // playerID '0' -- so non-technical players don't see a
-                    // seat numbering that starts at 0.
-                    seatNumber: Number(seat.playerID) + 1,
-                    occupant:
-                      seat.userID === user.id
-                        ? t('room.you')
-                        : (memberNames[seat.userID] ?? seat.userID),
-                  })}
-                  <PresenceBadge status={presence[seat.playerID] ?? 'connected'} />
-                  <span className={styles.spacer} />
-                  {seat.userID === user.id && canLeaveSeat && (
-                    <button
-                      className={styles.buttonDanger}
-                      type="button"
-                      onClick={() => void leaveSeat(seat.playerID)}
-                    >
-                      {t('room.leaveSeat')}
-                    </button>
-                  )}
-                  {canManageSeats && room.status === 'in_game' && (
-                    <button
-                      className={styles.buttonDanger}
-                      type="button"
-                      onClick={() => releaseSeat(seat.playerID)}
-                    >
-                      {t('room.release')}
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
+
             {canEditSettings && room.status === 'lobby' && (
               <label className={styles.checkboxLabel}>
                 <input
@@ -479,6 +443,43 @@ export function RoomShell({
             )}
           </section>
         </div>
+        <ul className={styles.list}>
+          {seats.map((seat) => (
+            <li className={styles.listItem} key={seat.playerID}>
+              {t('room.seatOccupied', {
+                // Seats are 0-indexed internally (boardgame.io's playerID
+                // convention), but displayed 1-indexed -- "Seat 1" for
+                // playerID '0' -- so non-technical players don't see a
+                // seat numbering that starts at 0.
+                seatNumber: Number(seat.playerID) + 1,
+                occupant:
+                  seat.userID === user.id
+                    ? t('room.you')
+                    : (memberNames[seat.userID] ?? seat.userID),
+              })}
+              <PresenceBadge status={presence[seat.playerID] ?? 'connected'} />
+              <span className={styles.spacer} />
+              {seat.userID === user.id && canLeaveSeat && (
+                <button
+                  className={styles.buttonDanger}
+                  type="button"
+                  onClick={() => void leaveSeat(seat.playerID)}
+                >
+                  {t('room.leaveSeat')}
+                </button>
+              )}
+              {canManageSeats && room.status === 'in_game' && (
+                <button
+                  className={styles.buttonDanger}
+                  type="button"
+                  onClick={() => releaseSeat(seat.playerID)}
+                >
+                  {t('room.release')}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
       </RoomDrawer>
 
       <div className={styles.matchControls}>
@@ -555,9 +556,9 @@ function SeatPicker({
             disabled={!!occupant}
             onClick={() => onClaim(playerID)}
           >
-            {t('room.seatLabel', { seatNumber: Number(playerID) + 1 })}
+            {!occupant ? t('room.seatClaim', { seatNumber: Number(playerID) + 1 }) : ''}
             {occupant &&
-              ` — ${occupant.userID === currentUserID
+              `${occupant.userID === currentUserID
                 ? t('room.you')
                 : (memberNames[occupant.userID] ?? occupant.userID)
               }`}

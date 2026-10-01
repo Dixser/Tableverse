@@ -33,6 +33,7 @@
     "rematch": "Revancha",
     "nextLevel": "Siguiente nivel",
     "seatLabel": "Asiento {{seatNumber}}",
+    "seatClaim": "Ocupar asiento",
     "seatOccupied": "Asiento {{seatNumber}}: {{occupant}}",
     "drawerToggle": "Menú de sala",
     "drawerTitle": "Sala",
@@ -178,12 +179,12 @@
     "playArea": {
       "title": "Área de juego",
       "eliminated": "Eliminado",
-      "protected": "Protegido"
+      "protected": "Protegido",
+      "empty": "Aún no se ha jugado ninguna carta"
     },
     "roundWins": {
-      "title": "Rondas ganadas"
+      "count": "Rondas ganadas por {{name}}: {{count}}"
     },
-    "currentTurn": "Turno actual: {{name}}",
     "deckCount": "Cartas restantes en el mazo: {{count}}",
     "reveal": {
       "priestViewed": "Miraste la mano de {{opponent}}: es un {{opponentRank}}.",

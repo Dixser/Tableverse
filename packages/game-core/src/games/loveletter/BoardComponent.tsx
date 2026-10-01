@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BoardProps } from '../../types.js';
-import type { CardRank, LoveLetterView } from './gameDef.js';
+import { TOKENS_TO_WIN, type CardRank, type LoveLetterView } from './gameDef.js';
 import { HandView } from './HandView.js';
 import { PlayOrDiscardPicker } from './PlayOrDiscardPicker.js';
 import { TargetPicker } from './TargetPicker.js';
 import { GuardGuessPicker } from './GuardGuessPicker.js';
 import { ChancellorPicker } from './ChancellorPicker.js';
 import { PlayArea } from './PlayArea.js';
-import { RoundWinsTracker } from './RoundWinsTracker.js';
+import { DeckStack } from './DeckStack.js';
 import { PrivateRevealToast } from './PrivateRevealToast.js';
 import { playerLabel } from './playerLabel.js';
 import { eligibleTargets } from './eligibleTargets.js';
@@ -45,9 +45,9 @@ function pick<T>(record: Record<string, T>, ids: string[]): Record<string, T> {
 }
 
 /**
- * Renders ONLY the Love Letter board -- hand, targeting, play areas, round
- * wins, private reveals. No player list, seat controls, presence, or chat
- * (platform chrome owns those; mirrors Tic-Tac-Toe's own chrome/board
+ * Renders ONLY the Love Letter board -- deck, hand, targeting, play areas
+ * (with round wins), private reveals. No player list, seat controls,
+ * presence, or chat (platform chrome owns those; mirrors Tic-Tac-Toe's own chrome/board
  * split, feature 002's AC8). See spec/features/015-loveletter-board.
  */
 export const LoveLetterBoard: React.FC<BoardProps<LoveLetterView>> = ({
@@ -136,19 +136,18 @@ export const LoveLetterBoard: React.FC<BoardProps<LoveLetterView>> = ({
 
   return (
     <div className={styles.board}>
-      <div className={styles.status}>
-        <span>
-          {t('loveLetter.currentTurn', { name: playerLabel(ctx.currentPlayer, playerNames, t) })}
-        </span>
-        <span>{t('loveLetter.deckCount', { count: G.deckCount })}</span>
+      <div className={styles.table}>
+        <DeckStack count={G.deckCount} ariaLabel={t('loveLetter.deckCount', { count: G.deckCount })} />
+        <PlayArea
+          playedCards={activeView.playedCards}
+          eliminated={activeView.eliminated}
+          handmaidProtected={activeView.handmaidProtected}
+          roundWins={pick(G.roundWins, activeSeatIDs)}
+          tokensToWin={TOKENS_TO_WIN[G.activeSeatIDs.length]}
+          playerNames={playerNames}
+          currentPlayerID={ctx.currentPlayer}
+        />
       </div>
-      <RoundWinsTracker roundWins={pick(G.roundWins, activeSeatIDs)} playerNames={playerNames} />
-      <PlayArea
-        playedCards={activeView.playedCards}
-        eliminated={activeView.eliminated}
-        handmaidProtected={activeView.handmaidProtected}
-        playerNames={playerNames}
-      />
       {playerID != null && (
         <HandView
           hand={ownHand}

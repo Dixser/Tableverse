@@ -4,8 +4,11 @@
   gap: var(--space-3);
 }
 
-.status {
+/* Draw deck beside the per-seat play area. */
+.table {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-3);
-  font-weight: 600;
 }

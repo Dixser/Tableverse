@@ -1,5 +1,6 @@
 .playArea {
   display: flex;
+  flex-direction: column;
   flex-wrap: wrap;
   gap: var(--space-3);
 }
@@ -12,9 +13,19 @@
 
 .seatHeader {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: var(--space-1);
   font-weight: 600;
+}
+
+/* Same active-turn highlight as Regicide/Cahoots' PlayerStatusList. */
+.active .name {
+  color: var(--color-accent);
+}
+
+.tokens {
+  letter-spacing: 1px;
 }
 
 .badge {
@@ -28,4 +39,9 @@
 .cards {
   display: flex;
   gap: var(--space-1);
+}
+
+.empty {
+  font-style: italic;
+  color: color-mix(in srgb, var(--color-text-secondary) 60%, transparent);
 }

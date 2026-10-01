@@ -166,13 +166,20 @@
 }
 
 .seatPicker {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   flex-wrap: wrap;
   gap: var(--space-2);
 }
 
 .seatButtonOpen {
+  height: 100px;
   composes: button;
+}
+
+.seatButtonOpen:hover {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 .seatButtonTaken {

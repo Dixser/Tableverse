@@ -181,9 +181,8 @@
       "protected": "Protected"
     },
     "roundWins": {
-      "title": "Round wins"
+      "count": "Round wins for {{name}}: {{count}}"
     },
-    "currentTurn": "Current turn: {{name}}",
     "deckCount": "Cards left in deck: {{count}}",
     "reveal": {
       "priestViewed": "You looked at {{opponent}}'s hand: it's a {{opponentRank}}.",

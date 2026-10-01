@@ -93,8 +93,8 @@ describe('LoveLetterBoard', () => {
       />,
     );
     // Public state still visible: round wins, play areas.
-    expect(screen.getByText('Seat 1: 1')).toBeInTheDocument();
-    expect(screen.getByText('Seat 2: 0')).toBeInTheDocument();
+    expect(screen.getByLabelText('TEST_round_wins Seat 1 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('TEST_round_wins Seat 2 0')).toBeInTheDocument();
     expect(screen.getByText('TEST_Baron')).toBeInTheDocument(); // '1's played card.
     // No hand rendered for anyone.
     expect(screen.queryByText('TEST_Priest')).toBeNull();
@@ -234,11 +234,13 @@ describe('LoveLetterBoard', () => {
         isActive={false}
       />,
     );
-    expect(screen.getByText('TEST_current_turn Seat 2')).toBeInTheDocument();
-    expect(screen.getByText('TEST_deck_count 7')).toBeInTheDocument();
+    // The current player is marked by PlayArea's active-seat highlight.
+    expect(screen.getByText('Seat 2').closest('[class*="active"]')).not.toBeNull();
+    expect(screen.getByText('Seat 1').closest('[class*="active"]')).toBeNull();
+    expect(screen.getByLabelText('TEST_deck_count 7')).toBeInTheDocument();
   });
 
-  it('shows a username instead of a seat label once playerNames has synced, and reflects it in the turn indicator', () => {
+  it('shows a username instead of a seat label once playerNames has synced, and highlights it as the current player', () => {
     render(
       <LoveLetterBoard
         G={seatedView()}
@@ -249,12 +251,12 @@ describe('LoveLetterBoard', () => {
         playerNames={{ '0': 'Alice', '1': 'Bob' }}
       />,
     );
-    expect(screen.getByText('TEST_current_turn Bob')).toBeInTheDocument();
-    expect(screen.getByText('Bob')).toBeInTheDocument(); // PlayArea's seat header.
+    // PlayArea's seat header, highlighted as the current player.
+    expect(screen.getByText('Bob').closest('[class*="active"]')).not.toBeNull();
     expect(screen.queryByText('Seat 2')).toBeNull();
   });
 
-  it('renders only claimed seats (per playerNames) in PlayArea/RoundWinsTracker, excluding phantom unclaimed seats', () => {
+  it('renders only claimed seats (per playerNames) in PlayArea, excluding phantom unclaimed seats', () => {
     render(
       <LoveLetterBoard
         G={seatedView({
@@ -273,8 +275,8 @@ describe('LoveLetterBoard', () => {
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.queryByText('Seat 3')).toBeNull();
-    expect(screen.getByText('Bob: 0')).toBeInTheDocument();
-    expect(screen.queryByText('Seat 3: 0')).toBeNull();
+    expect(screen.getByLabelText('TEST_round_wins Bob 0')).toBeInTheDocument();
+    expect(screen.queryByLabelText('TEST_round_wins Seat 3 0')).toBeNull();
   });
 
   it('excludes an unclaimed phantom seat from the TargetPicker even when it would otherwise be eligible', () => {

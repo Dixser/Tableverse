@@ -54,8 +54,7 @@ void i18n.use(initReactI18next).init({
             eliminated: 'TEST_eliminated',
             protected: 'TEST_protected',
           },
-          roundWins: { title: 'TEST_round_wins' },
-          currentTurn: 'TEST_current_turn {{name}}',
+          roundWins: { count: 'TEST_round_wins {{name}} {{count}}' },
           deckCount: 'TEST_deck_count {{count}}',
           reveal: {
             priestViewed: 'TEST_priest_viewed {{opponent}} {{opponentRank}}',

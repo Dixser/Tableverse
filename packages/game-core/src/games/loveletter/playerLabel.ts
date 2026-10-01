@@ -5,7 +5,7 @@ import type { TFunction } from 'i18next';
  * known, disambiguated with its seat number when this same name is
  * claiming more than one seat (SeatSwitcher's own multi-seat solo-play
  * case, where "Alice" alone wouldn't tell two of her own seats apart in a
- * TargetPicker/PlayArea/RoundWinsTracker row). Falls back to a plain
+ * TargetPicker/PlayArea row). Falls back to a plain
  * "Seat N" label (feature 010's `room.seatLabel` key) when no name has
  * synced yet -- same fallback GameoverBanner's own nameFor uses.
  */
